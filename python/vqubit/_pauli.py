@@ -177,3 +177,36 @@ def _format_coefficient(coefficient: complex) -> str:
 	if coefficient.imag == 0:
 		return str(int(coefficient.real)) if coefficient.real == int(coefficient.real) else str(coefficient.real)
 	return str(coefficient)
+
+
+class PauliSum:
+	"""A weighted sum of Pauli strings, the output of a Pauli expansion."""
+
+	def __init__(self, terms: Mapping[PauliString, complex] | None = None) -> None:
+		self._terms: dict[PauliString, complex] = {}
+		if terms is not None:
+			for pauli_string, coefficient in dict(terms).items():
+				if not isinstance(pauli_string, PauliString):
+					raise TypeError("PauliSum keys must be PauliString instances")
+				if abs(coefficient) > 0:
+					self._terms[pauli_string] = complex(coefficient)
+
+	def __getitem__(self, pauli_string: PauliString) -> complex:
+		return self._terms.get(pauli_string, 0j)
+
+	def items(self) -> Iterator[tuple[PauliString, complex]]:
+		return iter(self._terms.items())
+
+	def __iter__(self) -> Iterator[PauliString]:
+		return iter(self._terms)
+
+	def __len__(self) -> int:
+		return len(self._terms)
+
+	def __str__(self) -> str:
+		if not self._terms:
+			return "0"
+		return " + ".join(f"{_format_coefficient(c)}*{ps}" for ps, c in self._terms.items())
+
+	def __repr__(self) -> str:
+		return f"vqubit.PauliSum({self})"

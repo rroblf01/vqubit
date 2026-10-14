@@ -7,16 +7,17 @@ on. They accept gates, operations and circuits wherever that makes sense.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+from itertools import product
 from typing import Any
 
 from ._circuits import Circuit
-from ._gates import Gate, MeasurementGate
-from ._linalg import Matrix, apply_gate, identity, matmul
+from ._gates import Gate, MatrixGate, MeasurementGate, ZPowGate
+from ._linalg import Matrix, apply_gate, dagger, identity, kron, matmul
 from ._ops import GateOperation, Moment, Operation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
-from ._pauli import PauliString
-from ._qubits import Qid
+from ._pauli import Pauli, PauliString, PauliSum
+from ._qubits import LineQubit, Qid
 
 
 def _as_matrix(unitary_like: Any) -> Matrix | None:
@@ -280,3 +281,74 @@ def resolve_parameters(value: Any, resolver: ParamResolver) -> Any:
 	if isinstance(value, Gate):
 		return value._resolve_parameters_(resolver)
 	return resolve_value(value, resolver)
+
+
+def pauli_expansion(value: Any, *, atol: float = 1e-8) -> PauliSum:
+	"""Expand ``value`` as a weighted sum of Pauli strings.
+
+	Every Pauli string over the value's qubits is tested; only those whose
+	coefficient is larger than ``atol`` are kept.
+	"""
+	matrix = unitary(value)
+	dim = len(matrix)
+	num_qubits = dim.bit_length() - 1
+	if isinstance(value, (GateOperation, Operation)):
+		qubits: tuple[Qid, ...] = value.qubits
+	else:
+		qubits = tuple(LineQubit(i) for i in range(num_qubits))
+
+	terms: dict[PauliString, complex] = {}
+	for assignment in product((Pauli.I, Pauli.X, Pauli.Y, Pauli.Z), repeat=num_qubits):
+		probe: Matrix = [[1 + 0j]]
+		for pauli in assignment:
+			probe = kron(probe, pauli.matrix())
+		trace = 0j
+		for i in range(dim):
+			for j in range(dim):
+				trace += probe[i][j] * matrix[j][i]
+		coefficient = trace / dim
+		if abs(coefficient) > atol:
+			terms[PauliString(dict(zip(qubits, assignment, strict=True)))] = coefficient
+	return PauliSum(terms)
+
+
+def _embed_single(gate_matrix: Matrix, target: int, num_qubits: int) -> Matrix:
+	dim = 1 << num_qubits
+	columns: list[list[complex]] = []
+	for column_index in range(dim):
+		column = [0j] * dim
+		column[column_index] = 1.0 + 0j
+		columns.append(apply_gate(column, gate_matrix, [target]))
+	return [[columns[j][i] for j in range(dim)] for i in range(dim)]
+
+
+def phase_by(value: Any, phase_exponent: float, qubit_index: int) -> MatrixGate:
+	"""Conjugate ``value`` by a phase on one of its qubits.
+
+	The result is ``Z**phase_exponent`` applied to ``qubit_index``, ``value``,
+	and the inverse phase, returned as a :class:`~vqubit.MatrixGate`.
+	"""
+	matrix = unitary(value)
+	dim = len(matrix)
+	num_qubits = dim.bit_length() - 1
+	if not 0 <= qubit_index < num_qubits:
+		raise ValueError(f"qubit_index {qubit_index} out of range for {num_qubits} qubits")
+	rotation = ZPowGate(exponent=phase_exponent)._unitary_()
+	if rotation is None:
+		raise TypeError("phase_by needs a numeric phase exponent")
+	embedding = _embed_single(rotation, qubit_index, num_qubits)
+	return MatrixGate(matmul(matmul(embedding, matrix), dagger(embedding)))
+
+
+def apply_unitary(value: Any, state_vector: Sequence[complex]) -> list[complex]:
+	"""Apply the unitary of ``value`` to ``state_vector``.
+
+	The vector is expressed over the value's own qubits, so its length must be
+	the dimension of the unitary.
+	"""
+	matrix = unitary(value)
+	dim = len(matrix)
+	if len(state_vector) != dim:
+		raise ValueError(f"state_vector has length {len(state_vector)}, expected {dim}")
+	column = [complex(x) for x in state_vector]
+	return [sum(matrix[i][j] * column[j] for j in range(dim)) for i in range(dim)]

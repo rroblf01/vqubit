@@ -48,6 +48,7 @@ from ._gates import (
 	I,
 	IdentityGate,
 	ISWAPGate,
+	MatrixGate,
 	MeasurementGate,
 	Rx,
 	RxGate,
@@ -73,8 +74,9 @@ from ._gates import (
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._ops import GateOperation, Moment, Operation
 from ._parameter import Parameter, ParamResolver
-from ._pauli import Pauli, PauliString
+from ._pauli import Pauli, PauliString, PauliSum
 from ._protocols import (
+	apply_unitary,
 	commutes,
 	decompose,
 	decompose_once,
@@ -86,6 +88,8 @@ from ._protocols import (
 	measurement_key_names,
 	measurement_keys_touched,
 	num_qubits,
+	pauli_expansion,
+	phase_by,
 	pow,
 	qid_shape,
 	resolve_parameters,
@@ -129,6 +133,7 @@ __all__ = [
 	"IdentityGate",
 	"InsertStrategy",
 	"LineQubit",
+	"MatrixGate",
 	"MeasurementGate",
 	"Moment",
 	"NamedQubit",
@@ -137,6 +142,7 @@ __all__ = [
 	"Parameter",
 	"Pauli",
 	"PauliString",
+	"PauliSum",
 	"Qid",
 	"Qubit",
 	"Result",
@@ -162,6 +168,7 @@ __all__ = [
 	"ZPowGate",
 	"ZZPowGate",
 	"__version__",
+	"apply_unitary",
 	"cirq_type_from_json",
 	"commutes",
 	"decompose",
@@ -177,6 +184,8 @@ __all__ = [
 	"measurement_key_names",
 	"measurement_keys_touched",
 	"num_qubits",
+	"pauli_expansion",
+	"phase_by",
 	"pow",
 	"qasm",
 	"qid_shape",

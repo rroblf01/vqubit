@@ -670,6 +670,43 @@ class ISWAPGate(_FixedGate):
 
 
 @value_equality
+class MatrixGate(Gate):
+	"""A gate defined directly by a unitary matrix.
+
+	The matrix dimension must be a power of two; the gate acts on
+	``log2(dim)`` qubits.
+	"""
+
+	def __init__(self, matrix: Matrix) -> None:
+		rows = [[complex(entry) for entry in row] for row in matrix]
+		dim = len(rows)
+		if dim == 0 or dim & (dim - 1):
+			raise ValueError("MatrixGate needs a matrix whose dimension is a power of two")
+		if any(len(row) != dim for row in rows):
+			raise ValueError("MatrixGate needs a square matrix")
+		self._matrix = rows
+
+	@property
+	def matrix(self) -> Matrix:
+		return [list(row) for row in self._matrix]
+
+	def _num_qubits_(self) -> int:
+		return len(self._matrix).bit_length() - 1
+
+	def _unitary_(self) -> Matrix:
+		return [list(row) for row in self._matrix]
+
+	def _value_equality_values_(self) -> Any:
+		return (tuple(tuple(row) for row in self._matrix),)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("Matrix",) * self.num_qubits
+
+	def __str__(self) -> str:
+		return f"MatrixGate({self.num_qubits}q)"
+
+
+@value_equality
 class ControlledGate(Gate):
 	"""A gate applied only when the control qubits have the given values."""
 

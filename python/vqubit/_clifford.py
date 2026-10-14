@@ -6,9 +6,8 @@ small binary tableau (Aaronson and Gottesman, *Improved Simulation of
 Stabilizer Circuits*). Tracking that tableau instead of the state vector is why
 this simulator can reach many more qubits than :class:`~vqubit.Simulator`.
 
-The tableau has two blocks of rows: the first ``n`` are *destabilizers*, the
-last ``n`` are the *stabilizer* generators of the state. Each row is a Pauli
-operator stored as a pair of bit-vectors plus a phase bit.
+The tableau and the simulation loop live in V: Python builds a flat instruction
+stream and reshapes the results, so the whole run happens in one native call.
 """
 
 from __future__ import annotations
@@ -16,6 +15,8 @@ from __future__ import annotations
 import random
 from collections.abc import Sequence
 from typing import Any
+
+import vqubit_native as _native
 
 from ._circuits import Circuit
 from ._gates import (
@@ -29,10 +30,112 @@ from ._gates import (
 	YPowGate,
 	ZPowGate,
 )
-from ._linalg import identity, kron, matmul
-from ._ops import Operation
+from ._linalg import vector_from_flat
 from ._pauli import Pauli
-from ._qubits import Qid
+from ._qubits import LineQubit, Qid
+
+_INSTR_H = 0
+_INSTR_S = 1
+_INSTR_SDG = 2
+_INSTR_X = 3
+_INSTR_Y = 4
+_INSTR_Z = 5
+_INSTR_CNOT = 6
+_INSTR_CZ = 7
+_INSTR_SWAP = 8
+_INSTR_MEASURE = 9
+
+
+def _instruction_code(gate: Any) -> int | None:
+	"""Return the instruction code for a Clifford gate, or ``None`` for identity."""
+	if isinstance(gate, IdentityGate):
+		return None
+	if isinstance(gate, HPowGate) and gate.exponent == 1:
+		return _INSTR_H
+	if isinstance(gate, ZPowGate):
+		if gate.exponent == 1:
+			return _INSTR_Z
+		if gate.exponent == 0.5:
+			return _INSTR_S
+		if gate.exponent == -0.5:
+			return _INSTR_SDG
+	if isinstance(gate, XPowGate) and gate.exponent in (1, -1):
+		return _INSTR_X
+	if isinstance(gate, YPowGate) and gate.exponent in (1, -1):
+		return _INSTR_Y
+	if isinstance(gate, CNOTGate):
+		return _INSTR_CNOT
+	if isinstance(gate, CZGate):
+		return _INSTR_CZ
+	if isinstance(gate, SWAPGate):
+		return _INSTR_SWAP
+	raise TypeError(f"{gate!r} is not a Clifford gate")
+
+
+def _build_instructions(
+	program: Circuit,
+	index: dict[Qid, int],
+	allow_measurements: bool,
+) -> tuple[list[int], list[tuple[str, int, int]], dict[str, int]]:
+	"""Return ``(instructions, measure_meta, key_sizes)`` for a circuit."""
+	instructions: list[int] = []
+	measure_meta: list[tuple[str, int, int]] = []
+	key_sizes: dict[str, int] = {}
+	for operation in program.all_operations():
+		gate = operation.gate
+		if isinstance(gate, MeasurementGate):
+			if not allow_measurements:
+				raise ValueError("simulate() cannot run a circuit with measurements; use run()")
+			invert_mask = gate.full_invert_mask
+			for position, qubit in enumerate(operation.qubits):
+				instructions.extend((_INSTR_MEASURE, index[qubit], 0))
+				measure_meta.append((gate.key, position, int(invert_mask[position])))
+				key_sizes[gate.key] = max(key_sizes.get(gate.key, 0), position + 1)
+			continue
+		code = _instruction_code(gate)
+		if code is None:
+			continue
+		targets = [index[q] for q in operation.qubits]
+		second = targets[1] if len(targets) > 1 else 0
+		instructions.extend((code, targets[0], second))
+	return instructions, measure_meta, key_sizes
+
+
+class CliffordTableau:
+	"""The binary tableau of a stabilizer state."""
+
+	def __init__(self, num_qubits: int, flat: Sequence[int] | None = None) -> None:
+		self.num_qubits = num_qubits
+		self.rows = 2 * num_qubits + 1
+		self._side = 2 * num_qubits + 1
+		self._flat = list(flat) if flat is not None else []
+
+	@classmethod
+	def from_flat(cls, flat: Sequence[int], num_qubits: int) -> CliffordTableau:
+		"""Rebuild a tableau from the flattened native form."""
+		return cls(num_qubits, flat)
+
+	def _bit(self, row: int, col: int) -> int:
+		return self._flat[row * self._side + col]
+
+	def stabilizer_pauli_strings(self) -> list[Any]:
+		"""Return the stabilizer generators as Pauli strings."""
+		from ._pauli import PauliString
+
+		result: list[Any] = []
+		for k in range(self.num_qubits):
+			row = self.num_qubits + k
+			qubit_pauli_map: dict[Qid, Pauli] = {}
+			for j in range(self.num_qubits):
+				xbit = self._bit(row, j)
+				zbit = self._bit(row, self.num_qubits + j)
+				pauli = _PAULI_BITS[(xbit, zbit)]
+				if pauli is not Pauli.I:
+					qubit_pauli_map[LineQubit(j)] = pauli
+			sign = -1 if self._bit(row, 2 * self.num_qubits) else 1
+			result.append(PauliString(qubit_pauli_map, coefficient=sign))
+		return result
+
 
 _PAULI_BITS = {
 	(0, 0): Pauli.I,
@@ -40,150 +143,6 @@ _PAULI_BITS = {
 	(1, 1): Pauli.Y,
 	(0, 1): Pauli.Z,
 }
-
-
-class CliffordTableau:
-	"""The binary tableau of a stabilizer state."""
-
-	def __init__(self, num_qubits: int) -> None:
-		self.num_qubits = num_qubits
-		self.rows = 2 * num_qubits + 1  # one scratch row
-		self.x = [[0] * num_qubits for _ in range(self.rows)]
-		self.z = [[0] * num_qubits for _ in range(self.rows)]
-		self.r = [0] * self.rows
-		for i in range(num_qubits):
-			self.x[i][i] = 1
-			self.z[num_qubits + i][i] = 1
-
-	@staticmethod
-	def _g(x1: int, z1: int, x2: int, z2: int) -> int:
-		"""Return the exponent of ``i`` from multiplying two Paulis."""
-		if x1 == 0 and z1 == 0:
-			return 0
-		if x1 == 1 and z1 == 1:
-			return z2 - x2
-		if x1 == 1 and z1 == 0:
-			return z2 * (2 * x2 - 1)
-		return x2 * (1 - 2 * z2)
-
-	def rowsum(self, h: int, i: int) -> None:
-		"""Set row ``h`` to the product of rows ``h`` and ``i``."""
-		total = 2 * self.r[h] + 2 * self.r[i]
-		for j in range(self.num_qubits):
-			total += self._g(self.x[i][j], self.z[i][j], self.x[h][j], self.z[h][j])
-		self.r[h] = 0 if total % 4 == 0 else 1
-		for j in range(self.num_qubits):
-			self.x[h][j] ^= self.x[i][j]
-			self.z[h][j] ^= self.z[i][j]
-
-	def hadamard(self, a: int) -> None:
-		for i in range(2 * self.num_qubits):
-			self.r[i] ^= self.x[i][a] * self.z[i][a]
-			self.x[i][a], self.z[i][a] = self.z[i][a], self.x[i][a]
-
-	def phase(self, a: int) -> None:
-		for i in range(2 * self.num_qubits):
-			self.r[i] ^= self.x[i][a] * self.z[i][a]
-			self.z[i][a] ^= self.x[i][a]
-
-	def cnot(self, a: int, b: int) -> None:
-		for i in range(2 * self.num_qubits):
-			self.r[i] ^= self.x[i][a] * self.z[i][b] * (self.x[i][b] ^ self.z[i][a] ^ 1)
-			self.x[i][b] ^= self.x[i][a]
-			self.z[i][a] ^= self.z[i][b]
-
-	def pauli_x(self, a: int) -> None:
-		for i in range(2 * self.num_qubits):
-			self.r[i] ^= self.z[i][a]
-
-	def pauli_z(self, a: int) -> None:
-		for i in range(2 * self.num_qubits):
-			self.r[i] ^= self.x[i][a]
-
-	def pauli_y(self, a: int) -> None:
-		self.pauli_x(a)
-		self.pauli_z(a)
-
-	def cz(self, a: int, b: int) -> None:
-		self.hadamard(b)
-		self.cnot(a, b)
-		self.hadamard(b)
-
-	def swap(self, a: int, b: int) -> None:
-		self.cnot(a, b)
-		self.cnot(b, a)
-		self.cnot(a, b)
-
-	def measure(self, a: int, rng: random.Random) -> int:
-		"""Measure qubit ``a`` in the Z basis, updating the tableau."""
-		n = self.num_qubits
-		p = -1
-		for i in range(n, 2 * n):
-			if self.x[i][a]:
-				p = i
-				break
-		if p != -1:
-			for i in range(2 * n):
-				if i != p and self.x[i][a]:
-					self.rowsum(i, p)
-			for j in range(n):
-				self.x[p - n][j] = self.x[p][j]
-				self.z[p - n][j] = self.z[p][j]
-			self.r[p - n] = self.r[p]
-			for j in range(n):
-				self.x[p][j] = 0
-				self.z[p][j] = 0
-			self.z[p][a] = 1
-			self.r[p] = rng.getrandbits(1)
-			return self.r[p]
-
-		scratch = 2 * n
-		for j in range(n):
-			self.x[scratch][j] = 0
-			self.z[scratch][j] = 0
-		self.r[scratch] = 0
-		for i in range(n):
-			if self.x[i][a]:
-				self.rowsum(scratch, i + n)
-		return self.r[scratch]
-
-	def _stabilizer_matrix(self, row: int) -> list[list[complex]]:
-		matrix: list[list[complex]] = [[1 + 0j]]
-		for j in range(self.num_qubits):
-			matrix = kron(matrix, _PAULI_BITS[(self.x[row][j], self.z[row][j])].matrix())
-		sign = -1 if self.r[row] else 1
-		return [[sign * entry for entry in row_values] for row_values in matrix]
-
-	def stabilizer_pauli_strings(self) -> list[Any]:
-		"""Return the stabilizer generators as Pauli strings."""
-		from ._pauli import PauliString
-		from ._qubits import LineQubit
-
-		result: list[Any] = []
-		for k in range(self.num_qubits):
-			row = self.num_qubits + k
-			qubit_pauli_map: dict[Qid, Pauli] = {}
-			for j in range(self.num_qubits):
-				pauli = _PAULI_BITS[(self.x[row][j], self.z[row][j])]
-				if pauli is not Pauli.I:
-					qubit_pauli_map[LineQubit(j)] = pauli
-			result.append(PauliString(qubit_pauli_map, coefficient=-1 if self.r[row] else 1))
-		return result
-
-	def state_vector(self) -> list[complex]:
-		"""Return the state vector, defined up to a global phase."""
-		dim = 1 << self.num_qubits
-		accumulator = identity(dim)
-		for k in range(self.num_qubits):
-			stabilizer = self._stabilizer_matrix(self.num_qubits + k)
-			projector = [[stabilizer[i][j] + (1 if i == j else 0) for j in range(dim)] for i in range(dim)]
-			accumulator = matmul(accumulator, projector)
-		for column in range(dim):
-			vector = [accumulator[i][column] for i in range(dim)]
-			norm = sum(abs(entry) ** 2 for entry in vector) ** 0.5
-			if norm > 1e-9:
-				return [entry / norm for entry in vector]
-		raise ValueError("the tableau does not describe a pure state")
 
 
 class CliffordState:
@@ -198,7 +157,8 @@ class CliffordState:
 		return self._qubits
 
 	def state_vector(self) -> list[complex]:
-		return self._tableau.state_vector()
+		vector = _native.clifford_state_vector(self._tableau._flat, self._tableau.num_qubits)
+		return vector_from_flat(vector)
 
 	def stabilizers(self) -> list[Any]:
 		return self._tableau.stabilizer_pauli_strings()
@@ -243,11 +203,9 @@ class CliffordSimulator:
 	) -> CliffordSimulationResult:
 		qubits = self._resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
-		tableau = CliffordTableau(len(qubits))
-		for operation in program.all_operations():
-			if isinstance(operation.gate, MeasurementGate):
-				raise ValueError("simulate() cannot run a circuit with measurements; use run()")
-			self._apply(tableau, operation, index)
+		instructions, _, _ = _build_instructions(program, index, allow_measurements=False)
+		flat = _native.clifford_tableau(instructions, len(qubits))
+		tableau = CliffordTableau.from_flat(flat, len(qubits))
 		return CliffordSimulationResult(CliffordState(tableau, qubits))
 
 	def run(
@@ -264,15 +222,20 @@ class CliffordSimulator:
 			raise ValueError("repetitions must be at least 1")
 		qubits = self._resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
-		rng = random.Random(self._seed if seed is None else seed)
-		records: dict[str, list[list[int]]] = {}
-		for _ in range(repetitions):
-			tableau = CliffordTableau(len(qubits))
-			for operation in program.all_operations():
-				if isinstance(operation.gate, MeasurementGate):
-					self._measure(tableau, operation, index, rng, records)
-				else:
-					self._apply(tableau, operation, index)
+		instructions, measure_meta, key_sizes = _build_instructions(program, index, allow_measurements=True)
+		effective_seed = seed if seed is not None else self._seed
+		if effective_seed is None:
+			effective_seed = random.randrange(1 << 31)
+		invert_mask = [meta[2] for meta in measure_meta]
+		bits = _native.clifford_run(instructions, len(qubits), invert_mask, repetitions, int(effective_seed))
+
+		records: dict[str, list[list[int]]] = {
+			key: [[0] * size for _ in range(repetitions)] for key, size in key_sizes.items()
+		}
+		num_measurements = len(measure_meta)
+		for rep in range(repetitions):
+			for m, (key, position, _) in enumerate(measure_meta):
+				records[key][rep][position] = bits[rep * num_measurements + m]
 		return Result(records)
 
 	sample = run
@@ -286,54 +249,3 @@ class CliffordSimulator:
 		if missing:
 			raise ValueError(f"qubit_order is missing qubits used by the circuit: {sorted(missing)!r}")
 		return qubits
-
-	@staticmethod
-	def _apply(tableau: CliffordTableau, operation: Operation, index: dict[Qid, int]) -> None:
-		gate = operation.gate
-		targets = [index[q] for q in operation.qubits]
-		if isinstance(gate, IdentityGate):
-			return
-		if isinstance(gate, HPowGate) and gate.exponent == 1:
-			tableau.hadamard(targets[0])
-			return
-		if isinstance(gate, ZPowGate):
-			if gate.exponent == 1:
-				tableau.pauli_z(targets[0])
-			elif gate.exponent == 0.5:
-				tableau.phase(targets[0])
-			elif gate.exponent == -0.5:
-				for _ in range(3):
-					tableau.phase(targets[0])
-			else:
-				raise TypeError(f"{gate!r} is not a Clifford gate")
-			return
-		if isinstance(gate, XPowGate) and gate.exponent in (1, -1):
-			tableau.pauli_x(targets[0])
-			return
-		if isinstance(gate, YPowGate) and gate.exponent in (1, -1):
-			tableau.pauli_y(targets[0])
-			return
-		if isinstance(gate, CNOTGate):
-			tableau.cnot(targets[0], targets[1])
-			return
-		if isinstance(gate, CZGate):
-			tableau.cz(targets[0], targets[1])
-			return
-		if isinstance(gate, SWAPGate):
-			tableau.swap(targets[0], targets[1])
-			return
-		raise TypeError(f"{gate!r} is not a Clifford gate")
-
-	@staticmethod
-	def _measure(
-		tableau: CliffordTableau,
-		operation: Operation,
-		index: dict[Qid, int],
-		rng: random.Random,
-		records: dict[str, list[list[int]]],
-	) -> None:
-		gate = operation.gate
-		assert isinstance(gate, MeasurementGate)
-		invert_mask = gate.full_invert_mask
-		bits = [tableau.measure(index[q], rng) ^ int(invert_mask[k]) for k, q in enumerate(operation.qubits)]
-		records.setdefault(gate.key, []).append(bits)

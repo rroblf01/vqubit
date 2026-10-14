@@ -70,6 +70,7 @@ from ._gates import (
 	measure,
 	measure_each,
 )
+from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._ops import GateOperation, Moment, Operation
 from ._parameter import Parameter, ParamResolver
 from ._pauli import Pauli, PauliString
@@ -161,6 +162,7 @@ __all__ = [
 	"ZPowGate",
 	"ZZPowGate",
 	"__version__",
+	"cirq_type_from_json",
 	"commutes",
 	"decompose",
 	"decompose_once",
@@ -169,6 +171,7 @@ __all__ = [
 	"inverse",
 	"is_measurement",
 	"is_parameterized",
+	"json_cirq_type",
 	"measure",
 	"measure_each",
 	"measurement_key_names",
@@ -177,7 +180,11 @@ __all__ = [
 	"pow",
 	"qasm",
 	"qid_shape",
+	"read_json",
+	"read_json_gzip",
 	"resolve_parameters",
+	"to_json",
+	"to_json_gzip",
 	"unitary",
 	"value_equality",
 ]

@@ -192,6 +192,13 @@ class FrozenCircuit(Circuit):
 		built = Circuit(*contents, strategy=strategy)
 		self._moments = list(built._moments)
 
+	@classmethod
+	def from_moments(cls, moments: Iterable[Moment]) -> FrozenCircuit:
+		"""Build a frozen circuit from an explicit sequence of moments."""
+		frozen = cls()
+		frozen._moments = list(Circuit.from_moments(moments)._moments)
+		return frozen
+
 	def append(self, content: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> Circuit:
 		raise TypeError("FrozenCircuit is immutable")
 

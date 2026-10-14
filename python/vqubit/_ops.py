@@ -31,6 +31,12 @@ class Operation:
 	def _circuit_diagram_info_(self) -> tuple[str, ...]:
 		return (str(self),) * len(self.qubits)
 
+	def _is_measurement_(self) -> bool:
+		return self.gate._is_measurement_()
+
+	def _measurement_key_name_(self) -> str | None:
+		return self.gate._measurement_key_name_()
+
 
 @value_equality
 class GateOperation(Operation):

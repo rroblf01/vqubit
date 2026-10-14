@@ -49,6 +49,12 @@ class Gate:
 		"""Return the inverse gate, or ``None`` when there is none."""
 		return None
 
+	def _is_measurement_(self) -> bool:
+		return False
+
+	def _measurement_key_name_(self) -> str | None:
+		return None
+
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return (str(self),) * self.num_qubits
 
@@ -379,6 +385,12 @@ class MeasurementGate(Gate):
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return ("M",) * self._num_qubits
+
+	def _is_measurement_(self) -> bool:
+		return True
+
+	def _measurement_key_name_(self) -> str | None:
+		return self._key
 
 	def __str__(self) -> str:
 		return f"measure({self._key!r})"

@@ -9,7 +9,7 @@ time, exactly as Cirq does with its ``EARLIEST`` insertion strategy.
 from __future__ import annotations
 
 import enum
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from typing import Any
 
 from ._ops import Moment, Operation
@@ -121,6 +121,17 @@ class Circuit:
 
 	def all_qubits(self) -> tuple[Qid, ...]:
 		return tuple(sorted({q for moment in self._moments for q in moment.qubits}))
+
+	def findall_operations(self, predicate: Callable[[Operation], bool]) -> Iterator[tuple[int, Operation]]:
+		"""Yield ``(moment_index, operation)`` for every operation matching ``predicate``."""
+		for index, moment in enumerate(self._moments):
+			for operation in moment.operations:
+				if predicate(operation):
+					yield index, operation
+
+	def findall_operations_with_gate_type(self, gate_type: type) -> Iterator[tuple[int, Operation]]:
+		"""Yield ``(moment_index, operation)`` for operations whose gate is ``gate_type``."""
+		return self.findall_operations(lambda operation: isinstance(operation.gate, gate_type))
 
 	def unitary(self) -> Any:
 		"""Return the full unitary matrix over the sorted circuit qubits."""

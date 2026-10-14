@@ -64,7 +64,20 @@ from ._gates import (
 )
 from ._ops import GateOperation, Moment, Operation
 from ._pauli import Pauli, PauliString
-from ._protocols import decompose, has_unitary, inverse, num_qubits, pow, qid_shape, unitary
+from ._protocols import (
+	commutes,
+	decompose,
+	definitely_commutes,
+	has_unitary,
+	inverse,
+	is_measurement,
+	measurement_key_names,
+	measurement_keys_touched,
+	num_qubits,
+	pow,
+	qid_shape,
+	unitary,
+)
 from ._qubits import GridQubit, LineQubit, NamedQubit, Qid, Qubit
 from ._sim import Result, SimulationResult, Simulator, StateVector
 from ._value import value_equality
@@ -125,11 +138,16 @@ __all__ = [
 	"Z",
 	"ZPowGate",
 	"__version__",
+	"commutes",
 	"decompose",
+	"definitely_commutes",
 	"has_unitary",
 	"inverse",
+	"is_measurement",
 	"measure",
 	"measure_each",
+	"measurement_key_names",
+	"measurement_keys_touched",
 	"num_qubits",
 	"pow",
 	"qid_shape",

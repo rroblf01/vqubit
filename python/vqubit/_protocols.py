@@ -7,6 +7,7 @@ on. They accept gates, operations and circuits wherever that makes sense.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from ._circuits import Circuit
@@ -134,3 +135,78 @@ def decompose(value: Any) -> list[Any]:
 	if isinstance(value, Gate):
 		return [value]
 	raise TypeError(f"cannot decompose {value!r}")
+
+
+def is_measurement(value: Any) -> bool:
+	"""Report whether ``value`` contains a measurement."""
+	if isinstance(value, Circuit):
+		return any(is_measurement(operation) for operation in value.all_operations())
+	if isinstance(value, Moment):
+		return any(is_measurement(operation) for operation in value.operations)
+	if isinstance(value, (Gate, GateOperation, Operation)):
+		return bool(value._is_measurement_())
+	return False
+
+
+def measurement_key_names(value: Any) -> set[str]:
+	"""Return the classical keys whose values ``value`` depends on."""
+	if isinstance(value, Circuit):
+		operations: Iterable[Any] = value.all_operations()
+	elif isinstance(value, Moment):
+		operations = value.operations
+	elif isinstance(value, (GateOperation, Operation, Gate)):
+		operations = [value]
+	else:
+		return set()
+	keys: set[str] = set()
+	for operation in operations:
+		if is_measurement(operation):
+			key = operation._measurement_key_name_()
+			if key is not None:
+				keys.add(key)
+	return keys
+
+
+def measurement_keys_touched(value: Any) -> set[str]:
+	"""Alias of :func:`measurement_key_names`, matching Cirq's name."""
+	return measurement_key_names(value)
+
+
+def _commutator_is_zero(a: Matrix, b: Matrix, atol: float) -> bool:
+	ab = matmul(a, b)
+	ba = matmul(b, a)
+	dim = len(ab)
+	return all(abs(ab[i][j] - ba[i][j]) <= atol for i in range(dim) for j in range(dim))
+
+
+def commutes(a: Any, b: Any, atol: float = 1e-8) -> bool:
+	"""Report whether ``a`` and ``b`` commute.
+
+	Operations on disjoint qubits always commute. Otherwise the unitaries are
+	compared, and anything that cannot be decided is reported as not commuting.
+	"""
+	qubits_a = a.qubits if isinstance(a, (GateOperation, Operation)) else None
+	qubits_b = b.qubits if isinstance(b, (GateOperation, Operation)) else None
+
+	if qubits_a is not None and qubits_b is not None:
+		if set(qubits_a).isdisjoint(qubits_b):
+			return True
+		if tuple(qubits_a) == tuple(qubits_b):
+			matrix_a = _as_matrix(a.gate._unitary_())
+			matrix_b = _as_matrix(b.gate._unitary_())
+			if matrix_a is not None and matrix_b is not None and len(matrix_a) == len(matrix_b):
+				return _commutator_is_zero(matrix_a, matrix_b, atol)
+		return False
+
+	if isinstance(a, Gate) and isinstance(b, Gate) and a.num_qubits == b.num_qubits:
+		matrix_a = _as_matrix(a._unitary_())
+		matrix_b = _as_matrix(b._unitary_())
+		if matrix_a is not None and matrix_b is not None and len(matrix_a) == len(matrix_b):
+			return _commutator_is_zero(matrix_a, matrix_b, atol)
+
+	return False
+
+
+def definitely_commutes(a: Any, b: Any, atol: float = 1e-8) -> bool:
+	"""Report whether ``a`` and ``b`` are known to commute."""
+	return commutes(a, b, atol=atol)

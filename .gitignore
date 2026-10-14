@@ -1,0 +1,44 @@
+# --- vcraft / V build output ---------------------------------------------
+/build/
+/dist/
+/.vcraft/
+/src/_vcraft_generated.v
+python/*.pyi
+*.so
+*.pyd
+*.dylib
+
+# --- Python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Virtual environments -------------------------------------------------
+.venv/
+venv/
+env/
+
+# --- Tooling caches -------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ty/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# --- Documentation --------------------------------------------------------
+site/
+.docs/
+
+# --- Editors / OS ---------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

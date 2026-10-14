@@ -39,6 +39,7 @@ from ._channels import (
 	reset,
 )
 from ._circuits import Circuit, FrozenCircuit, InsertStrategy
+from ._clifford import CliffordSimulationResult, CliffordSimulator, CliffordState, CliffordTableau
 from ._gates import (
 	CCX,
 	CNOT,
@@ -149,6 +150,10 @@ __all__ = [
 	"CSWAPGate",
 	"CZGate",
 	"Circuit",
+	"CliffordSimulationResult",
+	"CliffordSimulator",
+	"CliffordState",
+	"CliffordTableau",
 	"ControlledGate",
 	"DensityMatrix",
 	"DensityMatrixSimulator",

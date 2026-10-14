@@ -166,6 +166,23 @@ pub fn matvec(matrix []f64, vector []f64, dim int) []f64 {
 	return out
 }
 
+// state_to_density returns the density matrix `|psi> <psi|` of a state vector.
+@[vc_fn]
+pub fn state_to_density(state []f64) []f64 {
+	dim := state.len / 2
+	mut out := []f64{len: 2 * dim * dim, init: 0.0}
+	for i in 0 .. dim {
+		re_i := state[2 * i]
+		im_i := state[2 * i + 1]
+		for j in 0 .. dim {
+			re_j := state[2 * j]
+			out[2 * (i * dim + j)] = re_i * re_j + im_i * state[2 * j + 1]
+			out[2 * (i * dim + j) + 1] = im_i * re_j - re_i * state[2 * j + 1]
+		}
+	}
+	return out
+}
+
 // sandwich returns `u @ a @ u^dagger`, the update of a density matrix by a
 // unitary, for `dim`-by-`dim` matrices.
 @[vc_fn]

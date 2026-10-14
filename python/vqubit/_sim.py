@@ -302,16 +302,7 @@ class DensityMatrixTrialResult:
 
 def _initial_density_flat(initial_state: Any, dim: int) -> list[float]:
 	vector = _initial_state_vector(initial_state, dim)
-	flat = [0.0] * (2 * dim * dim)
-	for i in range(dim):
-		re_i = vector[i].real
-		im_i = vector[i].imag
-		for j in range(dim):
-			re_j = vector[j].real
-			im_j = vector[j].imag
-			flat[2 * (i * dim + j)] = re_i * re_j + im_i * im_j
-			flat[2 * (i * dim + j) + 1] = im_i * re_j - re_i * im_j
-	return flat
+	return list(_native.state_to_density(vector_to_flat(vector)))
 
 
 def _density_flat_to_nested(flat: Sequence[float], dim: int) -> list[list[complex]]:

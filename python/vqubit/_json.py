@@ -23,6 +23,8 @@ from ._gates import (
 	IdentityGate,
 	ISWAPGate,
 	MeasurementGate,
+	PhasedXPowGate,
+	PhasedXZGate,
 	RxGate,
 	RyGate,
 	RzGate,
@@ -83,6 +85,20 @@ def _encode(value: Any) -> Any:
 		}
 	if isinstance(value, (RxGate, RyGate, RzGate)):
 		return {"cirq_type": type(value).__name__, "radians": _encode(value.radians)}
+	if isinstance(value, PhasedXPowGate):
+		return {
+			"cirq_type": "PhasedXPowGate",
+			"phase_exponent": _encode(value.phase_exponent),
+			"exponent": _encode(value.exponent),
+			"global_shift": _encode(value.global_shift),
+		}
+	if isinstance(value, PhasedXZGate):
+		return {
+			"cirq_type": "PhasedXZGate",
+			"x_exponent": _encode(value.x_exponent),
+			"z_exponent": _encode(value.z_exponent),
+			"axis_phase_exponent": _encode(value.axis_phase_exponent),
+		}
 	if isinstance(value, IdentityGate):
 		return {"cirq_type": "IdentityGate", "num_qubits": value.num_qubits}
 	if isinstance(value, MeasurementGate):
@@ -132,6 +148,8 @@ _TYPES: dict[str, Any] = {
 	"RxGate": RxGate,
 	"RyGate": RyGate,
 	"RzGate": RzGate,
+	"PhasedXPowGate": PhasedXPowGate,
+	"PhasedXZGate": PhasedXZGate,
 	"IdentityGate": IdentityGate,
 	"MeasurementGate": MeasurementGate,
 	"ControlledGate": ControlledGate,
@@ -226,6 +244,16 @@ def _register_all() -> None:
 	_DECODERS["RxGate"] = lambda d: RxGate(_decode(d["radians"]))
 	_DECODERS["RyGate"] = lambda d: RyGate(_decode(d["radians"]))
 	_DECODERS["RzGate"] = lambda d: RzGate(_decode(d["radians"]))
+	_DECODERS["PhasedXPowGate"] = lambda d: PhasedXPowGate(
+		phase_exponent=_decode(d["phase_exponent"]),
+		exponent=_decode(d["exponent"]),
+		global_shift=_decode(d.get("global_shift", 0.0)),
+	)
+	_DECODERS["PhasedXZGate"] = lambda d: PhasedXZGate(
+		x_exponent=_decode(d["x_exponent"]),
+		z_exponent=_decode(d["z_exponent"]),
+		axis_phase_exponent=_decode(d["axis_phase_exponent"]),
+	)
 	_DECODERS["IdentityGate"] = lambda d: IdentityGate(d["num_qubits"])
 	_DECODERS["MeasurementGate"] = lambda d: MeasurementGate(
 		d["key"], num_qubits=d["num_qubits"], invert_mask=tuple(d.get("invert_mask", ()))

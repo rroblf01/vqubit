@@ -8,6 +8,7 @@ the CNOT/Toffoli/CNOT sequence it decomposes into.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from ._circuits import Circuit
@@ -50,16 +51,16 @@ def _gate_instruction(gate: Any, qubits: list[str]) -> str | None:
 	if isinstance(gate, XPowGate):
 		if gate.exponent == 1:
 			return f"x {qubits[0]};"
-		return None
+		return f"rx({_format_angle(math.pi * gate.exponent)}) {qubits[0]};"
 	if isinstance(gate, YPowGate):
 		if gate.exponent == 1:
 			return f"y {qubits[0]};"
-		return None
+		return f"ry({_format_angle(math.pi * gate.exponent)}) {qubits[0]};"
 	if isinstance(gate, ZPowGate):
 		table = {1: "z", 0.5: "s", 0.25: "t", -0.5: "sdg", -0.25: "tdg"}
 		if gate.exponent in table:
 			return f"{table[gate.exponent]} {qubits[0]};"
-		return None
+		return f"rz({_format_angle(math.pi * gate.exponent)}) {qubits[0]};"
 	if isinstance(gate, HPowGate):
 		if gate.exponent == 1:
 			return f"h {qubits[0]};"

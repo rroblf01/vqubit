@@ -67,6 +67,8 @@ from ._gates import (
 	ISWAPGate,
 	MatrixGate,
 	MeasurementGate,
+	PhasedXPowGate,
+	PhasedXZGate,
 	Rx,
 	RxGate,
 	Ry,
@@ -90,7 +92,12 @@ from ._gates import (
 )
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._ops import GateOperation, Moment, Operation
-from ._optimizers import single_qubit_matrix_to_gates, single_qubit_matrix_to_operations
+from ._optimizers import (
+	single_qubit_matrix_to_gates,
+	single_qubit_matrix_to_operations,
+	single_qubit_matrix_to_phased_x_z,
+	single_qubit_matrix_to_phxz,
+)
 from ._parameter import Parameter, ParamResolver
 from ._pauli import Pauli, PauliString, PauliSum
 from ._protocols import (
@@ -133,6 +140,7 @@ from ._transformers import (
 	drop_empty_moments,
 	drop_negligible_operations,
 	expand_composite,
+	merge_single_qubit_moments_to_phxz,
 	stratified_circuit,
 )
 from ._value import value_equality
@@ -194,6 +202,8 @@ __all__ = [
 	"PauliSum",
 	"PhaseDampingChannel",
 	"PhaseFlipChannel",
+	"PhasedXPowGate",
+	"PhasedXZGate",
 	"Points",
 	"Qid",
 	"Qubit",
@@ -248,6 +258,7 @@ __all__ = [
 	"measure_each",
 	"measurement_key_names",
 	"measurement_keys_touched",
+	"merge_single_qubit_moments_to_phxz",
 	"num_qubits",
 	"pauli_expansion",
 	"phase_by",
@@ -265,6 +276,8 @@ __all__ = [
 	"sample",
 	"single_qubit_matrix_to_gates",
 	"single_qubit_matrix_to_operations",
+	"single_qubit_matrix_to_phased_x_z",
+	"single_qubit_matrix_to_phxz",
 	"stratified_circuit",
 	"to_json",
 	"to_json_gzip",

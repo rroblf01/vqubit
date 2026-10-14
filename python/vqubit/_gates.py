@@ -17,7 +17,7 @@ import math
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from ._linalg import Matrix, identity, kron
+from ._linalg import Matrix, identity, kron, matmul
 from ._ops import GateOperation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._qubits import Qid
@@ -266,6 +266,164 @@ class HPowGate(EigenGate):
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return ("H",)
+
+
+@value_equality
+class PhasedXPowGate(Gate):
+	"""A power of ``X`` conjugated by a phase: ``Z^p X^e Z^-p``."""
+
+	def __init__(self, *, phase_exponent: Any = 0.0, exponent: Any = 1.0, global_shift: Any = 0.0) -> None:
+		self._phase_exponent = phase_exponent if is_symbolic(phase_exponent) else float(phase_exponent)
+		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
+		self._global_shift = global_shift if is_symbolic(global_shift) else float(global_shift)
+
+	@property
+	def phase_exponent(self) -> Any:
+		return self._phase_exponent
+
+	@property
+	def exponent(self) -> Any:
+		return self._exponent
+
+	@property
+	def global_shift(self) -> Any:
+		return self._global_shift
+
+	def _num_qubits_(self) -> int:
+		return 1
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		phase = ZPowGate(exponent=self._phase_exponent)._unitary_()
+		power = XPowGate(exponent=self._exponent)._unitary_()
+		inverse_phase = ZPowGate(exponent=-self._phase_exponent)._unitary_()
+		if phase is None or power is None or inverse_phase is None:
+			return None
+		result = matmul(matmul(phase, power), inverse_phase)
+		if self._global_shift:
+			shift = cmath.exp(1j * math.pi * self._global_shift * self._exponent)
+			result = [[shift * entry for entry in row] for row in result]
+		return result
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._phase_exponent) or is_symbolic(self._exponent) or is_symbolic(self._global_shift)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> PhasedXPowGate:
+		if not self._is_parameterized_():
+			return self
+		return PhasedXPowGate(
+			phase_exponent=resolve_value(self._phase_exponent, resolver),
+			exponent=resolve_value(self._exponent, resolver),
+			global_shift=resolve_value(self._global_shift, resolver),
+		)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._phase_exponent, self._exponent, self._global_shift)
+
+	def __pow__(self, power: float) -> PhasedXPowGate:
+		return PhasedXPowGate(
+			phase_exponent=self._phase_exponent,
+			exponent=self._exponent * power,
+			global_shift=self._global_shift,
+		)
+
+	def _inverse_(self) -> PhasedXPowGate:
+		return PhasedXPowGate(
+			phase_exponent=self._phase_exponent,
+			exponent=-self._exponent,
+			global_shift=self._global_shift,
+		)
+
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation]:
+		qubit = qubits[0]
+		return [
+			ZPowGate(exponent=self._phase_exponent).on(qubit),
+			XPowGate(exponent=self._exponent).on(qubit),
+			ZPowGate(exponent=-self._phase_exponent).on(qubit),
+		]
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("PhX",)
+
+	def __str__(self) -> str:
+		return f"PhasedXPowGate(phase_exponent={_describe(self._phase_exponent)}, exponent={_describe(self._exponent)})"
+
+
+@value_equality
+class PhasedXZGate(Gate):
+	"""The standard single-qubit gate: ``Z^z`` after a phased ``X^x``."""
+
+	def __init__(self, *, x_exponent: Any = 0.0, z_exponent: Any = 0.0, axis_phase_exponent: Any = 0.0) -> None:
+		self._x_exponent = x_exponent if is_symbolic(x_exponent) else float(x_exponent)
+		self._z_exponent = z_exponent if is_symbolic(z_exponent) else float(z_exponent)
+		self._axis_phase_exponent = (
+			axis_phase_exponent if is_symbolic(axis_phase_exponent) else float(axis_phase_exponent)
+		)
+
+	@property
+	def x_exponent(self) -> Any:
+		return self._x_exponent
+
+	@property
+	def z_exponent(self) -> Any:
+		return self._z_exponent
+
+	@property
+	def axis_phase_exponent(self) -> Any:
+		return self._axis_phase_exponent
+
+	def _num_qubits_(self) -> int:
+		return 1
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		phased_x = PhasedXPowGate(phase_exponent=self._axis_phase_exponent, exponent=self._x_exponent)._unitary_()
+		z = ZPowGate(exponent=self._z_exponent)._unitary_()
+		if phased_x is None or z is None:
+			return None
+		return matmul(z, phased_x)
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._x_exponent) or is_symbolic(self._z_exponent) or is_symbolic(self._axis_phase_exponent)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> PhasedXZGate:
+		if not self._is_parameterized_():
+			return self
+		return PhasedXZGate(
+			x_exponent=resolve_value(self._x_exponent, resolver),
+			z_exponent=resolve_value(self._z_exponent, resolver),
+			axis_phase_exponent=resolve_value(self._axis_phase_exponent, resolver),
+		)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._x_exponent, self._z_exponent, self._axis_phase_exponent)
+
+	def _inverse_(self) -> PhasedXZGate:
+		# (Z^z PhX(x, a))^-1 = Z^-z PhX(-x, a + z).
+		return PhasedXZGate(
+			x_exponent=-self._x_exponent,
+			z_exponent=-self._z_exponent,
+			axis_phase_exponent=self._axis_phase_exponent + self._z_exponent,
+		)
+
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation]:
+		qubit = qubits[0]
+		return [
+			PhasedXPowGate(phase_exponent=self._axis_phase_exponent, exponent=self._x_exponent).on(qubit),
+			ZPowGate(exponent=self._z_exponent).on(qubit),
+		]
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("PhXZ",)
+
+	def __str__(self) -> str:
+		return (
+			f"PhasedXZGate(x_exponent={_describe(self._x_exponent)}, "
+			f"z_exponent={_describe(self._z_exponent)}, "
+			f"axis_phase_exponent={_describe(self._axis_phase_exponent)})"
+		)
 
 
 @value_equality

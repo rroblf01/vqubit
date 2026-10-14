@@ -12,8 +12,11 @@ from collections.abc import Callable
 from typing import Any
 
 from ._circuits import Circuit
+from ._linalg import matmul
 from ._ops import Moment, Operation
+from ._optimizers import single_qubit_matrix_to_phxz
 from ._protocols import decompose
+from ._qubits import Qid
 
 Predicate = Callable[[Operation], bool]
 
@@ -52,6 +55,50 @@ def drop_negligible_operations(circuit: Circuit, *, atol: float = 1e-8) -> Circu
 def expand_composite(circuit: Circuit) -> Circuit:
 	"""Return ``circuit`` with every decomposable gate expanded."""
 	return Circuit(decompose(circuit))
+
+
+def merge_single_qubit_moments_to_phxz(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:
+	"""Merge runs of single-qubit gates into one ``PhasedXZ`` gate per qubit.
+
+	Consecutive moments that hold only single-qubit gates are combined; on each
+	qubit the gates are multiplied together and replaced by the
+	:class:`~vqubit.PhasedXZGate` that implements the same unitary, up to phase.
+	"""
+	result = Circuit()
+	pending: dict[Qid, list[list[complex]]] = {}
+
+	def flush() -> None:
+		if not pending:
+			return
+		operations: list[Operation] = []
+		for qubit, matrix in pending.items():
+			if not _matrix_is_identity(matrix, atol):
+				operations.append(single_qubit_matrix_to_phxz(matrix, atol=atol).on(qubit))
+		if operations:
+			result.append(operations)
+		pending.clear()
+
+	for moment in circuit.moments:
+		mergeable = len(moment) > 0 and all(
+			len(operation.qubits) == 1 and not operation.gate._is_measurement_() for operation in moment.operations
+		)
+		if not mergeable:
+			flush()
+			result.append(moment)
+			continue
+		for operation in moment.operations:
+			matrix = operation.gate._unitary_()
+			if matrix is None:
+				flush()
+				result.append(operation)
+				continue
+			qubit = operation.qubits[0]
+			current = pending.get(qubit)
+			pending[qubit] = (
+				[list(row) for row in matrix] if current is None else matmul([list(row) for row in matrix], current)
+			)
+	flush()
+	return result
 
 
 def _as_predicate(category: Any) -> Predicate:
@@ -107,5 +154,6 @@ __all__ = [
 	"drop_empty_moments",
 	"drop_negligible_operations",
 	"expand_composite",
+	"merge_single_qubit_moments_to_phxz",
 	"stratified_circuit",
 ]

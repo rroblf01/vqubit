@@ -32,7 +32,7 @@ print(circuit)
 Measurement turns the quantum state into classical bits you can read:
 
 ```python
-circuit.append(vq.measure(q0, q1))
+circuit.append(vq.measure(q0, q1, key="result"))
 ```
 
 ## 4. Simulate it

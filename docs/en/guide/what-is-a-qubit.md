@@ -43,9 +43,7 @@ The **Hadamard** gate (`H`) puts a qubit into superposition: an equal split
 between `0` and `1`.
 
 ```python
-from vqubit import H   # ... (available from Phase 1 onwards)
-
-circuit = vq.Circuit(H(q0))
+circuit = vq.Circuit(vq.H(q0))
 state = vq.Simulator().simulate(circuit, qubit_order=[q0])
 print(state)
 ```

@@ -32,7 +32,7 @@ print(circuito)
 Medir convierte el estado cuántico en bits clásicos que puedes leer:
 
 ```python
-circuito.append(vq.measure(q0, q1))
+circuito.append(vq.measure(q0, q1, key="result"))
 ```
 
 ## 4. Simúlalo

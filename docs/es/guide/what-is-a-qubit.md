@@ -42,9 +42,7 @@ La puerta **Hadamard** (`H`) pone un qubit en superposición: a partes iguales
 entre `0` y `1`.
 
 ```python
-from vqubit import H   # ... (disponible a partir de la Fase 1)
-
-circuito = vq.Circuit(H(q0))
+circuito = vq.Circuit(vq.H(q0))
 estado = vq.Simulator().simulate(circuito, qubit_order=[q0])
 print(estado)
 ```

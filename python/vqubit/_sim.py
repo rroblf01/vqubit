@@ -1,28 +1,29 @@
 """Local simulators.
 
-The :class:`Simulator` evolves the state vector of a circuit in the native
-kernels. No third-party package is involved: a circuit is built, simulated and
-sampled entirely on your machine.
+The :class:`Simulator` evolves the state vector, the
+:class:`DensityMatrixSimulator` a density matrix, and both do the heavy linear
+algebra in the native kernels. States are kept as flat, interleaved buffers of
+``float`` (``[re0, im0, re1, im1, ...]``) end to end, so a simulation does not
+pay for converting Python objects on every gate and uses far less memory.
 
-This is the first simulator vqubit ships. Density-matrix and Clifford
-simulators arrive in a later phase; the API here is the one they will follow.
+No third-party package is involved: a circuit is built, simulated and sampled
+entirely on your machine.
 """
 
 from __future__ import annotations
 
-import math
 import random
 from collections import Counter
 from collections.abc import Callable, Sequence
 from typing import Any
 
+import vqubit_native as _native
+
 from ._circuits import Circuit
 from ._gates import MeasurementGate
-from ._linalg import apply_gate
+from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._ops import Moment
 from ._qubits import Qid
-
-StateVectorLike = "StateVector"
 
 
 def _resolve_qubits(circuit: Circuit, qubit_order: Sequence[Qid] | None) -> tuple[Qid, ...]:
@@ -48,28 +49,6 @@ def _initial_state_vector(initial_state: Any, dim: int) -> list[complex]:
 	if len(sequence) != dim:
 		raise ValueError(f"initial_state has length {len(sequence)}, expected {dim}")
 	return [complex(x) for x in sequence]
-
-
-def _subindex(basis: int, targets: Sequence[int], num_qubits: int) -> int:
-	result = 0
-	for target in targets:
-		result = (result << 1) | ((basis >> (num_qubits - 1 - target)) & 1)
-	return result
-
-
-def _collapse(state: list[complex], targets: Sequence[int], outcome: int, num_qubits: int) -> None:
-	norm = 0.0
-	for i in range(len(state)):
-		if _subindex(i, targets, num_qubits) == outcome:
-			norm += abs(state[i]) ** 2
-	if norm <= 0:
-		raise ValueError("cannot collapse onto an outcome with zero probability")
-	scale = 1.0 / math.sqrt(norm)
-	for i in range(len(state)):
-		if _subindex(i, targets, num_qubits) != outcome:
-			state[i] = 0j
-		else:
-			state[i] *= scale
 
 
 class StateVector:
@@ -173,6 +152,30 @@ class Result:
 		return f"vqubit.Result(keys={list(self._measurements)!r})"
 
 
+def _sample_outcome(probabilities: Sequence[float], rng: random.Random) -> int:
+	threshold = rng.random()
+	cumulative = 0.0
+	outcome = len(probabilities) - 1
+	for candidate, probability in enumerate(probabilities):
+		cumulative += probability
+		if threshold < cumulative:
+			outcome = candidate
+			break
+	return outcome
+
+
+def _record_bits(
+	gate: MeasurementGate,
+	outcome: int,
+	num_targets: int,
+	measurements: dict[str, list[list[int]]],
+) -> None:
+	bits = [(outcome >> (num_targets - 1 - k)) & 1 for k in range(num_targets)]
+	invert_mask = gate.full_invert_mask
+	bits = [bit ^ int(invert_mask[k]) for k, bit in enumerate(bits)]
+	measurements.setdefault(gate.key, []).append(bits)
+
+
 class Simulator:
 	"""A state-vector simulator.
 
@@ -192,11 +195,11 @@ class Simulator:
 	) -> SimulationResult:
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
-		dim = 1 << len(qubits)
-		state = _initial_state_vector(initial_state, dim)
+		num_qubits = len(qubits)
+		state = vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits))
 		for moment in program.moments:
-			self._apply_moment(state, moment, index, len(qubits), rng=None, measurements=None)
-		return SimulationResult(qubits, StateVector(state, qubits))
+			state = self._apply_moment(state, moment, index, num_qubits, rng=None, measurements=None)
+		return SimulationResult(qubits, StateVector(vector_from_flat(state), qubits))
 
 	def run(
 		self,
@@ -216,84 +219,39 @@ class Simulator:
 		rng = random.Random(self._seed if seed is None else seed)
 		records: dict[str, list[list[int]]] = {}
 		for _ in range(repetitions):
-			state = _initial_state_vector(initial_state, dim)
+			state = vector_to_flat(_initial_state_vector(initial_state, dim))
 			for moment in program.moments:
-				self._apply_moment(state, moment, index, num_qubits, rng=rng, measurements=records)
+				state = self._apply_moment(state, moment, index, num_qubits, rng=rng, measurements=records)
 		return Result(records)
 
 	sample = run
 
 	def _apply_moment(
 		self,
-		state: list[complex],
+		state: list[float],
 		moment: Moment,
 		index: dict[Qid, int],
 		num_qubits: int,
 		*,
 		rng: random.Random | None,
 		measurements: dict[str, list[list[int]]] | None,
-	) -> None:
+	) -> list[float]:
 		for operation in moment.operations:
 			gate = operation.gate
 			targets = [index[q] for q in operation.qubits]
 			if isinstance(gate, MeasurementGate):
 				if rng is None or measurements is None:
 					raise ValueError("simulate() cannot run a circuit with measurements; use run()")
-				self._measure(state, gate, targets, num_qubits, rng, measurements)
+				probabilities = _native.state_probabilities(state, targets, num_qubits)
+				outcome = _sample_outcome(probabilities, rng)
+				state = list(_native.collapse_state(state, targets, outcome, num_qubits))
+				_record_bits(gate, outcome, len(targets), measurements)
 				continue
 			matrix = gate._unitary_()
 			if matrix is None:
 				raise TypeError(f"{gate!r} has no unitary and cannot be simulated")
-			new_state = apply_gate(state, [list(row) for row in matrix], targets)
-			state[:] = new_state
-
-	def _measure(
-		self,
-		state: list[complex],
-		gate: MeasurementGate,
-		targets: Sequence[int],
-		num_qubits: int,
-		rng: random.Random,
-		measurements: dict[str, list[list[int]]],
-	) -> None:
-		num_targets = len(targets)
-		num_outcomes = 1 << num_targets
-		probabilities = [0.0] * num_outcomes
-		for i, amplitude in enumerate(state):
-			probabilities[_subindex(i, targets, num_qubits)] += abs(amplitude) ** 2
-		threshold = rng.random()
-		cumulative = 0.0
-		outcome = num_outcomes - 1
-		for candidate, probability in enumerate(probabilities):
-			cumulative += probability
-			if threshold < cumulative:
-				outcome = candidate
-				break
-		_collapse(state, targets, outcome, num_qubits)
-		bits = [(outcome >> (num_targets - 1 - k)) & 1 for k in range(num_targets)]
-		invert_mask = gate.full_invert_mask
-		bits = [bit ^ int(invert_mask[k]) for k, bit in enumerate(bits)]
-		measurements.setdefault(gate.key, []).append(bits)
-
-
-def _embed_operator(gate_matrix: list[list[complex]], targets: Sequence[int], num_qubits: int) -> list[list[complex]]:
-	dim = 1 << num_qubits
-	columns: list[list[complex]] = []
-	for column_index in range(dim):
-		column = [0j] * dim
-		column[column_index] = 1.0 + 0j
-		columns.append(apply_gate(column, gate_matrix, list(targets)))
-	return [[columns[j][i] for j in range(dim)] for i in range(dim)]
-
-
-def _matmul(a: list[list[complex]], b: list[list[complex]]) -> list[list[complex]]:
-	dim = len(a)
-	return [[sum(a[i][k] * b[k][j] for k in range(dim)) for j in range(dim)] for i in range(dim)]
-
-
-def _adjoint(a: list[list[complex]]) -> list[list[complex]]:
-	dim = len(a)
-	return [[a[j][i].conjugate() for j in range(dim)] for i in range(dim)]
+			state = list(_native.apply_gate(state, to_flat([list(row) for row in matrix]), num_qubits, targets))
+		return state
 
 
 class DensityMatrix:
@@ -342,6 +300,24 @@ class DensityMatrixTrialResult:
 		return f"vqubit.DensityMatrixTrialResult({self._final_density_matrix!r})"
 
 
+def _initial_density_flat(initial_state: Any, dim: int) -> list[float]:
+	vector = _initial_state_vector(initial_state, dim)
+	flat = [0.0] * (2 * dim * dim)
+	for i in range(dim):
+		re_i = vector[i].real
+		im_i = vector[i].imag
+		for j in range(dim):
+			re_j = vector[j].real
+			im_j = vector[j].imag
+			flat[2 * (i * dim + j)] = re_i * re_j + im_i * im_j
+			flat[2 * (i * dim + j) + 1] = im_i * re_j - re_i * im_j
+	return flat
+
+
+def _density_flat_to_nested(flat: Sequence[float], dim: int) -> list[list[complex]]:
+	return [[complex(flat[2 * (i * dim + j)], flat[2 * (i * dim + j) + 1]) for j in range(dim)] for i in range(dim)]
+
+
 class DensityMatrixSimulator:
 	"""A simulator that evolves a density matrix, so it can run noisy circuits."""
 
@@ -358,10 +334,11 @@ class DensityMatrixSimulator:
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
-		density = _initial_density_matrix(initial_state, 1 << num_qubits)
+		density = _initial_density_flat(initial_state, 1 << num_qubits)
 		for moment in program.moments:
-			self._apply_moment(density, moment, index, num_qubits, rng=None, measurements=None)
-		return DensityMatrixTrialResult(qubits, DensityMatrix(density, qubits))
+			density = self._apply_moment(density, moment, index, num_qubits, rng=None, measurements=None)
+		matrix = DensityMatrix(_density_flat_to_nested(density, 1 << num_qubits), qubits)
+		return DensityMatrixTrialResult(qubits, matrix)
 
 	def run(
 		self,
@@ -377,96 +354,47 @@ class DensityMatrixSimulator:
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
-		dim = 1 << num_qubits
 		rng = random.Random(self._seed if seed is None else seed)
 		records: dict[str, list[list[int]]] = {}
 		for _ in range(repetitions):
-			density = _initial_density_matrix(initial_state, dim)
+			density = _initial_density_flat(initial_state, 1 << num_qubits)
 			for moment in program.moments:
-				self._apply_moment(density, moment, index, num_qubits, rng=rng, measurements=records)
+				density = self._apply_moment(density, moment, index, num_qubits, rng=rng, measurements=records)
 		return Result(records)
 
 	sample = run
 
 	def _apply_moment(
 		self,
-		density: list[list[complex]],
+		density: list[float],
 		moment: Moment,
 		index: dict[Qid, int],
 		num_qubits: int,
 		*,
 		rng: random.Random | None,
 		measurements: dict[str, list[list[int]]] | None,
-	) -> None:
+	) -> list[float]:
+		dim = 1 << num_qubits
 		for operation in moment.operations:
 			gate = operation.gate
 			targets = [index[q] for q in operation.qubits]
 			if isinstance(gate, MeasurementGate):
 				if rng is None or measurements is None:
 					raise ValueError("simulate() cannot run a circuit with measurements; use run()")
-				self._measure(density, gate, targets, num_qubits, rng, measurements)
+				probabilities = _native.density_probabilities(density, targets, num_qubits)
+				outcome = _sample_outcome(probabilities, rng)
+				density = list(_native.density_collapse(density, targets, outcome, num_qubits))
+				_record_bits(gate, outcome, len(targets), measurements)
 				continue
-			kraus = gate._kraus_()
-			if kraus is None:
+			operators = gate._kraus_()
+			if operators is None:
 				matrix = gate._unitary_()
 				if matrix is None:
 					raise TypeError(f"{gate!r} has neither a unitary nor Kraus operators")
-				kraus = [matrix]
-			updated = [[0j] * len(density) for _ in range(len(density))]
-			for operator in kraus:
-				embedded = _embed_operator([list(row) for row in operator], targets, num_qubits)
-				updated = [
-					[updated[i][j] + entry for j, entry in enumerate(row)]
-					for i, row in enumerate(_matmul(_matmul(embedded, density), _adjoint(embedded)))
-				]
-			density[:] = updated
-
-	def _measure(
-		self,
-		density: list[list[complex]],
-		gate: MeasurementGate,
-		targets: Sequence[int],
-		num_qubits: int,
-		rng: random.Random,
-		measurements: dict[str, list[list[int]]],
-	) -> None:
-		dim = len(density)
-		num_targets = len(targets)
-		num_outcomes = 1 << num_targets
-		probabilities = [0.0] * num_outcomes
-		for i in range(dim):
-			probabilities[_subindex(i, targets, num_qubits)] += density[i][i].real
-		threshold = rng.random()
-		cumulative = 0.0
-		outcome = num_outcomes - 1
-		for candidate, probability in enumerate(probabilities):
-			cumulative += probability
-			if threshold < cumulative:
-				outcome = candidate
-				break
-		_collapse_density(density, targets, outcome, num_qubits)
-		bits = [(outcome >> (num_targets - 1 - k)) & 1 for k in range(num_targets)]
-		invert_mask = gate.full_invert_mask
-		bits = [bit ^ int(invert_mask[k]) for k, bit in enumerate(bits)]
-		measurements.setdefault(gate.key, []).append(bits)
-
-
-def _initial_density_matrix(initial_state: Any, dim: int) -> list[list[complex]]:
-	vector = _initial_state_vector(initial_state, dim)
-	return [[vector[i] * vector[j].conjugate() for j in range(dim)] for i in range(dim)]
-
-
-def _collapse_density(density: list[list[complex]], targets: Sequence[int], outcome: int, num_qubits: int) -> None:
-	keep = [_subindex(i, targets, num_qubits) == outcome for i in range(len(density))]
-	norm = 0.0
-	for i in range(len(density)):
-		if keep[i]:
-			norm += density[i][i].real
-	if norm <= 0:
-		raise ValueError("cannot collapse onto an outcome with zero probability")
-	for i in range(len(density)):
-		for j in range(len(density)):
-			if keep[i] and keep[j]:
-				density[i][j] /= norm
-			else:
-				density[i][j] = 0j
+				operators = [matrix]
+			embedded: list[float] = []
+			for operator in operators:
+				rows = [list(row) for row in operator]
+				embedded.extend(_native.embed_operator(to_flat(rows), len(rows), targets, num_qubits))
+			density = list(_native.channel(density, embedded, len(operators), dim))
+		return density

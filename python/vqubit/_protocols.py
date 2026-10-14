@@ -8,16 +8,19 @@ on. They accept gates, operations and circuits wherever that makes sense.
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from itertools import product
 from typing import Any
+
+import vqubit_native as _native
 
 from ._circuits import Circuit
 from ._gates import Gate, MatrixGate, MeasurementGate, ZPowGate
-from ._linalg import Matrix, apply_gate, dagger, identity, kron, matmul
+from ._linalg import Matrix, dagger, from_flat, identity, matmul, to_flat, vector_from_flat, vector_to_flat
 from ._ops import GateOperation, Moment, Operation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._pauli import Pauli, PauliString, PauliSum
 from ._qubits import LineQubit, Qid
+
+_PAULI_BY_DIGIT = (Pauli.I, Pauli.X, Pauli.Y, Pauli.Z)
 
 
 def _as_matrix(unitary_like: Any) -> Matrix | None:
@@ -70,20 +73,18 @@ def _circuit_unitary(circuit: Circuit) -> Matrix:
 
 
 def _moment_unitary(moment: Moment, index: dict[Qid, int], dim: int) -> Matrix:
-	columns: list[list[complex]] = []
-	for j in range(dim):
-		column: list[complex] = [0j] * dim
-		column[j] = 1.0 + 0j
-		for operation in moment.operations:
-			if isinstance(operation.gate, MeasurementGate):
-				raise TypeError("a circuit with measurements has no unitary")
-			gate_matrix = _as_matrix(operation.gate._unitary_())
-			if gate_matrix is None:
-				raise TypeError(f"{operation.gate!r} has no unitary")
-			targets = [index[q] for q in operation.qubits]
-			column = apply_gate(column, gate_matrix, targets)
-		columns.append(column)
-	return [[columns[j][i] for j in range(dim)] for i in range(dim)]
+	num_qubits = dim.bit_length() - 1
+	result = identity(dim)
+	for operation in moment.operations:
+		if isinstance(operation.gate, MeasurementGate):
+			raise TypeError("a circuit with measurements has no unitary")
+		gate_matrix = _as_matrix(operation.gate._unitary_())
+		if gate_matrix is None:
+			raise TypeError(f"{operation.gate!r} has no unitary")
+		targets = [index[q] for q in operation.qubits]
+		embedded = from_flat(_native.embed_operator(to_flat(gate_matrix), len(gate_matrix), targets, num_qubits), dim)
+		result = matmul(embedded, result)
+	return result
 
 
 def num_qubits(value: Any) -> int:
@@ -297,29 +298,15 @@ def pauli_expansion(value: Any, *, atol: float = 1e-8) -> PauliSum:
 	else:
 		qubits = tuple(LineQubit(i) for i in range(num_qubits))
 
+	coefficients = _native.pauli_expansion(to_flat(matrix), num_qubits)
 	terms: dict[PauliString, complex] = {}
-	for assignment in product((Pauli.I, Pauli.X, Pauli.Y, Pauli.Z), repeat=num_qubits):
-		probe: Matrix = [[1 + 0j]]
-		for pauli in assignment:
-			probe = kron(probe, pauli.matrix())
-		trace = 0j
-		for i in range(dim):
-			for j in range(dim):
-				trace += probe[i][j] * matrix[j][i]
-		coefficient = trace / dim
-		if abs(coefficient) > atol:
-			terms[PauliString(dict(zip(qubits, assignment, strict=True)))] = coefficient
+	for combo in range(1 << (2 * num_qubits)):
+		coefficient = complex(coefficients[2 * combo], coefficients[2 * combo + 1])
+		if abs(coefficient) <= atol:
+			continue
+		assignment = tuple(_PAULI_BY_DIGIT[(combo >> (2 * (num_qubits - 1 - q))) & 3] for q in range(num_qubits))
+		terms[PauliString(dict(zip(qubits, assignment, strict=True)))] = coefficient
 	return PauliSum(terms)
-
-
-def _embed_single(gate_matrix: Matrix, target: int, num_qubits: int) -> Matrix:
-	dim = 1 << num_qubits
-	columns: list[list[complex]] = []
-	for column_index in range(dim):
-		column = [0j] * dim
-		column[column_index] = 1.0 + 0j
-		columns.append(apply_gate(column, gate_matrix, [target]))
-	return [[columns[j][i] for j in range(dim)] for i in range(dim)]
 
 
 def phase_by(value: Any, phase_exponent: float, qubit_index: int) -> MatrixGate:
@@ -336,7 +323,9 @@ def phase_by(value: Any, phase_exponent: float, qubit_index: int) -> MatrixGate:
 	rotation = ZPowGate(exponent=phase_exponent)._unitary_()
 	if rotation is None:
 		raise TypeError("phase_by needs a numeric phase exponent")
-	embedding = _embed_single(rotation, qubit_index, num_qubits)
+	embedding = from_flat(
+		_native.embed_operator(to_flat([list(row) for row in rotation]), 2, [qubit_index], num_qubits), dim
+	)
 	return MatrixGate(matmul(matmul(embedding, matrix), dagger(embedding)))
 
 
@@ -350,8 +339,7 @@ def apply_unitary(value: Any, state_vector: Sequence[complex]) -> list[complex]:
 	dim = len(matrix)
 	if len(state_vector) != dim:
 		raise ValueError(f"state_vector has length {len(state_vector)}, expected {dim}")
-	column = [complex(x) for x in state_vector]
-	return [sum(matrix[i][j] * column[j] for j in range(dim)) for i in range(dim)]
+	return vector_from_flat(_native.matvec(to_flat(matrix), vector_to_flat(state_vector), dim))
 
 
 def kraus(value: Any) -> list[Matrix]:

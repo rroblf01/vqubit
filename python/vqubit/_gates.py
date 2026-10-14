@@ -19,6 +19,7 @@ from typing import Any
 
 from ._linalg import Matrix, identity
 from ._ops import GateOperation
+from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._qubits import Qid
 from ._value import value_equality
 
@@ -54,6 +55,12 @@ class Gate:
 
 	def _measurement_key_name_(self) -> str | None:
 		return None
+
+	def _is_parameterized_(self) -> bool:
+		return False
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> Gate:
+		return self
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return (str(self),) * self.num_qubits
@@ -119,9 +126,9 @@ class Gate:
 class EigenGate(Gate):
 	"""A single-qubit gate defined by its eigencomponents and an exponent."""
 
-	def __init__(self, *, exponent: float = 1.0, global_shift: float = 0.0) -> None:
-		self._exponent = float(exponent)
-		self._global_shift = float(global_shift)
+	def __init__(self, *, exponent: Any = 1.0, global_shift: Any = 0.0) -> None:
+		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
+		self._global_shift = global_shift if is_symbolic(global_shift) else float(global_shift)
 
 	@property
 	def exponent(self) -> float:
@@ -134,7 +141,9 @@ class EigenGate(Gate):
 	def _eigen_components(self) -> list[tuple[float, Matrix]]:
 		raise NotImplementedError
 
-	def _unitary_(self) -> Matrix:
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
 		result: Matrix = [[0j, 0j], [0j, 0j]]
 		for eigenvalue, projector in self._eigen_components():
 			if eigenvalue == 0:
@@ -147,6 +156,17 @@ class EigenGate(Gate):
 					result[i][j] += coefficient * projector[i][j]
 		return result
 
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._exponent) or is_symbolic(self._global_shift)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> EigenGate:
+		if not self._is_parameterized_():
+			return self
+		return type(self)(
+			exponent=resolve_value(self._exponent, resolver),
+			global_shift=resolve_value(self._global_shift, resolver),
+		)
+
 	def _value_equality_values_(self) -> Any:
 		return (self._exponent, self._global_shift)
 
@@ -157,12 +177,17 @@ class EigenGate(Gate):
 		return type(self)(exponent=-self._exponent, global_shift=self._global_shift)
 
 	def __str__(self) -> str:
-		return f"{type(self).__name__}(exponent={_clean(self._exponent)})"
+		return f"{type(self).__name__}(exponent={_describe(self._exponent)})"
 
 
 def _clean(value: float) -> float | int:
 	"""Return ``value`` as an int when it is a whole number, else as a float."""
 	return int(value) if abs(value - round(value)) < _EPS else float(value)
+
+
+def _describe(value: Any) -> str:
+	"""Render a numeric or symbolic parameter for a gate's ``str``."""
+	return str(value) if is_symbolic(value) else str(_clean(value))
 
 
 class XPowGate(EigenGate):
@@ -210,10 +235,11 @@ class ZPowGate(EigenGate):
 		]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		if abs(self._exponent - 0.5) < _EPS:
-			return ("S",)
-		if abs(self._exponent - 0.25) < _EPS:
-			return ("T",)
+		if not is_symbolic(self._exponent):
+			if abs(self._exponent - 0.5) < _EPS:
+				return ("S",)
+			if abs(self._exponent - 0.25) < _EPS:
+				return ("T",)
 		return ("Z",)
 
 
@@ -235,97 +261,79 @@ class HPowGate(EigenGate):
 
 
 @value_equality
-class RxGate(Gate):
+class _RotationGate(Gate):
+	"""Shared machinery for the single-axis rotation gates."""
+
+	_axis_symbol = "R"
+
+	def __init__(self, radians: Any) -> None:
+		self._radians = radians if is_symbolic(radians) else float(radians)
+
+	@property
+	def radians(self) -> Any:
+		return self._radians
+
+	def _num_qubits_(self) -> int:
+		return 1
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		return self._rotation_matrix(self._radians)
+
+	def _rotation_matrix(self, radians: float) -> Matrix:
+		raise NotImplementedError
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._radians)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> _RotationGate:
+		if not self._is_parameterized_():
+			return self
+		return type(self)(resolve_value(self._radians, resolver))
+
+	def _value_equality_values_(self) -> Any:
+		return (self._radians,)
+
+	def _inverse_(self) -> _RotationGate:
+		return type(self)(-self._radians)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return (self._axis_symbol,)
+
+	def __str__(self) -> str:
+		return f"{self._axis_symbol}({_describe(self._radians)})"
+
+
+class RxGate(_RotationGate):
 	"""A rotation of ``radians`` around the X axis."""
 
-	def __init__(self, radians: float) -> None:
-		self._radians = float(radians)
+	_axis_symbol = "Rx"
 
-	@property
-	def radians(self) -> float:
-		return self._radians
-
-	def _num_qubits_(self) -> int:
-		return 1
-
-	def _unitary_(self) -> Matrix:
-		c = math.cos(self._radians / 2)
-		s = math.sin(self._radians / 2)
+	def _rotation_matrix(self, radians: float) -> Matrix:
+		c = math.cos(radians / 2)
+		s = math.sin(radians / 2)
 		return [[c + 0j, -1j * s], [-1j * s, c + 0j]]
 
-	def _value_equality_values_(self) -> Any:
-		return (self._radians,)
 
-	def _inverse_(self) -> RxGate:
-		return RxGate(-self._radians)
-
-	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("Rx",)
-
-	def __str__(self) -> str:
-		return f"Rx({_clean(self._radians)})"
-
-
-@value_equality
-class RyGate(Gate):
+class RyGate(_RotationGate):
 	"""A rotation of ``radians`` around the Y axis."""
 
-	def __init__(self, radians: float) -> None:
-		self._radians = float(radians)
+	_axis_symbol = "Ry"
 
-	@property
-	def radians(self) -> float:
-		return self._radians
-
-	def _num_qubits_(self) -> int:
-		return 1
-
-	def _unitary_(self) -> Matrix:
-		c = math.cos(self._radians / 2)
-		s = math.sin(self._radians / 2)
+	def _rotation_matrix(self, radians: float) -> Matrix:
+		c = math.cos(radians / 2)
+		s = math.sin(radians / 2)
 		return [[c + 0j, -s + 0j], [s + 0j, c + 0j]]
 
-	def _value_equality_values_(self) -> Any:
-		return (self._radians,)
 
-	def _inverse_(self) -> RyGate:
-		return RyGate(-self._radians)
-
-	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("Ry",)
-
-	def __str__(self) -> str:
-		return f"Ry({_clean(self._radians)})"
-
-
-@value_equality
-class RzGate(Gate):
+class RzGate(_RotationGate):
 	"""A rotation of ``radians`` around the Z axis."""
 
-	def __init__(self, radians: float) -> None:
-		self._radians = float(radians)
+	_axis_symbol = "Rz"
 
-	@property
-	def radians(self) -> float:
-		return self._radians
-
-	def _num_qubits_(self) -> int:
-		return 1
-
-	def _unitary_(self) -> Matrix:
-		return [[cmath.exp(-0.5j * self._radians), 0j], [0j, cmath.exp(0.5j * self._radians)]]
-
-	def _value_equality_values_(self) -> Any:
-		return (self._radians,)
-
-	def _inverse_(self) -> RzGate:
-		return RzGate(-self._radians)
-
-	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("Rz",)
-
-	def __str__(self) -> str:
-		return f"Rz({_clean(self._radians)})"
+	def _rotation_matrix(self, radians: float) -> Matrix:
+		return [[cmath.exp(-0.5j * radians), 0j], [0j, cmath.exp(0.5j * radians)]]
 
 
 @value_equality
@@ -622,17 +630,17 @@ CSWAP: CSWAPGate = CSWAPGate()
 FREDKIN: CSWAPGate = CSWAPGate()
 
 
-def Rx(radians: float) -> RxGate:
+def Rx(radians: Any) -> RxGate:
 	"""Return a rotation of ``radians`` around the X axis."""
 	return RxGate(radians)
 
 
-def Ry(radians: float) -> RyGate:
+def Ry(radians: Any) -> RyGate:
 	"""Return a rotation of ``radians`` around the Y axis."""
 	return RyGate(radians)
 
 
-def Rz(radians: float) -> RzGate:
+def Rz(radians: Any) -> RzGate:
 	"""Return a rotation of ``radians`` around the Z axis."""
 	return RzGate(radians)
 

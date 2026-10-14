@@ -14,6 +14,7 @@ from ._circuits import Circuit
 from ._gates import Gate, MeasurementGate
 from ._linalg import Matrix, apply_gate, identity, matmul
 from ._ops import GateOperation, Moment, Operation
+from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._pauli import PauliString
 from ._qubits import Qid
 
@@ -210,3 +211,30 @@ def commutes(a: Any, b: Any, atol: float = 1e-8) -> bool:
 def definitely_commutes(a: Any, b: Any, atol: float = 1e-8) -> bool:
 	"""Report whether ``a`` and ``b`` are known to commute."""
 	return commutes(a, b, atol=atol)
+
+
+def is_parameterized(value: Any) -> bool:
+	"""Report whether ``value`` depends on a symbolic parameter."""
+	if isinstance(value, Circuit):
+		return any(is_parameterized(operation) for operation in value.all_operations())
+	if isinstance(value, Moment):
+		return any(is_parameterized(operation) for operation in value.operations)
+	if isinstance(value, (GateOperation, Operation)):
+		return bool(value.gate._is_parameterized_())
+	if isinstance(value, Gate):
+		return bool(value._is_parameterized_())
+	return is_symbolic(value)
+
+
+def resolve_parameters(value: Any, resolver: ParamResolver) -> Any:
+	"""Substitute parameters in ``value`` using ``resolver``."""
+	if isinstance(value, Circuit):
+		moments = [Moment([resolve_parameters(op, resolver) for op in moment.operations]) for moment in value.moments]
+		return Circuit.from_moments(moments)
+	if isinstance(value, Moment):
+		return Moment([resolve_parameters(op, resolver) for op in value.operations])
+	if isinstance(value, (GateOperation, Operation)):
+		return resolve_parameters(value.gate, resolver).on(*value.qubits)
+	if isinstance(value, Gate):
+		return value._resolve_parameters_(resolver)
+	return resolve_value(value, resolver)

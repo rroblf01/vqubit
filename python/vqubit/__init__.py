@@ -63,6 +63,7 @@ from ._gates import (
 	measure_each,
 )
 from ._ops import GateOperation, Moment, Operation
+from ._parameter import Parameter, ParamResolver
 from ._pauli import Pauli, PauliString
 from ._protocols import (
 	commutes,
@@ -71,11 +72,13 @@ from ._protocols import (
 	has_unitary,
 	inverse,
 	is_measurement,
+	is_parameterized,
 	measurement_key_names,
 	measurement_keys_touched,
 	num_qubits,
 	pow,
 	qid_shape,
+	resolve_parameters,
 	unitary,
 )
 from ._qubits import GridQubit, LineQubit, NamedQubit, Qid, Qubit
@@ -114,6 +117,8 @@ __all__ = [
 	"Moment",
 	"NamedQubit",
 	"Operation",
+	"ParamResolver",
+	"Parameter",
 	"Pauli",
 	"PauliString",
 	"Qid",
@@ -144,6 +149,7 @@ __all__ = [
 	"has_unitary",
 	"inverse",
 	"is_measurement",
+	"is_parameterized",
 	"measure",
 	"measure_each",
 	"measurement_key_names",
@@ -151,6 +157,7 @@ __all__ = [
 	"num_qubits",
 	"pow",
 	"qid_shape",
+	"resolve_parameters",
 	"unitary",
 	"value_equality",
 ]

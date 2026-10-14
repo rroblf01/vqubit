@@ -17,7 +17,7 @@ import math
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from ._linalg import Matrix, identity
+from ._linalg import Matrix, identity, kron
 from ._ops import GateOperation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._qubits import Qid
@@ -540,6 +540,103 @@ class CSWAPGate(_FixedGate):
 		return _swap_basis_states(3, [(0b101, 0b110)])
 
 
+_PAULI_2X2: dict[str, Matrix] = {
+	"X": [[0j, 1 + 0j], [1 + 0j, 0j]],
+	"Y": [[0j, -1j], [1j, 0j]],
+	"Z": [[1 + 0j, 0j], [0j, -1 + 0j]],
+}
+
+
+@value_equality
+class _PauliProductPowGate(Gate):
+	"""A two-qubit gate that is a power of a product of two Paulis."""
+
+	_letter = "X"
+	_symbols: tuple[str, ...] = ()
+
+	def __init__(self, *, exponent: Any = 1.0) -> None:
+		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
+
+	@property
+	def exponent(self) -> Any:
+		return self._exponent
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		pauli = kron(_PAULI_2X2[self._letter], _PAULI_2X2[self._letter])
+		# Eigenvalues +1 and -1, so the power is a projection combination with no
+		# global phase: at exponent 1 this is the Pauli product itself.
+		phase = cmath.exp(1j * math.pi * self._exponent)
+		a = (1 + phase) / 2
+		b = (1 - phase) / 2
+		return [[(a if i == j else 0j) + b * pauli[i][j] for j in range(4)] for i in range(4)]
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._exponent)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> _PauliProductPowGate:
+		if not self._is_parameterized_():
+			return self
+		return type(self)(exponent=resolve_value(self._exponent, resolver))
+
+	def _value_equality_values_(self) -> Any:
+		return (self._exponent,)
+
+	def __pow__(self, power: float) -> _PauliProductPowGate:
+		return type(self)(exponent=self._exponent * power)
+
+	def _inverse_(self) -> _PauliProductPowGate:
+		return type(self)(exponent=-self._exponent)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return self._symbols
+
+	def __str__(self) -> str:
+		return f"{type(self).__name__}(exponent={_describe(self._exponent)})"
+
+
+class XXPowGate(_PauliProductPowGate):
+	"""A power of ``X⊗X``, an Ising interaction."""
+
+	_letter = "X"
+	_symbols = ("XX", "XX")
+
+
+class YYPowGate(_PauliProductPowGate):
+	"""A power of ``Y⊗Y``."""
+
+	_letter = "Y"
+	_symbols = ("YY", "YY")
+
+
+class ZZPowGate(_PauliProductPowGate):
+	"""A power of ``Z⊗Z``."""
+
+	_letter = "Z"
+	_symbols = ("ZZ", "ZZ")
+
+
+class ISWAPGate(_FixedGate):
+	"""The iSWAP gate: swap two qubits, adding an ``i`` phase to ``|01>`` and ``|10>``."""
+
+	@staticmethod
+	def _base_symbols() -> tuple[str, ...]:
+		return ("iSwap", "iSwap")
+
+	@staticmethod
+	def _base_matrix() -> Matrix:
+		return [
+			[1.0 + 0j, 0j, 0j, 0j],
+			[0j, 0j, 1j, 0j],
+			[0j, 1j, 0j, 0j],
+			[0j, 0j, 0j, 1.0 + 0j],
+		]
+
+
 @value_equality
 class ControlledGate(Gate):
 	"""A gate applied only when the control qubits have the given values."""
@@ -628,6 +725,10 @@ CCX: CCXGate = CCXGate()
 TOFFOLI: CCXGate = CCXGate()
 CSWAP: CSWAPGate = CSWAPGate()
 FREDKIN: CSWAPGate = CSWAPGate()
+XX: XXPowGate = XXPowGate()
+YY: YYPowGate = YYPowGate()
+ZZ: ZZPowGate = ZZPowGate()
+ISWAP: ISWAPGate = ISWAPGate()
 
 
 def Rx(radians: Any) -> RxGate:

@@ -66,6 +66,10 @@ class Gate:
 		"""Return a decomposition into simpler operations, or ``None``."""
 		return None
 
+	def _kraus_(self) -> list[Matrix] | None:
+		"""Return the Kraus operators of a channel, or ``None`` for a gate."""
+		return None
+
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return (str(self),) * self.num_qubits
 

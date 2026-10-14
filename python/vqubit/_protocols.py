@@ -352,3 +352,31 @@ def apply_unitary(value: Any, state_vector: Sequence[complex]) -> list[complex]:
 		raise ValueError(f"state_vector has length {len(state_vector)}, expected {dim}")
 	column = [complex(x) for x in state_vector]
 	return [sum(matrix[i][j] * column[j] for j in range(dim)) for i in range(dim)]
+
+
+def kraus(value: Any) -> list[Matrix]:
+	"""Return the Kraus operators of ``value``.
+
+	A unitary gate has exactly one Kraus operator, its unitary matrix; a channel
+	has as many as it needs.
+	"""
+	if isinstance(value, (GateOperation, Operation)):
+		return kraus(value.gate)
+	if isinstance(value, Gate):
+		operators = value._kraus_()
+		if operators is not None:
+			return [[list(row) for row in operator] for operator in operators]
+		matrix = _as_matrix(value._unitary_())
+		if matrix is not None:
+			return [matrix]
+		raise TypeError(f"{value!r} has no Kraus operators")
+	raise TypeError(f"{value!r} has no Kraus operators")
+
+
+def has_kraus(value: Any) -> bool:
+	"""Report whether ``value`` has Kraus operators."""
+	try:
+		kraus(value)
+	except TypeError:
+		return False
+	return True

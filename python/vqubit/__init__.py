@@ -91,6 +91,7 @@ from ._gates import (
 	measure_each,
 )
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
+from ._kak import kak_decomposition, two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
 from ._ops import GateOperation, Moment, Operation
 from ._optimizers import (
 	single_qubit_matrix_to_gates,
@@ -262,6 +263,7 @@ __all__ = [
 	"is_measurement",
 	"is_parameterized",
 	"json_cirq_type",
+	"kak_decomposition",
 	"kraus",
 	"measure",
 	"measure_each",
@@ -291,6 +293,8 @@ __all__ = [
 	"stratified_circuit",
 	"to_json",
 	"to_json_gzip",
+	"two_qubit_matrix_to_cz_operations",
+	"two_qubit_matrix_to_operations",
 	"unitary",
 	"value_equality",
 ]

@@ -1,0 +1,102 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build abi3 wheel (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: build the wheel
+        uses: rroblf01/vcraft/actions/vcraft-action@v1
+        with:
+          args: build --release --abi3 3.11
+
+      - name: upload the wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheel-${{ matrix.os }}
+          path: dist/*.whl
+
+  test:
+    name: python ${{ matrix.python }} (${{ matrix.os }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: fetch the wheel
+        uses: actions/download-artifact@v6
+        with:
+          name: wheel-${{ matrix.os }}
+          path: dist
+
+      - name: install the wheel and pytest
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          python -m pip install pytest
+
+      - name: run the test suite
+        run: pytest
+
+  lint:
+    name: lint and type check
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.15"
+
+      - name: fetch the wheel
+        uses: actions/download-artifact@v6
+        with:
+          name: wheel-ubuntu-latest
+          path: dist
+
+      - name: install the wheel and the tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          python -m pip install ruff ty
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format --check
+        run: ruff format --check .
+
+      - name: ty check
+        run: ty check

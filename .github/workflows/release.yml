@@ -1,0 +1,79 @@
+name: release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: "cp311-abi3-manylinux-x86_64"
+            os: "ubuntu-latest"
+            container: "ghcr.io/rroblf01/vcraft-manylinux:1.1.1"
+            args: "build --release --abi3 3.11 --target linux-x86_64-gnu --manylinux 2_28 --interpreter /opt/python/cp311-cp311/bin/python"
+          - target: "cp311-abi3-manylinux-aarch64"
+            os: "ubuntu-24.04-arm"
+            container: "ghcr.io/rroblf01/vcraft-manylinux:1.1.1"
+            args: "build --release --abi3 3.11 --target linux-aarch64-gnu --manylinux 2_28 --interpreter /opt/python/cp311-cp311/bin/python"
+          - target: "cp311-abi3-musllinux-x86_64"
+            os: "ubuntu-latest"
+            container: "ghcr.io/rroblf01/vcraft-musllinux:1.1.1"
+            args: "build --release --abi3 3.11 --target linux-x86_64-musl --musllinux 1_2 --interpreter /usr/bin/python3"
+          - target: "cp311-abi3-musllinux-aarch64"
+            os: "ubuntu-24.04-arm"
+            container: "ghcr.io/rroblf01/vcraft-musllinux:1.1.1"
+            args: "build --release --abi3 3.11 --target linux-aarch64-musl --musllinux 1_2 --interpreter /usr/bin/python3"
+          - target: "cp311-abi3-macosx-arm64"
+            os: "macos-26"
+            python: "3.11"
+            args: "build --release --abi3 3.11"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        if: ${{ matrix.container == '' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: build
+        uses: rroblf01/vcraft/actions/vcraft-action@v1
+        with:
+          container: ${{ matrix.container }}
+          args: ${{ matrix.args }}
+
+      - name: upload the wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*.whl
+
+  publish:
+    name: publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/vqubit
+    permissions:
+      id-token: write
+    steps:
+      - name: collect the wheels
+        uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist

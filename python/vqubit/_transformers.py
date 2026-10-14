@@ -84,7 +84,20 @@ def merge_single_qubit_moments_to_phxz(circuit: Circuit, *, atol: float = 1e-8) 
 		)
 		if not mergeable:
 			flush()
-			result.append(moment)
+			compiled: list[Operation] = []
+			for operation in moment.operations:
+				if len(operation.qubits) != 1 or operation.gate._is_measurement_():
+					compiled.append(operation)
+					continue
+				matrix = operation.gate._unitary_()
+				if matrix is None:
+					compiled.append(operation)
+				elif not _matrix_is_identity([list(row) for row in matrix], atol):
+					compiled.append(
+						single_qubit_matrix_to_phxz([list(row) for row in matrix], atol=atol).on(operation.qubits[0])
+					)
+			if compiled:
+				result.append(compiled)
 			continue
 		for operation in moment.operations:
 			matrix = operation.gate._unitary_()

@@ -134,6 +134,12 @@ from ._sim import (
 	StateVector,
 )
 from ._study import Linspace, Points, Sampler, run, run_sweep, sample
+from ._target_gatesets import (
+	CNOTTargetGateset,
+	CZTargetGateset,
+	TargetGateset,
+	optimize_for_target_gateset,
+)
 from ._transformers import (
 	align_left,
 	align_right,
@@ -165,8 +171,10 @@ __all__ = [
 	"BitPhaseFlipChannel",
 	"CCXGate",
 	"CNOTGate",
+	"CNOTTargetGateset",
 	"CSWAPGate",
 	"CZGate",
+	"CZTargetGateset",
 	"Circuit",
 	"CliffordSimulationResult",
 	"CliffordSimulator",
@@ -222,6 +230,7 @@ __all__ = [
 	"Simulator",
 	"StateVector",
 	"T",
+	"TargetGateset",
 	"X",
 	"XPowGate",
 	"XXPowGate",
@@ -260,6 +269,7 @@ __all__ = [
 	"measurement_keys_touched",
 	"merge_single_qubit_moments_to_phxz",
 	"num_qubits",
+	"optimize_for_target_gateset",
 	"pauli_expansion",
 	"phase_by",
 	"phase_damp",

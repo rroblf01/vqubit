@@ -36,6 +36,10 @@ class TargetGateset:
 		"""Rewrite an entangling gate the target cannot run, or return ``None``."""
 		return None
 
+	def synthesize_two_qubit(self, operation: Operation) -> list[Operation] | None:
+		"""Synthesize an arbitrary two-qubit gate, or return ``None`` if unsupported."""
+		return None
+
 	def compile_operation(self, operation: Operation) -> list[Operation]:
 		"""Return ``operation`` rewritten in the target gate set."""
 		gate = operation.gate
@@ -52,6 +56,9 @@ class TargetGateset:
 		converted = self.convert_two_qubit(operation)
 		if converted is not None:
 			return converted
+		synthesized = self.synthesize_two_qubit(operation)
+		if synthesized is not None:
+			return synthesized
 		raise TypeError(f"{gate!r} is not in the {type(self).__name__} target gate set")
 
 	def optimize_circuit(self, circuit: Circuit) -> Circuit:
@@ -77,6 +84,18 @@ class CZTargetGateset(TargetGateset):
 			return [H.on(target), CZGate().on(control, target), H.on(target)]
 		return None
 
+	def synthesize_two_qubit(self, operation: Operation) -> list[Operation] | None:
+		from ._kak import two_qubit_matrix_to_cz_operations
+
+		matrix = operation.gate._unitary_()
+		if matrix is None:
+			return None
+		return two_qubit_matrix_to_cz_operations(
+			[list(row) for row in matrix],
+			qubits=(operation.qubits[0], operation.qubits[1]),
+			atol=self.atol,
+		)
+
 
 class CNOTTargetGateset(TargetGateset):
 	"""A gate set whose only entangling gate is ``CNOT``."""
@@ -90,6 +109,18 @@ class CNOTTargetGateset(TargetGateset):
 			control, target = operation.qubits
 			return [H.on(target), CNOTGate().on(control, target), H.on(target)]
 		return None
+
+	def synthesize_two_qubit(self, operation: Operation) -> list[Operation] | None:
+		from ._kak import two_qubit_matrix_to_operations
+
+		matrix = operation.gate._unitary_()
+		if matrix is None:
+			return None
+		return two_qubit_matrix_to_operations(
+			[list(row) for row in matrix],
+			qubits=(operation.qubits[0], operation.qubits[1]),
+			atol=self.atol,
+		)
 
 
 def optimize_for_target_gateset(circuit: Circuit, gateset: TargetGateset | None = None) -> Circuit:

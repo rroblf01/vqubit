@@ -58,8 +58,9 @@ def test_measurements_are_preserved() -> None:
 
 def test_unsupported_two_qubit_gate_raises() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
+	# The base gate set has no entangling gate and no synthesizer.
 	with pytest.raises(TypeError):
-		vqubit.optimize_for_target_gateset(vqubit.Circuit(vqubit.ISWAP(q0, q1)), vqubit.CZTargetGateset())
+		vqubit.optimize_for_target_gateset(vqubit.Circuit(vqubit.ISWAP(q0, q1)), vqubit.TargetGateset())
 
 
 def test_default_target_is_cz() -> None:

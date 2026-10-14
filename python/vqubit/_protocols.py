@@ -13,6 +13,7 @@ from ._circuits import Circuit
 from ._gates import Gate, MeasurementGate
 from ._linalg import Matrix, apply_gate, identity, matmul
 from ._ops import GateOperation, Moment, Operation
+from ._pauli import PauliString
 from ._qubits import Qid
 
 
@@ -41,6 +42,8 @@ def unitary(value: Any) -> Matrix:
 		if matrix is None:
 			raise TypeError(f"{value!r} has no unitary")
 		return matrix
+	if isinstance(value, PauliString):
+		return value.matrix()
 	raise TypeError(f"{value!r} has no unitary")
 
 
@@ -99,8 +102,8 @@ def qid_shape(value: Any) -> tuple[int, ...]:
 def inverse(value: Any) -> Any:
 	"""Return the inverse of ``value``."""
 	if isinstance(value, Gate):
-		gate_inverse = value._inverse_() if hasattr(value, "_inverse_") else NotImplemented
-		if gate_inverse is NotImplemented:
+		gate_inverse = value._inverse_()
+		if gate_inverse is None:
 			raise TypeError(f"{value!r} has no inverse")
 		return gate_inverse
 	if isinstance(value, (GateOperation, Operation)):

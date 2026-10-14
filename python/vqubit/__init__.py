@@ -24,11 +24,18 @@ from vqubit_native import version as _native_version
 
 from ._circuits import Circuit, FrozenCircuit, InsertStrategy
 from ._gates import (
+	CCX,
 	CNOT,
+	CSWAP,
 	CX,
 	CZ,
+	FREDKIN,
 	SWAP,
+	TOFFOLI,
+	CCXGate,
 	CNOTGate,
+	ControlledGate,
+	CSWAPGate,
 	CZGate,
 	EigenGate,
 	Gate,
@@ -56,6 +63,7 @@ from ._gates import (
 	measure_each,
 )
 from ._ops import GateOperation, Moment, Operation
+from ._pauli import Pauli, PauliString
 from ._protocols import decompose, has_unitary, inverse, num_qubits, pow, qid_shape, unitary
 from ._qubits import GridQubit, LineQubit, NamedQubit, Qid, Qubit
 from ._sim import Result, SimulationResult, Simulator, StateVector
@@ -64,13 +72,20 @@ from ._value import value_equality
 __version__ = _native_version()
 
 __all__ = [
+	"CCX",
 	"CNOT",
+	"CSWAP",
 	"CX",
 	"CZ",
+	"FREDKIN",
 	"SWAP",
+	"TOFFOLI",
+	"CCXGate",
 	"CNOTGate",
+	"CSWAPGate",
 	"CZGate",
 	"Circuit",
+	"ControlledGate",
 	"EigenGate",
 	"FrozenCircuit",
 	"Gate",
@@ -86,6 +101,8 @@ __all__ = [
 	"Moment",
 	"NamedQubit",
 	"Operation",
+	"Pauli",
+	"PauliString",
 	"Qid",
 	"Qubit",
 	"Result",

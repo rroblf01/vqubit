@@ -17,7 +17,7 @@ import math
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from ._linalg import Matrix
+from ._linalg import Matrix, identity
 from ._ops import GateOperation
 from ._qubits import Qid
 from ._value import value_equality
@@ -43,6 +43,10 @@ class Gate:
 		return self._qid_shape_()
 
 	def _unitary_(self) -> Matrix | None:
+		return None
+
+	def _inverse_(self) -> Gate | None:
+		"""Return the inverse gate, or ``None`` when there is none."""
 		return None
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
@@ -73,6 +77,27 @@ class Gate:
 			for k in range(0, len(target), self.num_qubits):
 				operations.append(self.on(*target[k : k + self.num_qubits]))
 		return tuple(operations)
+
+	def controlled_by(
+		self,
+		*control_qubits: Qid | Iterable[Qid],
+		control_values: Sequence[bool | int] | None = None,
+	) -> ControlledGate:
+		"""Return this gate with additional control qubits.
+
+		The number of controls comes from the qubits passed here; the actual
+		qubits are supplied when the returned gate is applied with ``on``, the
+		controls first.
+		"""
+		controls: list[Qid] = []
+		for qubit in control_qubits:
+			if isinstance(qubit, Qid):
+				controls.append(qubit)
+			else:
+				controls.extend(qubit)
+		values = None if control_values is None else tuple(bool(v) for v in control_values)
+		num_controls = len(controls) if controls else (len(values) if values is not None else 0)
+		return ControlledGate(self, num_controls=num_controls, control_values=values)
 
 	def __pow__(self, power: float) -> Gate:
 		raise NotImplementedError(f"{type(self).__name__} does not support powers")
@@ -308,9 +333,10 @@ class IdentityGate(Gate):
 		return self._num_qubits
 
 	def _unitary_(self) -> Matrix | None:
-		if self._num_qubits == 1:
-			return [[1.0 + 0j if i == j else 0j for j in range(2)] for i in range(2)]
-		return None
+		return identity(1 << self._num_qubits)
+
+	def _inverse_(self) -> IdentityGate:
+		return IdentityGate(self._num_qubits)
 
 	def _value_equality_values_(self) -> Any:
 		return (self._num_qubits,)
@@ -375,8 +401,12 @@ class _FixedGate(Gate):
 	def _base_symbols() -> tuple[str, ...]:
 		raise NotImplementedError
 
-	def _num_qubits_(self) -> int:
+	@staticmethod
+	def _base_num_qubits() -> int:
 		return 2
+
+	def _num_qubits_(self) -> int:
+		return self._base_num_qubits()
 
 	def _unitary_(self) -> Matrix:
 		return [list(row) for row in self._base_matrix()]
@@ -445,6 +475,123 @@ class SWAPGate(_FixedGate):
 		]
 
 
+def _swap_basis_states(num_qubits: int, swaps: Sequence[tuple[int, int]]) -> Matrix:
+	"""Return the identity on ``num_qubits`` with the listed basis states swapped."""
+	matrix = identity(1 << num_qubits)
+	for a, b in swaps:
+		matrix[a][a] = 0j
+		matrix[b][b] = 0j
+		matrix[a][b] = 1.0 + 0j
+		matrix[b][a] = 1.0 + 0j
+	return matrix
+
+
+class CCXGate(_FixedGate):
+	"""The Toffoli gate: ``X`` on the target when both controls are ``1``."""
+
+	@staticmethod
+	def _base_num_qubits() -> int:
+		return 3
+
+	@staticmethod
+	def _base_symbols() -> tuple[str, ...]:
+		return ("@", "@", "X")
+
+	@staticmethod
+	def _base_matrix() -> Matrix:
+		# Swap |110> and |111>, the two states whose two controls are set.
+		return _swap_basis_states(3, [(0b110, 0b111)])
+
+
+class CSWAPGate(_FixedGate):
+	"""The Fredkin gate: swap two qubits when the control is ``1``."""
+
+	@staticmethod
+	def _base_num_qubits() -> int:
+		return 3
+
+	@staticmethod
+	def _base_symbols() -> tuple[str, ...]:
+		return ("@", "×", "×")
+
+	@staticmethod
+	def _base_matrix() -> Matrix:
+		# Swap |101> and |110>, which share the control at 1.
+		return _swap_basis_states(3, [(0b101, 0b110)])
+
+
+@value_equality
+class ControlledGate(Gate):
+	"""A gate applied only when the control qubits have the given values."""
+
+	def __init__(
+		self,
+		sub_gate: Gate,
+		*,
+		num_controls: int,
+		control_values: Sequence[bool | int] | None = None,
+	) -> None:
+		if num_controls < 1:
+			raise ValueError("ControlledGate needs at least one control qubit")
+		if not isinstance(sub_gate, Gate):
+			raise TypeError("ControlledGate needs a Gate to control")
+		values = (True,) * num_controls if control_values is None else tuple(bool(v) for v in control_values)
+		if len(values) != num_controls:
+			raise ValueError(f"control_values has length {len(values)}, expected {num_controls}")
+		self._sub_gate = sub_gate
+		self._num_controls = num_controls
+		self._control_values = values
+
+	@property
+	def sub_gate(self) -> Gate:
+		return self._sub_gate
+
+	@property
+	def num_controls(self) -> int:
+		return self._num_controls
+
+	@property
+	def control_values(self) -> tuple[bool, ...]:
+		return self._control_values
+
+	def _num_qubits_(self) -> int:
+		return self._num_controls + self._sub_gate.num_qubits
+
+	def _unitary_(self) -> Matrix | None:
+		sub = self._sub_gate._unitary_()
+		if sub is None:
+			return None
+		sub = [list(row) for row in sub]
+		block = len(sub)
+		blocks = 1 << self._num_controls
+		total = blocks * block
+		target = 0
+		for value in self._control_values:
+			target = (target << 1) | int(value)
+		offset = target * block
+		matrix = identity(total)
+		for i in range(block):
+			for j in range(block):
+				matrix[offset + i][offset + j] = sub[i][j]
+		return matrix
+
+	def _inverse_(self) -> ControlledGate | None:
+		sub_inverse = self._sub_gate._inverse_()
+		if sub_inverse is None:
+			return None
+		return ControlledGate(sub_inverse, num_controls=self._num_controls, control_values=self._control_values)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		controls = tuple("@" if value else "○" for value in self._control_values)
+		return controls + self._sub_gate._diagram_symbols_(qubits[self._num_controls :])
+
+	def _value_equality_values_(self) -> Any:
+		return (self._sub_gate, self._num_controls, self._control_values)
+
+	def __str__(self) -> str:
+		return f"ControlledGate({self._sub_gate})"
+
+
 # Instances, as in Cirq.
 X: XPowGate = XPowGate()
 Y: YPowGate = YPowGate()
@@ -457,6 +604,10 @@ CNOT: CNOTGate = CNOTGate()
 CX: CNOTGate = CNOTGate()
 CZ: CZGate = CZGate()
 SWAP: SWAPGate = SWAPGate()
+CCX: CCXGate = CCXGate()
+TOFFOLI: CCXGate = CCXGate()
+CSWAP: CSWAPGate = CSWAPGate()
+FREDKIN: CSWAPGate = CSWAPGate()
 
 
 def Rx(radians: float) -> RxGate:

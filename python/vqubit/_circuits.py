@@ -122,6 +122,18 @@ class Circuit:
 	def all_qubits(self) -> tuple[Qid, ...]:
 		return tuple(sorted({q for moment in self._moments for q in moment.qubits}))
 
+	def unitary(self) -> Any:
+		"""Return the full unitary matrix over the sorted circuit qubits."""
+		from ._protocols import unitary
+
+		return unitary(self)
+
+	def to_text_diagram(self) -> str:
+		"""Return an ASCII diagram of the circuit."""
+		from ._diagram import to_text_diagram
+
+		return to_text_diagram(self)
+
 	def __iter__(self) -> Iterator[Moment]:
 		return iter(self._moments)
 

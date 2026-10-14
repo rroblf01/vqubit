@@ -220,8 +220,7 @@ def measurement_keys_touched(value: Any) -> set[str]:
 def _commutator_is_zero(a: Matrix, b: Matrix, atol: float) -> bool:
 	ab = matmul(a, b)
 	ba = matmul(b, a)
-	dim = len(ab)
-	return all(abs(ab[i][j] - ba[i][j]) <= atol for i in range(dim) for j in range(dim))
+	return bool(_native.matrix_allclose(to_flat(ab), to_flat(ba), len(ab), atol))
 
 
 def commutes(a: Any, b: Any, atol: float = 1e-8) -> bool:

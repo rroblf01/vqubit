@@ -11,8 +11,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+import vqubit_native as _native
+
 from ._circuits import Circuit
-from ._linalg import matmul
+from ._linalg import matmul, to_flat
 from ._ops import Moment, Operation
 from ._optimizers import single_qubit_matrix_to_phxz
 from ._protocols import decompose
@@ -27,13 +29,7 @@ def drop_empty_moments(circuit: Circuit) -> Circuit:
 
 
 def _matrix_is_identity(matrix: list[list[complex]], atol: float) -> bool:
-	dim = len(matrix)
-	for i in range(dim):
-		for j in range(dim):
-			expected = 1.0 + 0j if i == j else 0j
-			if abs(matrix[i][j] - expected) > atol:
-				return False
-	return True
+	return bool(_native.is_identity_matrix(to_flat(matrix), len(matrix), atol))
 
 
 def drop_negligible_operations(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:

@@ -77,13 +77,8 @@ def apply_gate(state: Sequence[complex], gate: Sequence[Sequence[complex]], targ
 
 def is_unitary(matrix: Sequence[Sequence[complex]], tol: float = 1e-9) -> bool:
 	dim = len(matrix)
-	product = from_flat(_native.matmul(to_flat(matrix), to_flat(dagger(matrix)), dim), dim)
-	for i in range(dim):
-		for j in range(dim):
-			expected = 1.0 + 0j if i == j else 0j
-			if abs(product[i][j] - expected) > tol:
-				return False
-	return True
+	product = _native.matmul(to_flat(matrix), to_flat(dagger(matrix)), dim)
+	return bool(_native.is_identity_matrix(product, dim, tol))
 
 
 def transpose(matrix: Sequence[Sequence[complex]]) -> Matrix:

@@ -153,15 +153,7 @@ class Result:
 
 
 def _sample_outcome(probabilities: Sequence[float], rng: random.Random) -> int:
-	threshold = rng.random()
-	cumulative = 0.0
-	outcome = len(probabilities) - 1
-	for candidate, probability in enumerate(probabilities):
-		cumulative += probability
-		if threshold < cumulative:
-			outcome = candidate
-			break
-	return outcome
+	return int(_native.sample_outcome(list(probabilities), rng.random()))
 
 
 def _record_bits(

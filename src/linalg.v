@@ -420,3 +420,50 @@ pub fn pauli_expansion(matrix []f64, num_qubits int) []f64 {
 	}
 	return out
 }
+
+// sample_outcome returns the index where the cumulative probability first
+// exceeds the uniform draw `u`, i.e. one sample from a categorical
+// distribution given its probabilities.
+@[vc_fn]
+pub fn sample_outcome(probabilities []f64, u f64) int {
+	mut cumulative := 0.0
+	for i, p in probabilities {
+		cumulative += p
+		if u < cumulative {
+			return i
+		}
+	}
+	return probabilities.len - 1
+}
+
+// is_identity_matrix reports (as 1 or 0) whether a `dim`-by-`dim` complex
+// matrix is the identity within `atol`.
+@[vc_fn]
+pub fn is_identity_matrix(matrix []f64, dim int, atol f64) int {
+	for i in 0 .. dim {
+		for j in 0 .. dim {
+			re := matrix[2 * (i * dim + j)]
+			im := matrix[2 * (i * dim + j) + 1]
+			expected := if i == j { 1.0 } else { 0.0 }
+			if math.abs(re - expected) > atol || math.abs(im) > atol {
+				return 0
+			}
+		}
+	}
+	return 1
+}
+
+// matrix_allclose reports (as 1 or 0) whether two `dim`-by-`dim` complex
+// matrices agree within `atol`.
+@[vc_fn]
+pub fn matrix_allclose(a []f64, b []f64, dim int, atol f64) int {
+	for i in 0 .. dim {
+		for j in 0 .. dim {
+			idx := 2 * (i * dim + j)
+			if math.abs(a[idx] - b[idx]) > atol || math.abs(a[idx + 1] - b[idx + 1]) > atol {
+				return 0
+			}
+		}
+	}
+	return 1
+}

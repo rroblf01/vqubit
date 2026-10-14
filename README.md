@@ -1,6 +1,37 @@
 # vqubit
 
-A Python extension written in V.
+**A dependency-free quantum computing framework for Python, written in [V](https://vlang.io).**
+
+vqubit lets you build quantum circuits and run them on local simulators with
+**zero third-party dependencies**. The numerically heavy work — linear algebra,
+gate matrices and simulation — is written in V and compiled into a native
+extension; the public API is dependency-free Python on top of it.
+
+The API mirrors [Cirq](https://quantumai.google/cirq) closely, so if you know
+Cirq you already know vqubit.
+
+```python
+import vqubit as vq
+
+q0, q1 = vq.LineQubit.range(2)
+circuit = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1), vq.measure(q0, q1))
+print(circuit)
+
+result = vq.Simulator().run(circuit, repetitions=100)
+print(result.histogram(key="result"))
+```
+
+## Highlights
+
+- **No dependencies.** `pip install vqubit` installs nothing else. Everything
+  runs offline, on your machine.
+- **Native speed.** Linear algebra, gate matrices and simulation are compiled
+  from V, not interpreted.
+- **One wheel, every Python.** A single abi3 wheel covers CPython 3.11–3.15 per
+  platform.
+- **Cross-platform.** Linux and macOS (x86-64 and ARM).
+- **Cirq-compatible API.** Build, transform and simulate circuits the way Cirq
+  documents them.
 
 ## Installation
 
@@ -8,27 +39,42 @@ A Python extension written in V.
 $ pip install vqubit
 ```
 
-## Usage
+Requires Python 3.11 or newer. No other packages are installed.
 
-```python
->>> import vqubit as m
->>> m.greet('world')
-'Hello, world!'
->>> m.add(2, 3)
-5
->>> c = m.Counter()
->>> c.increment()
-1
-```
+## Documentation
+
+The full documentation is published at **https://rroblf01.github.io/vqubit/**
+in both [Spanish](https://rroblf01.github.io/vqubit/es/) and
+[English](https://rroblf01.github.io/vqubit/en/). It starts from "what is a
+qubit?" and builds up to circuits and simulation.
+
+## Status
+
+vqubit is **alpha**. The core object model (qubits, gates, operations, moments
+and circuits), the protocols and the local simulators are being built out
+phase by phase. See [CHANGELOG.md](CHANGELOG.md) for what is in place.
+
+Windows support is currently blocked by the build tool [vcraft](https://github.com/rroblf01/vcraft),
+which does not yet produce Windows wheels.
 
 ## Development
 
-Written in [V](https://vlang.io) and built with [vcraft](https://github.com/rroblf01/vcraft).
+vqubit is built with [vcraft](https://github.com/rroblf01/vcraft). You need the
+V compiler and a C compiler.
 
 ```console
 $ python -m venv .venv && source .venv/bin/activate
-$ vcraft develop          # build and install into the active virtualenv
-$ python main.py          # run the example, which imports the extension
-$ python -m unittest      # run the tests under tests/
-$ vcraft build --release  # write a wheel into dist/
+$ pip install vcraft
+$ pip install -r requirements-dev.txt
+$ vcraft develop            # build and install into the active virtualenv
+$ python main.py            # run the example
+$ pytest                    # run the test suite
+$ vcraft build --release    # write an abi3 wheel into dist/
 ```
+
+The development setup is the only thing that needs the V toolchain — the
+published wheels need nothing.
+
+## License
+
+MIT. See [LICENSE](LICENSE). © Ricardo Robles Fernández.

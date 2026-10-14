@@ -1,0 +1,103 @@
+site_name: vqubit
+site_url: https://rroblf01.github.io/vqubit/
+site_description: >-
+  A dependency-free quantum computing framework for Python, written in V.
+repo_url: https://github.com/rroblf01/vqubit
+repo_name: rroblf01/vqubit
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Ricardo Robles Fernández — MIT License
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: es
+          default: true
+          name: Español
+          build: true
+          nav_translations:
+            Home: Inicio
+            Installation: Instalación
+            Quickstart: Inicio rápido
+            Guide: Guía
+            What is a qubit?: ¿Qué es un qubit?
+            Quantum gates: Puertas cuánticas
+            Circuits: Circuitos
+            Examples: Ejemplos
+            Bell state: Estado de Bell
+            API reference: Referencia de la API
+        - locale: en
+          name: English
+          build: true
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [python]
+          options:
+            show_source: false
+            show_root_heading: true
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quickstart: quickstart.md
+  - Guide:
+      - What is a qubit?: guide/what-is-a-qubit.md
+      - Quantum gates: guide/quantum-gates.md
+      - Circuits: guide/circuits.md
+  - Examples:
+      - Bell state: examples/bell-state.md
+  - API reference: api/index.md

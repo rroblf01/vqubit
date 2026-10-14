@@ -9,8 +9,8 @@ copyright: Copyright &copy; 2026 Ricardo Robles Fernández — MIT License
 
 theme:
   name: material
-  logo: assets/logo.svg
-  favicon: assets/logo.svg
+  logo: assets/favicon.ico
+  favicon: assets/favicon.ico
   features:
     - navigation.tabs
     - navigation.sections

@@ -128,14 +128,56 @@ def pow(value: Any, exponent: float) -> Any:
 
 
 def decompose(value: Any) -> list[Any]:
-	"""Return a decomposition of ``value`` into simpler operations."""
+	"""Return a decomposition of ``value`` into simpler operations.
+
+	Gates that can be expanded (the Toffoli, the Fredkin, ...) are recursively
+	replaced by their decomposition; everything else is returned unchanged.
+	"""
 	if isinstance(value, Circuit):
-		return list(value.all_operations())
+		result: list[Any] = []
+		for operation in value.all_operations():
+			result.extend(_decompose_operation(operation))
+		return result
 	if isinstance(value, (GateOperation, Operation)):
-		return [value]
+		return _decompose_operation(value)
 	if isinstance(value, Gate):
 		return [value]
 	raise TypeError(f"cannot decompose {value!r}")
+
+
+def decompose_once(value: Any) -> list[Any]:
+	"""Return one level of decomposition of ``value``."""
+	if isinstance(value, (GateOperation, Operation)):
+		return _decompose_level(value)
+	if isinstance(value, Gate):
+		return [value]
+	if isinstance(value, Circuit):
+		result: list[Any] = []
+		for operation in value.all_operations():
+			result.extend(_decompose_level(operation))
+		return result
+	raise TypeError(f"cannot decompose {value!r}")
+
+
+def _decompose_level(operation: Operation) -> list[Any]:
+	gate = operation.gate
+	expanded = gate._decompose_(operation.qubits)
+	if expanded is None:
+		return [operation]
+	return list(expanded)
+
+
+def _decompose_operation(operation: Operation, depth: int = 0) -> list[Any]:
+	if depth >= 10:
+		return [operation]
+	gate = operation.gate
+	expanded = gate._decompose_(operation.qubits)
+	if expanded is None:
+		return [operation]
+	result: list[Any] = []
+	for child in expanded:
+		result.extend(_decompose_operation(child, depth + 1))
+	return result
 
 
 def is_measurement(value: Any) -> bool:

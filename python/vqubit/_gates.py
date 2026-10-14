@@ -62,6 +62,10 @@ class Gate:
 	def _resolve_parameters_(self, resolver: ParamResolver) -> Gate:
 		return self
 
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation] | None:
+		"""Return a decomposition into simpler operations, or ``None``."""
+		return None
+
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return (str(self),) * self.num_qubits
 
@@ -522,6 +526,26 @@ class CCXGate(_FixedGate):
 		# Swap |110> and |111>, the two states whose two controls are set.
 		return _swap_basis_states(3, [(0b110, 0b111)])
 
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation]:
+		control0, control1, target = qubits
+		return [
+			H.on(target),
+			CNOT.on(control1, target),
+			(T**-1).on(target),
+			CNOT.on(control0, target),
+			T.on(target),
+			CNOT.on(control1, target),
+			(T**-1).on(target),
+			CNOT.on(control0, target),
+			T.on(control1),
+			T.on(target),
+			H.on(target),
+			CNOT.on(control0, control1),
+			T.on(control0),
+			(T**-1).on(control1),
+			CNOT.on(control0, control1),
+		]
+
 
 class CSWAPGate(_FixedGate):
 	"""The Fredkin gate: swap two qubits when the control is ``1``."""
@@ -538,6 +562,14 @@ class CSWAPGate(_FixedGate):
 	def _base_matrix() -> Matrix:
 		# Swap |101> and |110>, which share the control at 1.
 		return _swap_basis_states(3, [(0b101, 0b110)])
+
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation]:
+		control, first, second = qubits
+		return [
+			CNOT.on(second, first),
+			CCX.on(control, first, second),
+			CNOT.on(second, first),
+		]
 
 
 _PAULI_2X2: dict[str, Matrix] = {

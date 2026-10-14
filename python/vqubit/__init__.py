@@ -76,6 +76,7 @@ from ._pauli import Pauli, PauliString
 from ._protocols import (
 	commutes,
 	decompose,
+	decompose_once,
 	definitely_commutes,
 	has_unitary,
 	inverse,
@@ -161,6 +162,7 @@ __all__ = [
 	"__version__",
 	"commutes",
 	"decompose",
+	"decompose_once",
 	"definitely_commutes",
 	"has_unitary",
 	"inverse",

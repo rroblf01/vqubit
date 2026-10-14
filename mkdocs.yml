@@ -57,6 +57,11 @@ plugins:
             What is a qubit?: ¿Qué es un qubit?
             Quantum gates: Puertas cuánticas
             Circuits: Circuitos
+            Simulation: Simulación
+            Noise: Ruido
+            Optimization: Optimización
+            Serialization: Serialización
+            Devices: Dispositivos
             Examples: Ejemplos
             Bell state: Estado de Bell
             API reference: Referencia de la API
@@ -98,6 +103,11 @@ nav:
       - What is a qubit?: guide/what-is-a-qubit.md
       - Quantum gates: guide/quantum-gates.md
       - Circuits: guide/circuits.md
+      - Simulation: guide/simulation.md
+      - Noise: guide/noise.md
+      - Optimization: guide/optimization.md
+      - Serialization: guide/serialization.md
+      - Devices: guide/devices.md
   - Examples:
       - Bell state: examples/bell-state.md
   - API reference: api/index.md

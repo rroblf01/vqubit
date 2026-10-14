@@ -1,19 +1,12 @@
-"""Run this after `vcraft develop` to see the extension in action."""
+"""Run this after `vcraft develop` to check the extension is importable."""
 
 from __future__ import annotations
 
-import vqubit as m
+import vqubit
 
 
 def main() -> None:
-	print(m.greet("world"))
-	print(m.add(2, 3))
-	counter = m.Counter()
-	print(counter.increment())
-	try:
-		m.parse_int("not a number")
-	except ValueError as exc:
-		print(f"parse_int: {exc}")
+	print(f"vqubit {vqubit.__version__}")
 
 
 if __name__ == "__main__":

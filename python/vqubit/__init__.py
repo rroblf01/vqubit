@@ -90,6 +90,7 @@ from ._gates import (
 )
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._ops import GateOperation, Moment, Operation
+from ._optimizers import single_qubit_matrix_to_gates, single_qubit_matrix_to_operations
 from ._parameter import Parameter, ParamResolver
 from ._pauli import Pauli, PauliString, PauliSum
 from ._protocols import (
@@ -124,6 +125,15 @@ from ._sim import (
 	SimulationResult,
 	Simulator,
 	StateVector,
+)
+from ._study import Linspace, Points, Sampler, run, run_sweep, sample
+from ._transformers import (
+	align_left,
+	align_right,
+	drop_empty_moments,
+	drop_negligible_operations,
+	expand_composite,
+	stratified_circuit,
 )
 from ._value import value_equality
 
@@ -171,6 +181,7 @@ __all__ = [
 	"IdentityGate",
 	"InsertStrategy",
 	"LineQubit",
+	"Linspace",
 	"MatrixGate",
 	"MeasurementGate",
 	"Moment",
@@ -183,6 +194,7 @@ __all__ = [
 	"PauliSum",
 	"PhaseDampingChannel",
 	"PhaseFlipChannel",
+	"Points",
 	"Qid",
 	"Qubit",
 	"ResetChannel",
@@ -195,6 +207,7 @@ __all__ = [
 	"RzGate",
 	"S",
 	"SWAPGate",
+	"Sampler",
 	"SimulationResult",
 	"Simulator",
 	"StateVector",
@@ -209,6 +222,8 @@ __all__ = [
 	"ZPowGate",
 	"ZZPowGate",
 	"__version__",
+	"align_left",
+	"align_right",
 	"amplitude_damp",
 	"apply_unitary",
 	"bit_flip",
@@ -219,6 +234,9 @@ __all__ = [
 	"decompose_once",
 	"definitely_commutes",
 	"depolarize",
+	"drop_empty_moments",
+	"drop_negligible_operations",
+	"expand_composite",
 	"has_kraus",
 	"has_unitary",
 	"inverse",
@@ -242,6 +260,12 @@ __all__ = [
 	"read_json_gzip",
 	"reset",
 	"resolve_parameters",
+	"run",
+	"run_sweep",
+	"sample",
+	"single_qubit_matrix_to_gates",
+	"single_qubit_matrix_to_operations",
+	"stratified_circuit",
 	"to_json",
 	"to_json_gzip",
 	"unitary",

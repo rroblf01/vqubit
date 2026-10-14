@@ -16,6 +16,4 @@ the package name.
 
 The heavy lifting (linear algebra, gate matrices and simulation) lives in the
 native extension `vqubit_native`. You do not need to import it directly: the
-`vqubit` package wraps it.
-
-::: vqubit_native
+`vqubit` package wraps it, and its contents are an implementation detail.

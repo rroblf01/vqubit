@@ -16,6 +16,4 @@ paquete.
 
 El trabajo pesado (álgebra lineal, matrices de puertas y simulación) vive en la
 extensión nativa `vqubit_native`. No necesitas importarla directamente: el
-paquete `vqubit` la envuelve.
-
-::: vqubit_native
+paquete `vqubit` la envuelve, y su contenido es un detalle de implementación.

@@ -90,7 +90,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install dist/*.whl
-          python -m pip install ruff ty
+          python -m pip install pytest ruff ty
 
       - name: ruff check
         run: ruff check .

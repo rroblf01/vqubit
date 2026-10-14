@@ -90,6 +90,7 @@ from ._protocols import (
 	resolve_parameters,
 	unitary,
 )
+from ._qasm import qasm
 from ._qubits import GridQubit, LineQubit, NamedQubit, Qid, Qubit
 from ._sim import Result, SimulationResult, Simulator, StateVector
 from ._value import value_equality
@@ -174,6 +175,7 @@ __all__ = [
 	"measurement_keys_touched",
 	"num_qubits",
 	"pow",
+	"qasm",
 	"qid_shape",
 	"resolve_parameters",
 	"unitary",

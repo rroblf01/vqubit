@@ -22,6 +22,9 @@ ignore = [
 	"E501", # line length is handled by the formatter
 	"W191", # the project indents with tabs, matching the V sources
 ]
+# The multiplication sign is used on purpose in the SWAP diagram, the way Cirq
+# draws it.
+allowed-confusables = ["×"]
 
 [lint.isort]
 known-first-party = ["vqubit"]

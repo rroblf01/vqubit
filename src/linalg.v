@@ -482,7 +482,28 @@ fn channel_subspace_2x2_into(mut rho []f64, ops []f64, num_ops int, targets []in
 	dim := 1 << num_qubits
 	bit := 1 << (num_qubits - 1 - targets[0])
 	bitd := bit * dim
+	// Hoist the Kraus coefficients out of the block loop: they are the same for
+	// every block, and the per-op slice would otherwise be rebuilt each time.
+	mut k00r := []f64{len: num_ops, init: 0.0}
+	mut k00i := []f64{len: num_ops, init: 0.0}
+	mut k01r := []f64{len: num_ops, init: 0.0}
+	mut k01i := []f64{len: num_ops, init: 0.0}
+	mut k10r := []f64{len: num_ops, init: 0.0}
+	mut k10i := []f64{len: num_ops, init: 0.0}
+	mut k11r := []f64{len: num_ops, init: 0.0}
+	mut k11i := []f64{len: num_ops, init: 0.0}
 	unsafe {
+		for o in 0 .. num_ops {
+			k00r[o] = ops[o * 8]
+			k00i[o] = ops[o * 8 + 1]
+			k01r[o] = ops[o * 8 + 2]
+			k01i[o] = ops[o * 8 + 3]
+			k10r[o] = ops[o * 8 + 4]
+			k10i[o] = ops[o * 8 + 5]
+			k11r[o] = ops[o * 8 + 6]
+			k11i[o] = ops[o * 8 + 7]
+		}
+		p := &f64(rho.data)
 		for rb in 0 .. dim {
 			if (rb & bit) != 0 {
 				continue
@@ -497,14 +518,14 @@ fn channel_subspace_2x2_into(mut rho []f64, ops []f64, num_ops int, targets []in
 				i01 := i00 + 2 * bit
 				i10 := i00 + 2 * bitd
 				i11 := i10 + 2 * bit
-				a00r := rho[i00]
-				a00i := rho[i00 + 1]
-				a01r := rho[i01]
-				a01i := rho[i01 + 1]
-				a10r := rho[i10]
-				a10i := rho[i10 + 1]
-				a11r := rho[i11]
-				a11i := rho[i11 + 1]
+				a00r := p[i00]
+				a00i := p[i00 + 1]
+				a01r := p[i01]
+				a01i := p[i01 + 1]
+				a10r := p[i10]
+				a10i := p[i10 + 1]
+				a11r := p[i11]
+				a11i := p[i11 + 1]
 				mut b00r := 0.0
 				mut b00i := 0.0
 				mut b01r := 0.0
@@ -514,42 +535,41 @@ fn channel_subspace_2x2_into(mut rho []f64, ops []f64, num_ops int, targets []in
 				mut b11r := 0.0
 				mut b11i := 0.0
 				for o in 0 .. num_ops {
-					k := ops[o * 8..(o + 1) * 8]
-					k00r := k[0]
-					k00i := k[1]
-					k01r := k[2]
-					k01i := k[3]
-					k10r := k[4]
-					k10i := k[5]
-					k11r := k[6]
-					k11i := k[7]
+					kr00 := k00r[o]
+					ki00 := k00i[o]
+					kr01 := k01r[o]
+					ki01 := k01i[o]
+					kr10 := k10r[o]
+					ki10 := k10i[o]
+					kr11 := k11r[o]
+					ki11 := k11i[o]
 					// C = K A.
-					c00r := k00r * a00r - k00i * a00i + k01r * a10r - k01i * a10i
-					c00i := k00r * a00i + k00i * a00r + k01r * a10i + k01i * a10r
-					c01r := k00r * a01r - k00i * a01i + k01r * a11r - k01i * a11i
-					c01i := k00r * a01i + k00i * a01r + k01r * a11i + k01i * a11r
-					c10r := k10r * a00r - k10i * a00i + k11r * a10r - k11i * a10i
-					c10i := k10r * a00i + k10i * a00r + k11r * a10i + k11i * a10r
-					c11r := k10r * a01r - k10i * a01i + k11r * a11r - k11i * a11i
-					c11i := k10r * a01i + k10i * a01r + k11r * a11i + k11i * a11r
+					c00r := kr00 * a00r - ki00 * a00i + kr01 * a10r - ki01 * a10i
+					c00i := kr00 * a00i + ki00 * a00r + kr01 * a10i + ki01 * a10r
+					c01r := kr00 * a01r - ki00 * a01i + kr01 * a11r - ki01 * a11i
+					c01i := kr00 * a01i + ki00 * a01r + kr01 * a11i + ki01 * a11r
+					c10r := kr10 * a00r - ki10 * a00i + kr11 * a10r - ki11 * a10i
+					c10i := kr10 * a00i + ki10 * a00r + kr11 * a10i + ki11 * a10r
+					c11r := kr10 * a01r - ki10 * a01i + kr11 * a11r - ki11 * a11i
+					c11i := kr10 * a01i + ki10 * a01r + kr11 * a11i + ki11 * a11r
 					// B += C K^dagger, with K^dagger[d][j] = conj(K[j][d]).
-					b00r += c00r * k00r + c00i * k00i + c01r * k01r + c01i * k01i
-					b00i += c00i * k00r - c00r * k00i + c01i * k01r - c01r * k01i
-					b01r += c00r * k10r + c00i * k10i + c01r * k11r + c01i * k11i
-					b01i += c00i * k10r - c00r * k10i + c01i * k11r - c01r * k11i
-					b10r += c10r * k00r + c10i * k00i + c11r * k01r + c11i * k01i
-					b10i += c10i * k00r - c10r * k00i + c11i * k01r - c11r * k01i
-					b11r += c10r * k10r + c10i * k10i + c11r * k11r + c11i * k11i
-					b11i += c10i * k10r - c10r * k10i + c11i * k11r - c11r * k11i
+					b00r += c00r * kr00 + c00i * ki00 + c01r * kr01 + c01i * ki01
+					b00i += c00i * kr00 - c00r * ki00 + c01i * kr01 - c01r * ki01
+					b01r += c00r * kr10 + c00i * ki10 + c01r * kr11 + c01i * ki11
+					b01i += c00i * kr10 - c00r * ki10 + c01i * kr11 - c01r * ki11
+					b10r += c10r * kr00 + c10i * ki00 + c11r * kr01 + c11i * ki01
+					b10i += c10i * kr00 - c10r * ki00 + c11i * kr01 - c11r * ki01
+					b11r += c10r * kr10 + c10i * ki10 + c11r * kr11 + c11i * ki11
+					b11i += c10i * kr10 - c10r * ki10 + c11i * kr11 - c11r * ki11
 				}
-				rho[i00] = b00r
-				rho[i00 + 1] = b00i
-				rho[i01] = b01r
-				rho[i01 + 1] = b01i
-				rho[i10] = b10r
-				rho[i10 + 1] = b10i
-				rho[i11] = b11r
-				rho[i11 + 1] = b11i
+				p[i00] = b00r
+				p[i00 + 1] = b00i
+				p[i01] = b01r
+				p[i01 + 1] = b01i
+				p[i10] = b10r
+				p[i10 + 1] = b10i
+				p[i11] = b11r
+				p[i11 + 1] = b11i
 			}
 		}
 	}

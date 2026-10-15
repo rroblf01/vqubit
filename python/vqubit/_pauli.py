@@ -279,3 +279,8 @@ class DensePauliString:
 
 	def __repr__(self) -> str:
 		return f"vqubit.DensePauliString({self!s})"
+
+
+PAULI_GATE_LIKE = Any
+PAULI_STRING_LIKE = Any
+PauliSumLike = Any

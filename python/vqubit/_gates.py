@@ -993,6 +993,7 @@ CCX: CCXGate = CCXGate()
 TOFFOLI: CCXGate = CCXGate()
 CSWAP: CSWAPGate = CSWAPGate()
 FREDKIN: CSWAPGate = CSWAPGate()
+CSwapGate = CSWAPGate
 XX: XXPowGate = XXPowGate()
 YY: YYPowGate = YYPowGate()
 ZZ: ZZPowGate = ZZPowGate()
@@ -1034,6 +1035,9 @@ def measure_each(*qubits: Qid, key_func: Any = None) -> tuple[GateOperation, ...
 	if key_func is None:
 		key_func = str
 	return tuple(MeasurementGate(key_func(q), num_qubits=1).on(q) for q in qubits)
+
+
+M = measure
 
 
 @value_equality

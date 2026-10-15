@@ -343,6 +343,14 @@ def phase_damp(gamma: Any) -> PhaseDampingChannel:
 	return PhaseDampingChannel(gamma)
 
 
-def reset(num_qubits: int = 1) -> ResetChannel:
-	"""Return a channel that resets qubits to ``|0>``."""
-	return ResetChannel(num_qubits)
+def reset(qubit: Qid) -> Any:
+	"""Return an operation that resets ``qubit`` to ``|0>``."""
+	return ResetChannel(1).on(qubit)
+
+
+R = reset
+
+
+def reset_each(*qubits: Qid) -> tuple[Any, ...]:
+	"""Return a reset operation on each of the given qubits."""
+	return tuple(reset(qubit) for qubit in qubits)

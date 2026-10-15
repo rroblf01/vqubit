@@ -30,6 +30,7 @@ from ._channels import (
 	DepolarizingChannel,
 	PhaseDampingChannel,
 	PhaseFlipChannel,
+	R,
 	ResetChannel,
 	amplitude_damp,
 	bit_flip,
@@ -72,6 +73,7 @@ from ._gates import (
 	CNOTGate,
 	ControlledGate,
 	CSWAPGate,
+	CSwapGate,
 	CZGate,
 	EigenGate,
 	FSimGate,
@@ -82,6 +84,7 @@ from ._gates import (
 	I,
 	IdentityGate,
 	ISWAPGate,
+	M,
 	MatrixGate,
 	MeasurementGate,
 	MSGate,
@@ -221,7 +224,15 @@ from ._optimizers import (
 	single_qubit_matrix_to_phxz,
 )
 from ._parameter import Parameter, ParamResolver
-from ._pauli import DensePauliString, Pauli, PauliString, PauliSum
+from ._pauli import (
+	PAULI_GATE_LIKE,
+	PAULI_STRING_LIKE,
+	DensePauliString,
+	Pauli,
+	PauliString,
+	PauliSum,
+	PauliSumLike,
+)
 from ._protocols import (
 	apply_unitary,
 	approx_eq,
@@ -265,7 +276,7 @@ from ._qis import (
 	to_valid_state_vector,
 	von_neumann_entropy,
 )
-from ._qubit_order import QubitOrder
+from ._qubit_order import QubitOrder, QubitOrderOrList
 from ._qubits import GridQid, GridQubit, LineQid, LineQubit, NamedQid, NamedQubit, Qid, Qubit
 from ._sim import (
 	DensityMatrix,
@@ -333,6 +344,8 @@ __all__ = [
 	"ISWAP_INV",
 	"OP_TREE",
 	"PAULI_BASIS",
+	"PAULI_GATE_LIKE",
+	"PAULI_STRING_LIKE",
 	"SQRT_ISWAP",
 	"SQRT_ISWAP_INV",
 	"SWAP",
@@ -355,6 +368,7 @@ __all__ = [
 	"CNOTTargetGateset",
 	"CNotPowGate",
 	"CSWAPGate",
+	"CSwapGate",
 	"CXPowGate",
 	"CYPowGate",
 	"CZGate",
@@ -401,6 +415,7 @@ __all__ = [
 	"LineQid",
 	"LineQubit",
 	"Linspace",
+	"M",
 	"MSGate",
 	"MatrixGate",
 	"MeasurementGate",
@@ -415,6 +430,7 @@ __all__ = [
 	"Pauli",
 	"PauliString",
 	"PauliSum",
+	"PauliSumLike",
 	"PhaseDampingChannel",
 	"PhaseFlipChannel",
 	"PhasedISwapPowGate",
@@ -427,7 +443,9 @@ __all__ = [
 	"QuantumFourierTransformGate",
 	"Qubit",
 	"QubitOrder",
+	"QubitOrderOrList",
 	"QubitPermutationGate",
+	"R",
 	"ResetChannel",
 	"Result",
 	"Rx",

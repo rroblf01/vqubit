@@ -443,9 +443,9 @@ def global_phase_operation(coefficient: complex) -> Any:
 
 def reset_each(*qubits: Qid) -> tuple[Any, ...]:
 	"""Return a reset operation on each of the given qubits."""
-	from ._channels import ResetChannel
+	from ._channels import reset
 
-	return tuple(ResetChannel(1).on(qubit) for qubit in qubits)
+	return tuple(reset(qubit) for qubit in qubits)
 
 
 def identity_each(*qubits: Qid) -> tuple[Any, ...]:

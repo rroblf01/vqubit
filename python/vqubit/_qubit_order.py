@@ -7,7 +7,7 @@ tuple, which is what a simulator needs. ``QubitOrder.DEFAULT`` sorts them;
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 
 from ._qubits import Qid
@@ -56,4 +56,6 @@ class QubitOrder:
 
 QubitOrder.DEFAULT = QubitOrder.sorted_by(lambda qubit: qubit)
 
-__all__ = ["QubitOrder"]
+QubitOrderOrList = QubitOrder | Sequence[Qid]
+
+__all__ = ["QubitOrder", "QubitOrderOrList"]

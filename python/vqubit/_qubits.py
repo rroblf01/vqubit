@@ -22,6 +22,11 @@ from ._value import value_equality
 class Qid:
 	"""A quantum identifier: the abstract location of a qubit."""
 
+	@property
+	def dimension(self) -> int:
+		"""The dimension of the qudit this qid refers to (always 2 here)."""
+		return 2
+
 	def _comparison_key(self) -> Any:
 		raise NotImplementedError
 

@@ -50,9 +50,10 @@ qubit?" and builds up to circuits and simulation.
 
 ## Status
 
-vqubit is **alpha**. The core object model (qubits, gates, operations, moments
-and circuits), the protocols and the local simulators are being built out
-phase by phase. See [CHANGELOG.md](CHANGELOG.md) for what is in place.
+vqubit is **alpha** (0.1.0). It exports every one of cirq-core's top-level
+names, and the simulators, optimizers, transformers and devices are in place;
+see [CHANGELOG.md](CHANGELOG.md) for the full list. The API may still change
+before 1.0.
 
 Windows support is currently blocked by the build tool [vcraft](https://github.com/rroblf01/vcraft),
 which does not yet produce Windows wheels.

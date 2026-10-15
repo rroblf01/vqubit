@@ -5,79 +5,10 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-10-15
 
 The first release: a dependency-free, Cirq-compatible quantum computing
 framework for Python, with the numerical core written in V.
-
-### Changed
-
-- **Toolchain: built with vcraft 1.3.0.** The native extension now keeps its
-  instance state inside the object instead of behind a pointer, so construction
-  and native method calls are faster (a no-op `apply_gate` on a two-qubit state
-  went from ~0.34 µs to ~0.31 µs) and a failed native constructor no longer leaks
-  the object. The `NativeState`/`NativeDensity` buffers are exposed as typed
-  `memoryview`s (`format "d"`, `itemsize 8`), and the generated CI build
-  containers were regenerated for 1.3.0.
-- **Performance: gate-heavy and density-matrix workloads are much faster.** The
-  single-qubit power gates, `PhasedXPowGate` and `PhasedXZGate` now build their
-  matrix in closed form (a `PhasedXZ` matrix went from ~34 µs to ~3 µs); gate
-  unitaries and their native flat form are memoised on the gate, and
-  `value_equality` caches the hash. On the density-matrix side the channel
-  kernels were reworked: the 2x2 Kraus coefficients are hoisted, diagonal Kraus
-  operators (CZ, CCZ, ...) get a direct scaling path, and the general block
-  product is factored into two matrix products. A 250-layer, 12-qubit circuit
-  now simulates in ~30 ms (Cirq: ~184 ms) and `density_large` is ~2x faster than
-  Cirq.
-- **Performance: vqubit now matches or beats Cirq on every benchmark** (see the
-  [benchmarks guide](docs/en/guide/benchmarks.md)). The hot V kernels were
-  rewritten (`apply_gate` as a block gather/apply/scatter with in-place and
-  contiguous 1-/2-qubit paths plus a permutation fast path; reordered
-  `matmul`/`sandwich`; an in-place subspace density channel), the simulator
-  results are handed back as zero-copy NumPy views of the native buffers, the
-  flatten/rebuild helpers, sampling, the Bloch vector and the circuit unitary
-  use NumPy when it is installed, and `|0...0>` needs no Python list. vqubit
-  imports ~2.7x less memory than Cirq (77 MB vs 208 MB).
-- **Circuit construction is now O(1) amortised per operation.** `Circuit`
-  caches each moment's qubit set and `append` scans backwards, stopping at the
-  first conflicting moment, instead of re-deriving `Moment.qubits` for every
-  earlier moment. Building a 300-moment circuit went from ~4.6 s to ~16 ms.
-- **Sampling terminal measurements no longer re-simulates per repetition.** When
-  every measurement is terminal, `Simulator.run` computes the final state once
-  and draws each repetition's outcomes from it; sampling 1000 shots of a
-  12-qubit circuit went from ~2.7 s to ~0.1 s.
-- **Simulator state now lives in V.** The state-vector and density-matrix
-  simulators and the Clifford simulator keep their state in `@[vc_buffer]`-backed
-  native classes (`NativeState`, `NativeDensity`, `NativeTableau`) for the
-  simulation's lifetime, so gates are applied to native memory without a Python
-  round trip between calls. `memoryview` of a state is a zero-copy view.
-- **Development tooling moved into `pyproject.toml`.** The dev and docs
-  dependencies are `[dependency-groups]` and the ruff, pytest and ty settings are
-  `[tool.*]` tables, installed with `uv pip install --group` (vcraft 1.2.0 merges
-  the file instead of overwriting it). The standalone requirements and config
-  files are gone.
-
-### Fixed
-
-- **Numerical results are now cross-validated against Cirq.** A new harness
-  (`benchmarks/verify.py`, run by the `cirq parity` CI job) compares gate
-  unitaries, channels, circuit simulation, sampling, decompositions, Pauli and
-  Clifford algebra, and the public API surface. It found and this release fixes:
-  - `DensityMatrixSimulator` dropped the sign of diagonal two-qubit gates such
-    as `CZ`/`CCZ` (the permutation fast path treated any real entry of modulus
-    one as an unsigned permutation), so superposed states came out wrong.
-  - `PhasedISwapPowGate` conjugated the wrong off-diagonal phase factor.
-  - `MSGate`/`ms` used `exp(-i theta/2 XX)` instead of Cirq's `exp(-i rads XX)`;
-    `MSGate` is now `MSGate(*, rads)`.
-  - `QuantumFourierTransformGate`/`qft` used the wrong qubit reversal; it now
-    returns the standard DFT and `qft` returns an `Operation`.
-  - `DiagonalGate`/`TwoQubitDiagonalGate`/`ThreeQubitDiagonalGate` took the
-    diagonal entries instead of the diagonal angles.
-  - `QubitPermutationGate` permuted basis states instead of qubits.
-  - `kak_vector` now accepts a batch of matrices and returns real values.
-- **Signatures now match Cirq** for `two_qubit_matrix_to_cz_operations` and its
-  isometry/diagonal variants, and for `merge_operations`/`merge_moments` (whose
-  `merge_func` now takes two operations/moments).
 
 ### Added
 
@@ -306,4 +237,73 @@ framework for Python, with the numerical core written in V.
   `pytest`), CI for build/test/docs/release, and bilingual documentation
   (Spanish and English) with runnable examples.
 
-[Unreleased]: https://github.com/rroblf01/vqubit/commits/main
+### Changed
+
+- **Toolchain: built with vcraft 1.3.0.** The native extension now keeps its
+  instance state inside the object instead of behind a pointer, so construction
+  and native method calls are faster (a no-op `apply_gate` on a two-qubit state
+  went from ~0.34 µs to ~0.31 µs) and a failed native constructor no longer leaks
+  the object. The `NativeState`/`NativeDensity` buffers are exposed as typed
+  `memoryview`s (`format "d"`, `itemsize 8`), and the generated CI build
+  containers were regenerated for 1.3.0.
+- **Performance: gate-heavy and density-matrix workloads are much faster.** The
+  single-qubit power gates, `PhasedXPowGate` and `PhasedXZGate` now build their
+  matrix in closed form (a `PhasedXZ` matrix went from ~34 µs to ~3 µs); gate
+  unitaries and their native flat form are memoised on the gate, and
+  `value_equality` caches the hash. On the density-matrix side the channel
+  kernels were reworked: the 2x2 Kraus coefficients are hoisted, diagonal Kraus
+  operators (CZ, CCZ, ...) get a direct scaling path, and the general block
+  product is factored into two matrix products. A 250-layer, 12-qubit circuit
+  now simulates in ~30 ms (Cirq: ~184 ms) and `density_large` is ~2x faster than
+  Cirq.
+- **Performance: vqubit now matches or beats Cirq on every benchmark** (see the
+  [benchmarks guide](docs/en/guide/benchmarks.md)). The hot V kernels were
+  rewritten (`apply_gate` as a block gather/apply/scatter with in-place and
+  contiguous 1-/2-qubit paths plus a permutation fast path; reordered
+  `matmul`/`sandwich`; an in-place subspace density channel), the simulator
+  results are handed back as zero-copy NumPy views of the native buffers, the
+  flatten/rebuild helpers, sampling, the Bloch vector and the circuit unitary
+  use NumPy when it is installed, and `|0...0>` needs no Python list. vqubit
+  imports ~2.7x less memory than Cirq (77 MB vs 208 MB).
+- **Circuit construction is now O(1) amortised per operation.** `Circuit`
+  caches each moment's qubit set and `append` scans backwards, stopping at the
+  first conflicting moment, instead of re-deriving `Moment.qubits` for every
+  earlier moment. Building a 300-moment circuit went from ~4.6 s to ~16 ms.
+- **Sampling terminal measurements no longer re-simulates per repetition.** When
+  every measurement is terminal, `Simulator.run` computes the final state once
+  and draws each repetition's outcomes from it; sampling 1000 shots of a
+  12-qubit circuit went from ~2.7 s to ~0.1 s.
+- **Simulator state now lives in V.** The state-vector and density-matrix
+  simulators and the Clifford simulator keep their state in `@[vc_buffer]`-backed
+  native classes (`NativeState`, `NativeDensity`, `NativeTableau`) for the
+  simulation's lifetime, so gates are applied to native memory without a Python
+  round trip between calls. `memoryview` of a state is a zero-copy view.
+- **Development tooling moved into `pyproject.toml`.** The dev and docs
+  dependencies are `[dependency-groups]` and the ruff, pytest and ty settings are
+  `[tool.*]` tables, installed with `uv pip install --group` (vcraft merges the
+  file instead of overwriting it). The standalone requirements and config files
+  are gone.
+
+### Fixed
+
+- **Numerical results are now cross-validated against Cirq.** A new harness
+  (`benchmarks/verify.py`, run by the `cirq parity` CI job) compares gate
+  unitaries, channels, circuit simulation, sampling, decompositions, Pauli and
+  Clifford algebra, and the public API surface. It found and this release fixes:
+  - `DensityMatrixSimulator` dropped the sign of diagonal two-qubit gates such
+    as `CZ`/`CCZ` (the permutation fast path treated any real entry of modulus
+    one as an unsigned permutation), so superposed states came out wrong.
+  - `PhasedISwapPowGate` conjugated the wrong off-diagonal phase factor.
+  - `MSGate`/`ms` used `exp(-i theta/2 XX)` instead of Cirq's `exp(-i rads XX)`;
+    `MSGate` is now `MSGate(*, rads)`.
+  - `QuantumFourierTransformGate`/`qft` used the wrong qubit reversal; it now
+    returns the standard DFT and `qft` returns an `Operation`.
+  - `DiagonalGate`/`TwoQubitDiagonalGate`/`ThreeQubitDiagonalGate` took the
+    diagonal entries instead of the diagonal angles.
+  - `QubitPermutationGate` permuted basis states instead of qubits.
+  - `kak_vector` now accepts a batch of matrices and returns real values.
+- **Signatures now match Cirq** for `two_qubit_matrix_to_cz_operations` and its
+  isometry/diagonal variants, and for `merge_operations`/`merge_moments` (whose
+  `merge_func` now takes two operations/moments).
+
+[0.1.0]: https://github.com/rroblf01/vqubit/releases/tag/v0.1.0

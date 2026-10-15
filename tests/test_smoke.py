@@ -24,6 +24,14 @@ def test_version_matches_vcraft_toml() -> None:
 	assert vqubit.__version__ == match.group(1)
 
 
+def test_version_matches_changelog() -> None:
+	"""The latest released version in `CHANGELOG.md` must match the package."""
+	text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+	match = re.search(r"^## \[(\d+\.\d+\.\d+)\]", text, re.MULTILINE)
+	assert match is not None, "CHANGELOG.md has no released version heading"
+	assert vqubit.__version__ == match.group(1)
+
+
 @pytest.mark.parametrize("name", ["vqubit_native"])
 def test_native_module_available(name: str) -> None:
 	module = pytest.importorskip(name)

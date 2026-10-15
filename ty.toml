@@ -1,8 +1,0 @@
-# Configuration for `ty`, the Python type checker.
-#
-# The hand-written package lives under `python/`; `extra-paths` adds it to the
-# import search path so `import vqubit` resolves without an install, and the
-# generated `python/vqubit_native.pyi` next to it types the native module.
-
-[environment]
-extra-paths = ["python"]

@@ -3,7 +3,7 @@
 /dist/
 /.vcraft/
 /src/_vcraft_generated.v
-python/*.pyi
+python/vqubit_native.pyi
 *.so
 *.pyd
 *.dylib

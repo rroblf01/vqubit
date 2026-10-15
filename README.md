@@ -60,17 +60,23 @@ which does not yet produce Windows wheels.
 ## Development
 
 vqubit is built with [vcraft](https://github.com/rroblf01/vcraft). You need the
-V compiler and a C compiler.
+V compiler, a C compiler, and [uv](https://docs.astral.sh/uv/) for the
+development tooling.
 
 ```console
 $ python -m venv .venv && source .venv/bin/activate
 $ pip install vcraft
-$ pip install -r requirements-dev.txt
-$ vcraft develop            # build and install into the active virtualenv
-$ python main.py            # run the example
-$ pytest                    # run the test suite
-$ vcraft build --release    # write an abi3 wheel into dist/
+$ uv pip install --group dev   # pytest, ruff, ty, build
+$ vcraft develop               # build and install into the active virtualenv
+$ python main.py               # run the example
+$ pytest                       # run the test suite
+$ vcraft build --release       # write an abi3 wheel into dist/
 ```
+
+The dev and docs tooling are `[dependency-groups]` in `pyproject.toml`; use
+`uv pip install --group docs` for the documentation toolchain. (`uv pip install`
+adds to the virtualenv without pruning it — `uv sync` would remove the editable
+extension that `vcraft develop` installs.)
 
 The development setup is the only thing that needs the V toolchain — the
 published wheels need nothing.

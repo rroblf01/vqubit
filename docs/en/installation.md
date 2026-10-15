@@ -33,14 +33,15 @@ If you want to build vqubit yourself (for example, to contribute), you need:
 
 - the **V** compiler,
 - a **C** compiler (gcc or clang),
-- [**vcraft**](https://github.com/rroblf01/vcraft), the build tool.
+- [**vcraft**](https://github.com/rroblf01/vcraft), the build tool,
+- [**uv**](https://docs.astral.sh/uv/) for the development tooling.
 
 ```console
 $ git clone https://github.com/rroblf01/vqubit
 $ cd vqubit
 $ python -m venv .venv && source .venv/bin/activate
 $ pip install vcraft
-$ pip install -r requirements-dev.txt
+$ uv pip install --group dev
 $ vcraft develop
 ```
 

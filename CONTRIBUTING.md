@@ -12,15 +12,21 @@ vqubit is a Python extension written in [V](https://vlang.io) and built with
 - Python 3.11 or newer;
 - the V compiler and a C compiler (gcc or clang);
 - `vcraft`;
+- [uv](https://docs.astral.sh/uv/) for the development tooling.
 
 ```console
 $ git clone https://github.com/rroblf01/vqubit
 $ cd vqubit
 $ python -m venv .venv && source .venv/bin/activate
 $ pip install vcraft
-$ pip install -r requirements-dev.txt
+$ uv pip install --group dev
 $ vcraft develop
 ```
+
+The dev and docs tooling are `[dependency-groups]` in `pyproject.toml`. Use
+`uv pip install --group docs` for the documentation toolchain. `uv pip install`
+adds to the virtualenv without pruning it, unlike `uv sync`, which would remove
+the editable extension `vcraft develop` installs.
 
 `vcraft develop` builds the native extension and installs an editable pointer
 into the virtualenv, so edits to the V sources or the Python package are picked

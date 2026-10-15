@@ -22,6 +22,9 @@ extra-paths = ["./python"]
 [dependency-groups]
 dev = ["pytest", "ruff", "ty", "build"]
 docs = ["mkdocs-material", "mkdocs-static-i18n", "mkdocstrings[python]"]
+# Optional interoperability, tested by a dedicated CI job: with numpy installed
+# the public API returns ndarray results. The published wheel never depends on it.
+interop = ["numpy", "sympy"]
 
 [tool.ruff]
 line-length = 120

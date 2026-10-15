@@ -42,6 +42,8 @@ def _zeros(rows: int, cols: int) -> Matrix:
 
 def _mm(a: Any, b: Any) -> Matrix:
 	"""Matrix (or matrix-vector) product for arbitrary shapes."""
+	a = _as_matrix_or_vector(a)
+	b = _as_matrix_or_vector(b)
 	if b and not isinstance(b[0], (list, tuple)):
 		return [sum(a[i][j] * b[j] for j in range(len(b))) for i in range(len(a))]
 	inner = len(b)
@@ -252,7 +254,7 @@ def kron(*factors: Any, shape_len: int = 2) -> Any:
 	del shape_len
 	product: Any = None
 	for factor in factors:
-		if isinstance(factor, (list, tuple)):
+		if _is_matrix(factor):
 			matrix = to_nested_list(factor)
 			product = matrix if product is None else _la.kron(to_nested_list(product), matrix)
 		else:
@@ -1171,6 +1173,8 @@ def kak_vector(
 	check_preconditions: bool = True,
 ) -> Any:
 	"""Compute the canonical KAK vector of a two-qubit unitary."""
+	if is_numpy_array(unitary):
+		unitary = to_nested_list(unitary)
 	if not unitary:
 		return asarray([])
 	first = unitary[0]

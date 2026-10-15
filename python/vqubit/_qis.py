@@ -15,12 +15,15 @@ from typing import Any
 import vqubit_native as _native
 
 from ._circuits import Circuit
+from ._compat import asarray, asvector, is_numpy_array, to_nested_list
 from ._linalg import Matrix, dagger, matmul
 
 StateVectorLike = Sequence[complex]
 
 
 def _is_density(value: Any) -> bool:
+	if is_numpy_array(value):
+		return value.ndim == 2
 	return isinstance(value, Sequence) and len(value) > 0 and isinstance(value[0], Sequence)
 
 
@@ -40,6 +43,7 @@ def to_valid_state_vector(
 	atol: float = 1e-8,
 ) -> list[complex]:
 	"""Return ``state`` as a normalized state vector, or raise ``ValueError``."""
+	state = state.tolist() if is_numpy_array(state) else state
 	dim = 1
 	for size in qid_shape:
 		dim *= size
@@ -81,9 +85,10 @@ def to_valid_density_matrix(
 	atol: float = 1e-8,
 ) -> Matrix:
 	"""Return ``matrix`` as a density matrix (a state vector becomes ``|psi><psi|``)."""
+	matrix = to_nested_list(matrix) if is_numpy_array(matrix) else matrix
 	if isinstance(matrix, int) and not isinstance(matrix, bool):
 		vector = to_valid_state_vector(matrix, qid_shape, atol=atol)
-		return [[vector[i] * vector[j].conjugate() for j in range(len(vector))] for i in range(len(vector))]
+		return asarray([[vector[i] * vector[j].conjugate() for j in range(len(vector))] for i in range(len(vector))])
 	if _is_density(matrix):
 		rows = [[complex(x) for x in row] for row in matrix]
 		dim = len(rows)
@@ -92,9 +97,9 @@ def to_valid_density_matrix(
 		trace = sum(rows[i][i] for i in range(dim))
 		if abs(trace - 1.0) > atol:
 			raise ValueError(f"density matrix trace is {trace}, expected 1")
-		return rows
+		return asarray(rows)
 	vector = to_valid_state_vector(matrix, qid_shape, atol=atol)
-	return [[vector[i] * vector[j].conjugate() for j in range(len(vector))] for i in range(len(vector))]
+	return asarray([[vector[i] * vector[j].conjugate() for j in range(len(vector))] for i in range(len(vector))])
 
 
 def density_matrix(matrix: Any, *, qid_shape: Sequence[int] | None = None) -> Matrix:
@@ -156,7 +161,7 @@ def partial_trace(tensor: Sequence[Sequence[complex]], keep_indices: Sequence[in
 			# The traced bits must agree for the term to contribute.
 			if _traced_bits_equal(i, j, keep, num_qubits):
 				reduced[kept_i][kept_j] += rows[i][j]
-	return reduced
+	return asarray(reduced)
 
 
 def _traced_bits_equal(i: int, j: int, keep: Sequence[int], num_qubits: int) -> bool:
@@ -227,7 +232,7 @@ def _hermitian_sqrt(matrix: Matrix, dim: int) -> Matrix:
 		for i in range(dim):
 			for j in range(dim):
 				result[i][j] += root * vector[i] * vector[j].conjugate()
-	return result
+	return asarray(result)
 
 
 def von_neumann_entropy(density: Matrix, *, base: float = 2.0) -> float:
@@ -246,7 +251,7 @@ def random_state_vector(num_qubits: int, *, seed: int | None = None) -> list[com
 	dim = 1 << num_qubits
 	vector = [complex(rng.gauss(0, 1), rng.gauss(0, 1)) for _ in range(dim)]
 	norm = math.sqrt(sum(abs(x) ** 2 for x in vector))
-	return [x / norm for x in vector]
+	return asvector([x / norm for x in vector])
 
 
 def random_density_matrix(num_qubits: int, *, seed: int | None = None) -> Matrix:
@@ -256,7 +261,7 @@ def random_density_matrix(num_qubits: int, *, seed: int | None = None) -> Matrix
 	g = [[complex(rng.gauss(0, 1), rng.gauss(0, 1)) for _ in range(dim)] for _ in range(dim)]
 	product = matmul(g, dagger(g))
 	trace = sum(product[i][i].real for i in range(dim))
-	return [[product[i][j] / trace for j in range(dim)] for i in range(dim)]
+	return asarray([[product[i][j] / trace for j in range(dim)] for i in range(dim)])
 
 
 def kraus_channel(kraus_operators: Sequence[Sequence[Sequence[complex]]]) -> list[Matrix]:

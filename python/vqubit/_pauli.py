@@ -15,6 +15,7 @@ import enum
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any
 
+from ._compat import asarray
 from ._gates import I, X, Y, Z
 from ._linalg import Matrix, kron
 from ._qubits import Qid
@@ -144,11 +145,11 @@ class PauliString:
 		"""Return the full matrix over this string's qubits, coefficient included."""
 		qubits = self.qubits
 		if not qubits:
-			return [[self._coefficient]]
+			return asarray([[self._coefficient]])
 		result = [[self._coefficient]]
 		for qubit in qubits:
 			result = kron(result, self[qubit].matrix())
-		return result
+		return asarray(result)
 
 	def unitary(self) -> Matrix:
 		"""Alias of :meth:`matrix`."""
@@ -252,7 +253,7 @@ class DensePauliString:
 		result: Matrix = [[self._coefficient]]
 		for pauli in self._paulis:
 			result = kron(result, pauli.matrix())
-		return result
+		return asarray(result)
 
 	def __mul__(self, other: Any) -> DensePauliString:
 		if isinstance(other, DensePauliString):

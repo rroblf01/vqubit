@@ -20,6 +20,7 @@ from typing import Any
 import vqubit_native as _native
 
 from ._circuits import Circuit
+from ._compat import asarray, asvector
 from ._gates import MeasurementGate
 from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._ops import Moment
@@ -117,7 +118,7 @@ class SimulationResult(SimulationTrialResultBase):
 		return self._final_state
 
 	def state_vector(self) -> list[complex]:
-		return self._final_state.state_vector()
+		return asvector(self._final_state.state_vector())
 
 	def dirac_notation(self, decimals: int = 3) -> str:
 		return self._final_state.dirac_notation(decimals)
@@ -289,7 +290,7 @@ class DensityMatrixTrialResult(SimulationTrialResultBase):
 		return self._final_density_matrix
 
 	def density_matrix(self) -> list[list[complex]]:
-		return self._final_density_matrix.density_matrix()
+		return asarray(self._final_density_matrix.density_matrix())
 
 	def __repr__(self) -> str:
 		return f"vqubit.DensityMatrixTrialResult({self._final_density_matrix!r})"

@@ -101,8 +101,10 @@ framework for Python, with the numerical core written in V.
   `num_cnots_required`, `unitary_eig`, `map_eigenvalues`). `kak_decomposition`
   now returns a `KakDecomposition`.
 - **Optional numpy/sympy interop**: when numpy is installed the public API
-  returns `numpy.ndarray` results and accepts numpy inputs; the core stays
-  dependency-free otherwise.
+  returns `numpy.ndarray` results (from `unitary`, `kraus`, `PauliString.matrix`,
+  `Circuit.unitary`, `state_vector`, `density_matrix` and the simulation
+  results) and accepts numpy inputs; the core stays dependency-free otherwise.
+  A dedicated CI job runs the whole suite with numpy installed.
 - **More gates**: the controlled power gates (`CXPowGate`, `CYPowGate`,
   `CZPowGate`, `CCXPowGate`, `CCYPowGate`, `CCZPowGate`, plus the
   `CNotPowGate`/`CCNotPowGate` aliases), `SwapPowGate`, `ISwapPowGate`,

@@ -12,6 +12,7 @@ from typing import Any
 
 import vqubit_native as _native
 
+from ._compat import asarray, asvector
 from ._gates import MeasurementGate
 from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._qis_extra import density_matrix_from_state_vector
@@ -183,11 +184,11 @@ class StepResult(StepResultBase):
 	def state_vector(self) -> list[complex]:
 		if self._state_vector is None:
 			raise ValueError("this step result has no state vector")
-		return list(self._state_vector)
+		return asvector(self._state_vector)
 
 	def density_matrix(self) -> list[list[complex]]:
 		if self._density_matrix is not None:
-			return [list(row) for row in self._density_matrix]
+			return asarray(self._density_matrix)
 		return density_matrix_from_state_vector(self.state_vector())
 
 	def set_state_vector(self, state: Sequence[complex]) -> None:

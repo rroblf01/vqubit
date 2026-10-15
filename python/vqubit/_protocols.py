@@ -14,6 +14,7 @@ from typing import Any
 import vqubit_native as _native
 
 from ._circuits import Circuit, CircuitOperation
+from ._compat import asarray
 from ._gates import Gate, MatrixGate, MeasurementGate, ZPowGate
 from ._linalg import Matrix, dagger, from_flat, identity, matmul, to_flat, vector_from_flat, vector_to_flat
 from ._measurement_key import MeasurementKey
@@ -36,28 +37,29 @@ def unitary(value: Any) -> Matrix:
 
 	For a gate, the matrix is in the gate's own qubit order. For an operation,
 	it is in the order of ``operation.qubits``. For a circuit, it is the full
-	matrix over the sorted circuit qubits.
+	matrix over the sorted circuit qubits. When numpy is installed the result is
+	a ``numpy.ndarray``.
 	"""
 	if isinstance(value, Circuit):
-		return _circuit_unitary(value)
+		return asarray(_circuit_unitary(value))
 	if isinstance(value, CircuitOperation):
-		return value._unitary_()
+		return asarray(value._unitary_())
 	if isinstance(value, (GateOperation, Operation)):
 		matrix = _as_matrix(value.gate._unitary_())
 		if matrix is None:
 			matrix = _decomposed_unitary(value)
 		if matrix is None:
 			raise TypeError(f"{value!r} has no unitary")
-		return matrix
+		return asarray(matrix)
 	if isinstance(value, Gate):
 		matrix = _as_matrix(value._unitary_())
 		if matrix is None:
 			matrix = _decomposed_unitary(value)
 		if matrix is None:
 			raise TypeError(f"{value!r} has no unitary")
-		return matrix
+		return asarray(matrix)
 	if isinstance(value, PauliString):
-		return value.matrix()
+		return asarray(value.matrix())
 	raise TypeError(f"{value!r} has no unitary")
 
 
@@ -378,10 +380,10 @@ def kraus(value: Any) -> list[Matrix]:
 	if isinstance(value, Gate):
 		operators = value._kraus_()
 		if operators is not None:
-			return [[list(row) for row in operator] for operator in operators]
+			return [asarray([list(row) for row in operator]) for operator in operators]
 		matrix = _as_matrix(value._unitary_())
 		if matrix is not None:
-			return [matrix]
+			return [asarray(matrix)]
 		raise TypeError(f"{value!r} has no Kraus operators")
 	raise TypeError(f"{value!r} has no Kraus operators")
 

@@ -68,6 +68,33 @@ jobs:
       - name: run the test suite
         run: pytest
 
+  interop:
+    name: numpy interop
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.15"
+
+      - name: fetch the wheel
+        uses: actions/download-artifact@v6
+        with:
+          name: wheel-ubuntu-latest
+          path: dist
+
+      - name: install the wheel, numpy, sympy and pytest
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl numpy sympy
+          python -m pip install pytest
+
+      - name: run the test suite with numpy installed
+        run: pytest
+
   lint:
     name: lint and type check
     needs: build

@@ -44,7 +44,7 @@ def test_channels_are_trace_preserving() -> None:
 def test_unitary_gates_have_one_kraus_operator() -> None:
 	operators = vqubit.kraus(vqubit.X)
 	assert len(operators) == 1
-	assert operators[0] == vqubit.unitary(vqubit.X)
+	assert vqubit.allclose_up_to_global_phase(operators[0], vqubit.unitary(vqubit.X))
 
 
 def test_channel_flags() -> None:

@@ -72,6 +72,16 @@ class Pauli(enum.Enum):
 		return self.value
 
 
+# A product table keyed by enum members, so multiplying strings avoids string
+# comparisons in the hot loop.
+_PRODUCT_MAP: dict[tuple[Pauli, Pauli], tuple[Pauli, complex]] = {}
+for _left in Pauli:
+	for _right in Pauli:
+		_result, _phase = _product(_left.value, _right.value)
+		_PRODUCT_MAP[(_left, _right)] = (Pauli(_result), _phase)
+del _left, _right, _result, _phase
+
+
 @value_equality
 class PauliString:
 	"""A Pauli on each of a set of qubits, with a complex coefficient."""
@@ -113,11 +123,19 @@ class PauliString:
 			return NotImplemented
 		phase = self._coefficient * other._coefficient
 		result: dict[Qid, Pauli] = {}
-		for qubit in set(self._map) | set(other._map):
-			product, factor = _product(self[qubit].value, other[qubit].value)
+		other_map = other._map
+		for qubit, left in self._map.items():
+			right = other_map.get(qubit)
+			if right is None:
+				result[qubit] = left
+				continue
+			product, factor = _PRODUCT_MAP[(left, right)]
 			phase *= factor
-			if product != "I":
-				result[qubit] = Pauli(product)
+			if product is not Pauli.I:
+				result[qubit] = product
+		for qubit, right in other_map.items():
+			if qubit not in self._map:
+				result[qubit] = right
 		return PauliString(result, phase)
 
 	def __rmul__(self, other: Any) -> PauliString:

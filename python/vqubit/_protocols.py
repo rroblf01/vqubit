@@ -46,14 +46,14 @@ def unitary(value: Any) -> Matrix:
 	if isinstance(value, CircuitOperation):
 		return asarray(value._unitary_())
 	if isinstance(value, (GateOperation, Operation)):
-		matrix = _as_matrix(value.gate._unitary_())
+		matrix = _as_matrix(value.gate._cached_unitary_())
 		if matrix is None:
 			matrix = _decomposed_unitary(value)
 		if matrix is None:
 			raise TypeError(f"{value!r} has no unitary")
 		return asarray(matrix)
 	if isinstance(value, Gate):
-		matrix = _as_matrix(value._unitary_())
+		matrix = _as_matrix(value._cached_unitary_())
 		if matrix is None:
 			matrix = _decomposed_unitary(value)
 		if matrix is None:
@@ -116,7 +116,7 @@ def _numpy_circuit_unitary(circuit: Circuit) -> Any:
 		for operation in moment.operations:
 			if isinstance(operation.gate, MeasurementGate):
 				raise TypeError("a circuit with measurements has no unitary")
-			matrix = _as_matrix(operation.gate._unitary_())
+			matrix = _as_matrix(operation.gate._cached_unitary_())
 			if matrix is None:
 				raise TypeError(f"{operation.gate!r} has no unitary")
 			targets = [index[q] for q in operation.qubits]
@@ -155,7 +155,7 @@ def _moment_unitary(moment: Moment, index: dict[Qid, int], dim: int) -> Matrix:
 	for operation in moment.operations:
 		if isinstance(operation.gate, MeasurementGate):
 			raise TypeError("a circuit with measurements has no unitary")
-		gate_matrix = _as_matrix(operation.gate._unitary_())
+		gate_matrix = _as_matrix(operation.gate._cached_unitary_())
 		if gate_matrix is None:
 			raise TypeError(f"{operation.gate!r} has no unitary")
 		targets = [index[q] for q in operation.qubits]
@@ -430,7 +430,7 @@ def kraus(value: Any) -> list[Matrix]:
 		operators = value._kraus_()
 		if operators is not None:
 			return [asarray([list(row) for row in operator]) for operator in operators]
-		matrix = _as_matrix(value._unitary_())
+		matrix = _as_matrix(value._cached_unitary_())
 		if matrix is not None:
 			return [asarray(matrix)]
 		raise TypeError(f"{value!r} has no Kraus operators")

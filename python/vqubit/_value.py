@@ -9,6 +9,7 @@ class declares its components with ``_value_equality_values_`` and applies the
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 from typing import Any, TypeVar, overload
 
@@ -50,10 +51,15 @@ def value_equality(cls: Any = None, *, unhashable: bool = False) -> Any:
 			return not result
 
 		def _hash(self: Any) -> int:
-			values = self._value_equality_values_()
-			if not isinstance(values, tuple):
-				values = (values,)
-			return hash((type(self), *values))
+			cached = getattr(self, "_hash_cache", None)
+			if cached is None:
+				values = self._value_equality_values_()
+				if not isinstance(values, tuple):
+					values = (values,)
+				cached = hash((type(self), *values))
+				with contextlib.suppress(AttributeError):  # pragma: no cover - slotted classes
+					object.__setattr__(self, "_hash_cache", cached)
+			return cached
 
 		cls.__eq__ = _eq
 		cls.__ne__ = _ne

@@ -129,7 +129,7 @@ class Circuit(AbstractCircuit):
 			yield from moment.operations
 
 	def all_qubits(self) -> tuple[Qid, ...]:
-		return tuple(sorted({q for moment in self._moments for q in moment.qubits}))
+		return tuple(sorted({q for moment in self._moments for q in moment.qubits_set}))
 
 	def findall_operations(self, predicate: Callable[[Operation], bool]) -> Iterator[tuple[int, Operation]]:
 		"""Yield ``(moment_index, operation)`` for every operation matching ``predicate``."""

@@ -13,17 +13,19 @@ all follow from one definition.
 from __future__ import annotations
 
 import cmath
+import contextlib
 import math
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from ._linalg import Matrix, identity, kron, matmul
+from ._linalg import Matrix, identity, kron
 from ._ops import GateOperation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._qubits import Qid
 from ._value import value_equality
 
 _EPS = 1e-12
+_MISSING = object()
 
 
 class Gate:
@@ -45,6 +47,15 @@ class Gate:
 
 	def _unitary_(self) -> Matrix | None:
 		return None
+
+	def _cached_unitary_(self) -> Matrix | None:
+		"""Like ``_unitary_`` but memoised on the gate (gates are immutable values)."""
+		cached: Any = getattr(self, "_unitary_cache", _MISSING)
+		if cached is _MISSING:
+			cached = self._unitary_()
+			with contextlib.suppress(AttributeError):  # pragma: no cover - slotted gate
+				object.__setattr__(self, "_unitary_cache", cached)
+		return cached
 
 	def _inverse_(self) -> Gate | None:
 		"""Return the inverse gate, or ``None`` when there is none."""
@@ -202,6 +213,21 @@ class EigenGate(Gate):
 		return f"vqubit.{type(self).__name__}(exponent={self._exponent!r}, global_shift={self._global_shift!r})"
 
 
+def _pow_coefficients(exponent: float, global_shift: float) -> tuple[complex, complex]:
+	"""Return the ``A`` (eigenvalue ``+1``) and ``B`` (eigenvalue ``-1``) coefficients.
+
+	``complex(-1.0) ** exponent`` gives exactly ``+-1`` for integer exponents, so
+	this matches the eigencomponent expansion bit for bit.
+	"""
+	return cmath.exp(1j * math.pi * global_shift), complex(-1.0) ** exponent * cmath.exp(-1j * math.pi * global_shift)
+
+
+def _xpow_entries(exponent: float) -> tuple[complex, complex]:
+	"""Return the ``(diagonal, off_diagonal)`` entries of ``XPowGate(exponent, 0)``."""
+	a, b = _pow_coefficients(exponent, 0.0)
+	return (a + b) / 2, (a - b) / 2
+
+
 def _clean(value: float) -> float | int:
 	"""Return ``value`` as an int when it is a whole number, else as a float."""
 	return int(value) if abs(value - round(value)) < _EPS else float(value)
@@ -224,6 +250,14 @@ class XPowGate(EigenGate):
 			(-1.0, [[0.5, -0.5], [-0.5, 0.5]]),
 		]
 
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		a, b = _pow_coefficients(self._exponent, self._global_shift)
+		diagonal = (a + b) / 2
+		off = (a - b) / 2
+		return [[diagonal, off], [off, diagonal]]
+
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return ("X",)
 
@@ -240,6 +274,14 @@ class YPowGate(EigenGate):
 			(-1.0, [[0.5, 0.5j], [-0.5j, 0.5]]),
 		]
 
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		a, b = _pow_coefficients(self._exponent, self._global_shift)
+		diagonal = (a + b) / 2
+		off = 0.5j * (a - b)
+		return [[diagonal, -off], [off, diagonal]]
+
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return ("Y",)
 
@@ -255,6 +297,12 @@ class ZPowGate(EigenGate):
 			(1.0, [[1.0, 0.0], [0.0, 0.0]]),
 			(-1.0, [[0.0, 0.0], [0.0, 1.0]]),
 		]
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		a, b = _pow_coefficients(self._exponent, self._global_shift)
+		return [[a, 0j], [0j, b]]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		if not is_symbolic(self._exponent):
@@ -277,6 +325,16 @@ class HPowGate(EigenGate):
 			(1.0, [[(1 + s) / 2, s / 2], [s / 2, (1 - s) / 2]]),
 			(-1.0, [[(1 - s) / 2, -s / 2], [-s / 2, (1 + s) / 2]]),
 		]
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		a, b = _pow_coefficients(self._exponent, self._global_shift)
+		s = math.sqrt(0.5)
+		top_left = a * (1 + s) / 2 + b * (1 - s) / 2
+		bottom_right = a * (1 - s) / 2 + b * (1 + s) / 2
+		off = s / 2 * (a - b)
+		return [[top_left, off], [off, bottom_right]]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return ("H",)
@@ -309,16 +367,11 @@ class PhasedXPowGate(Gate):
 	def _unitary_(self) -> Matrix | None:
 		if self._is_parameterized_():
 			return None
-		phase = ZPowGate(exponent=self._phase_exponent)._unitary_()
-		power = XPowGate(exponent=self._exponent)._unitary_()
-		inverse_phase = ZPowGate(exponent=-self._phase_exponent)._unitary_()
-		if phase is None or power is None or inverse_phase is None:
-			return None
-		result = matmul(matmul(phase, power), inverse_phase)
-		if self._global_shift:
-			shift = cmath.exp(1j * math.pi * self._global_shift * self._exponent)
-			result = [[shift * entry for entry in row] for row in result]
-		return result
+		diagonal, off = _xpow_entries(self._exponent)
+		z = cmath.exp(1j * math.pi * self._phase_exponent)
+		z_inv = cmath.exp(-1j * math.pi * self._phase_exponent)
+		shift = cmath.exp(1j * math.pi * self._global_shift * self._exponent) if self._global_shift else 1 + 0j
+		return [[shift * diagonal, shift * off * z_inv], [shift * off * z, shift * diagonal]]
 
 	def _is_parameterized_(self) -> bool:
 		return is_symbolic(self._phase_exponent) or is_symbolic(self._exponent) or is_symbolic(self._global_shift)
@@ -396,11 +449,11 @@ class PhasedXZGate(Gate):
 	def _unitary_(self) -> Matrix | None:
 		if self._is_parameterized_():
 			return None
-		phased_x = PhasedXPowGate(phase_exponent=self._axis_phase_exponent, exponent=self._x_exponent)._unitary_()
-		z = ZPowGate(exponent=self._z_exponent)._unitary_()
-		if phased_x is None or z is None:
-			return None
-		return matmul(z, phased_x)
+		diagonal, off = _xpow_entries(self._x_exponent)
+		axis = cmath.exp(1j * math.pi * self._axis_phase_exponent)
+		axis_inv = cmath.exp(-1j * math.pi * self._axis_phase_exponent)
+		z = cmath.exp(1j * math.pi * self._z_exponent)
+		return [[diagonal, off * axis_inv], [z * off * axis, z * diagonal]]
 
 	def _is_parameterized_(self) -> bool:
 		return is_symbolic(self._x_exponent) or is_symbolic(self._z_exponent) or is_symbolic(self._axis_phase_exponent)

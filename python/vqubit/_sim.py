@@ -272,7 +272,7 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 					if isinstance(operation.gate, MeasurementGate):
 						measurements.append((operation.gate, [index[q] for q in operation.qubits]))
 						continue
-					matrix = operation.gate._unitary_()
+					matrix = operation.gate._cached_unitary_()
 					if matrix is None:
 						raise TypeError(f"{operation.gate!r} has no unitary and cannot be simulated")
 					state.apply_gate(to_flat([list(row) for row in matrix]), [index[q] for q in operation.qubits])
@@ -318,7 +318,7 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 				outcome = state.measure(targets, rng.random())
 				_record_bits(gate, outcome, len(targets), measurements)
 				continue
-			matrix = gate._unitary_()
+			matrix = gate._cached_unitary_()
 			if matrix is None:
 				raise TypeError(f"{gate!r} has no unitary and cannot be simulated")
 			state.apply_gate(to_flat([list(row) for row in matrix]), targets)
@@ -456,7 +456,7 @@ class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalStat
 				continue
 			operators = gate._kraus_()
 			if operators is None:
-				matrix = gate._unitary_()
+				matrix = gate._cached_unitary_()
 				if matrix is None:
 					raise TypeError(f"{gate!r} has neither a unitary nor Kraus operators")
 				operators = [matrix]

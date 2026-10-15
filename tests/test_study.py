@@ -74,4 +74,4 @@ def test_sampler() -> None:
 def test_run_sweep_rejects_unknown_sweep() -> None:
 	q0 = vqubit.LineQubit(0)
 	with pytest.raises(TypeError):
-		vqubit.run_sweep(vqubit.Circuit(vqubit.measure(q0)), "nope")  # ty: ignore[invalid-argument-type]
+		vqubit.run_sweep(vqubit.Circuit(vqubit.measure(q0)), "nope")

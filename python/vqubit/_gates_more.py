@@ -162,14 +162,15 @@ class SwapPowGate(_PowGate):
 	def _unitary_(self) -> Matrix | None:
 		if self._is_parameterized_():
 			return None
-		phase = cmath.exp(1j * math.pi * (self._exponent - self._global_shift))
+		phase = cmath.exp(1j * math.pi * self._exponent)
 		a = (1 + phase) / 2
 		b = (1 - phase) / 2
+		shift = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
 		return [
-			[a + b, 0j, 0j, 0j],
-			[0j, a, b, 0j],
-			[0j, b, a, 0j],
-			[0j, 0j, 0j, a + b],
+			[shift * (a + b), 0j, 0j, 0j],
+			[0j, shift * a, shift * b, 0j],
+			[0j, shift * b, shift * a, 0j],
+			[0j, 0j, 0j, shift * (a + b)],
 		]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
@@ -186,17 +187,14 @@ class ISwapPowGate(_PowGate):
 	def _unitary_(self) -> Matrix | None:
 		if self._is_parameterized_():
 			return None
-		# The {|01>, |10>} block has eigenvalues +/- i; a global shift scales
-		# each eigencomponent by exp(i pi g * eigenvalue).
-		plus = cmath.exp(1j * math.pi * self._exponent / 2) * cmath.exp(1j * math.pi * self._global_shift * 1j)
-		minus = cmath.exp(-1j * math.pi * self._exponent / 2) * cmath.exp(-1j * math.pi * self._global_shift * 1j)
-		a = (plus + minus) / 2
-		b = (plus - minus) / 2
+		c = math.cos(math.pi * self._exponent / 2)
+		s = math.sin(math.pi * self._exponent / 2)
+		shift = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
 		return [
-			[1 + 0j, 0j, 0j, 0j],
-			[0j, a, b, 0j],
-			[0j, b, a, 0j],
-			[0j, 0j, 0j, 1 + 0j],
+			[shift, 0j, 0j, 0j],
+			[0j, shift * c, shift * 1j * s, 0j],
+			[0j, shift * 1j * s, shift * c, 0j],
+			[0j, 0j, 0j, shift],
 		]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
@@ -515,6 +513,234 @@ def parallel_gate_op(sub_gate: Gate, *qubits: Qid) -> Any:
 	return ParallelGate(sub_gate).on(*qubits)
 
 
+def riswap(rads: Any) -> ISwapPowGate:
+	"""Return ``exp(+i rads (X⊗X + Y⊗Y) / 2)``."""
+	return ISwapPowGate(exponent=2 * rads / math.pi)
+
+
+def _canonicalize_angle(value: Any) -> Any:
+	"""Shift a 2π-periodic angle into ``[-π, π)``."""
+	if is_symbolic(value):
+		return value
+	period = 2 * math.pi
+	return float(value) - period * math.floor((float(value) + math.pi) / period)
+
+
+@value_equality
+class PhaseGradientGate(Gate):
+	"""Phases each basis state ``|x>`` by ``omega**x`` with ``omega = e^{2πi/2^n}``."""
+
+	def __init__(self, *, num_qubits: int, exponent: Any) -> None:
+		self._num_qubits = int(num_qubits)
+		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
+
+	@property
+	def exponent(self) -> Any:
+		return self._exponent
+
+	def _num_qubits_(self) -> int:
+		return self._num_qubits
+
+	def _unitary_(self) -> Matrix | None:
+		if is_symbolic(self._exponent):
+			return None
+		size = 1 << self._num_qubits
+		return [
+			[cmath.exp(1j * math.pi * 2 * i * self._exponent / size) if i == j else 0j for j in range(size)]
+			for i in range(size)
+		]
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._exponent)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> PhaseGradientGate:
+		if not self._is_parameterized_():
+			return self
+		return PhaseGradientGate(num_qubits=self._num_qubits, exponent=resolve_value(self._exponent, resolver))
+
+	def __pow__(self, power: float) -> PhaseGradientGate:
+		return PhaseGradientGate(num_qubits=self._num_qubits, exponent=self._exponent * power)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._num_qubits, self._exponent)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("Grad", *(f"#{k + 1}" for k in range(1, self._num_qubits)))
+
+	def __str__(self) -> str:
+		return f"PhaseGradientGate(num_qubits={self._num_qubits}, exponent={self._exponent})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.PhaseGradientGate(num_qubits={self._num_qubits}, exponent={self._exponent!r})"
+
+
+@value_equality
+class PhasedFSimGate(Gate):
+	"""The general excitation-preserving two-qubit gate ``PhasedFSim(theta, zeta, chi, gamma, phi)``."""
+
+	def __init__(self, theta: Any, zeta: Any = 0.0, chi: Any = 0.0, gamma: Any = 0.0, phi: Any = 0.0) -> None:
+		self._theta = _canonicalize_angle(theta)
+		self._zeta = _canonicalize_angle(zeta)
+		self._chi = _canonicalize_angle(chi)
+		self._gamma = _canonicalize_angle(gamma)
+		self._phi = _canonicalize_angle(phi)
+
+	@property
+	def theta(self) -> Any:
+		return self._theta
+
+	@property
+	def zeta(self) -> Any:
+		return self._zeta
+
+	@property
+	def chi(self) -> Any:
+		return self._chi
+
+	@property
+	def gamma(self) -> Any:
+		return self._gamma
+
+	@property
+	def phi(self) -> Any:
+		return self._phi
+
+	@staticmethod
+	def from_fsim_rz(theta: Any, phi: Any, rz_angles_before: Any, rz_angles_after: Any) -> PhasedFSimGate:
+		"""Create a :class:`PhasedFSimGate` from FSim plus Rz angles."""
+		b0, b1 = rz_angles_before
+		a0, a1 = rz_angles_after
+		gamma = (-b0 - b1 - a0 - a1) / 2.0
+		zeta = (b0 - b1 + a0 - a1) / 2.0
+		chi = (b0 - b1 - a0 + a1) / 2.0
+		return PhasedFSimGate(theta, zeta, chi, gamma, phi)
+
+	@property
+	def rz_angles_before(self) -> tuple[Any, Any]:
+		return ((-self.gamma + self.zeta + self.chi) / 2.0, (-self.gamma - self.zeta - self.chi) / 2.0)
+
+	@property
+	def rz_angles_after(self) -> tuple[Any, Any]:
+		return ((-self.gamma + self.zeta - self.chi) / 2.0, (-self.gamma - self.zeta + self.chi) / 2.0)
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _is_parameterized_(self) -> bool:
+		return any(is_symbolic(a) for a in (self._theta, self._zeta, self._chi, self._gamma, self._phi))
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		a = math.cos(self._theta)
+		b = -1j * math.sin(self._theta)
+		c = cmath.exp(-1j * self._phi)
+		f1 = cmath.exp(-1j * self._gamma - 1j * self._zeta)
+		f2 = cmath.exp(-1j * self._gamma + 1j * self._chi)
+		f3 = cmath.exp(-1j * self._gamma - 1j * self._chi)
+		f4 = cmath.exp(-1j * self._gamma + 1j * self._zeta)
+		f5 = cmath.exp(-2j * self._gamma)
+		return [
+			[1 + 0j, 0j, 0j, 0j],
+			[0j, f1 * a, f2 * b, 0j],
+			[0j, f3 * b, f4 * a, 0j],
+			[0j, 0j, 0j, f5 * c],
+		]
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> PhasedFSimGate:
+		if not self._is_parameterized_():
+			return self
+		return PhasedFSimGate(
+			*(resolve_value(a, resolver) for a in (self._theta, self._zeta, self._chi, self._gamma, self._phi))
+		)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._theta, self._zeta, self._chi, self._gamma, self._phi)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("PhFSim", "PhFSim")
+
+	def __str__(self) -> str:
+		return f"PhasedFSimGate(theta={self._theta}, zeta={self._zeta}, chi={self._chi}, gamma={self._gamma}, phi={self._phi})"
+
+	def __repr__(self) -> str:
+		return (
+			f"vqubit.PhasedFSimGate(theta={self._theta!r}, zeta={self._zeta!r}, chi={self._chi!r}, "
+			f"gamma={self._gamma!r}, phi={self._phi!r})"
+		)
+
+
+@value_equality
+class UniformSuperpositionGate(Gate):
+	"""Prepares the uniform superposition over the states ``[0, M)`` on ``num_qubits``."""
+
+	def __init__(self, m_value: int, num_qubits: int) -> None:
+		if not (isinstance(m_value, int) and m_value > 0):
+			raise ValueError("m_value must be a positive integer.")
+		bits = m_value.bit_length()
+		if (m_value & (m_value - 1)) == 0:
+			bits -= 1
+		if not (isinstance(num_qubits, int) and num_qubits >= bits):
+			raise ValueError("num_qubits must be an integer greater than or equal to log2(m_value).")
+		self._m_value = m_value
+		self._num_qubits = num_qubits
+
+	@property
+	def m_value(self) -> int:
+		return self._m_value
+
+	def _num_qubits_(self) -> int:
+		return self._num_qubits
+
+	def _decompose_(self, qubits: Sequence[Qid]) -> Any:
+		from ._gates import H, Ry, X
+
+		qreg = list(qubits)[::-1]
+		m = self._m_value
+		if m == 1:
+			return
+		if (m & (m - 1)) == 0:
+			for q in qreg[: m.bit_length() - 1]:
+				yield H(q)
+			return
+		k = m.bit_length()
+		l_value = [i for i in range(m.bit_length()) if (m >> i) & 1]
+		for q_bit in l_value[1:k]:
+			yield X(qreg[q_bit])
+		m_current = 2 ** l_value[0]
+		theta = -2 * math.acos(math.sqrt(m_current / m))
+		if l_value[0] > 0:
+			for q in qreg[: l_value[0]]:
+				yield H(q)
+		yield Ry(theta)(qreg[l_value[1]])
+		for i in range(l_value[0], l_value[1]):
+			yield H.controlled_by(qreg[l_value[1]], control_values=[False]).on(qreg[l_value[1]], qreg[i])
+		for index in range(1, len(l_value) - 1):
+			theta = -2 * math.acos(math.sqrt(2 ** l_value[index] / (m - m_current)))
+			yield (
+				Ry(theta)
+				.controlled_by(qreg[l_value[index]], control_values=[0])
+				.on(qreg[l_value[index]], qreg[l_value[index + 1]])
+			)
+			for i in range(l_value[index], l_value[index + 1]):
+				yield H.controlled_by(qreg[l_value[index + 1]], control_values=[0]).on(
+					qreg[l_value[index + 1]], qreg[i]
+				)
+			m_current += 2 ** l_value[index]
+
+	def _value_equality_values_(self) -> Any:
+		return (self._m_value, self._num_qubits)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("USup",) * self._num_qubits
+
+	def __str__(self) -> str:
+		return f"UniformSuperpositionGate(m_value={self._m_value}, num_qubits={self._num_qubits})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.UniformSuperpositionGate(m_value={self._m_value}, num_qubits={self._num_qubits})"
+
+
 __all__ = [
 	"CCNOT",
 	"CCY",
@@ -533,12 +759,15 @@ __all__ = [
 	"CZPowGate",
 	"DiagonalGate",
 	"ISwapPowGate",
+	"PhaseGradientGate",
+	"PhasedFSimGate",
 	"PhasedISwapPowGate",
 	"QuantumFourierTransformGate",
 	"QubitPermutationGate",
 	"SwapPowGate",
 	"ThreeQubitDiagonalGate",
 	"TwoQubitDiagonalGate",
+	"UniformSuperpositionGate",
 	"cphase",
 	"givens",
 	"global_phase_operation",
@@ -547,6 +776,7 @@ __all__ = [
 	"q",
 	"qft",
 	"reset_each",
+	"riswap",
 	"rx",
 	"ry",
 	"rz",

@@ -135,6 +135,34 @@ def test_qid_variants() -> None:
 	assert isinstance(vqubit.NamedQid("a"), vqubit.Qid)
 
 
+def test_riswap_and_phase_gradient() -> None:
+	assert up_to_phase(_unitary(vqubit.riswap(0.7)), _unitary(vqubit.ISwapPowGate(exponent=2 * 0.7 / math.pi)))
+	gradient = vqubit.PhaseGradientGate(num_qubits=2, exponent=1)
+	assert vqubit.is_unitary(_unitary(gradient))
+	assert _unitary(gradient)[0][0] == pytest.approx(1)
+	assert _unitary(gradient)[2][2] == pytest.approx(-1)
+	assert _unitary(gradient**2)[2][2] == pytest.approx(1)
+
+
+def test_phased_fsim_gate() -> None:
+	gate = vqubit.PhasedFSimGate(0.5, 0.1, 0.2, 0.3, 0.4)
+	assert vqubit.is_unitary(_unitary(gate))
+	rebuilt = vqubit.PhasedFSimGate.from_fsim_rz(0.5, 0.4, gate.rz_angles_before, gate.rz_angles_after)
+	assert up_to_phase(_unitary(rebuilt), _unitary(gate))
+	assert vqubit.PhasedFSimGate(0.5).theta == pytest.approx(0.5)
+
+
+def test_uniform_superposition_gate() -> None:
+	for m_value, num_qubits in [(1, 1), (2, 2), (3, 2), (5, 3), (7, 3), (8, 3)]:
+		gate = vqubit.UniformSuperpositionGate(m_value, num_qubits)
+		assert gate.num_qubits == num_qubits
+		assert vqubit.is_unitary(vqubit.unitary(gate))
+	with pytest.raises(ValueError):
+		vqubit.UniformSuperpositionGate(0, 1)
+	with pytest.raises(ValueError):
+		vqubit.UniformSuperpositionGate(9, 2)
+
+
 def test_extra_gate_reprs_round_trip() -> None:
 	from vqubit import testing
 

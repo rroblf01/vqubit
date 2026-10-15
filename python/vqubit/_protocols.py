@@ -45,16 +45,38 @@ def unitary(value: Any) -> Matrix:
 	if isinstance(value, (GateOperation, Operation)):
 		matrix = _as_matrix(value.gate._unitary_())
 		if matrix is None:
+			matrix = _decomposed_unitary(value)
+		if matrix is None:
 			raise TypeError(f"{value!r} has no unitary")
 		return matrix
 	if isinstance(value, Gate):
 		matrix = _as_matrix(value._unitary_())
+		if matrix is None:
+			matrix = _decomposed_unitary(value)
 		if matrix is None:
 			raise TypeError(f"{value!r} has no unitary")
 		return matrix
 	if isinstance(value, PauliString):
 		return value.matrix()
 	raise TypeError(f"{value!r} has no unitary")
+
+
+def _decomposed_unitary(value: Any) -> Matrix | None:
+	"""Build the unitary of a gate/operation from its decomposition, if any."""
+	subject = value.gate if isinstance(value, (GateOperation, Operation)) else value
+	decompose_method = getattr(subject, "_decompose_", None)
+	if decompose_method is None:
+		return None
+	qubits = (
+		value.qubits if isinstance(value, (GateOperation, Operation)) else tuple(LineQubit.range(subject.num_qubits))
+	)
+	try:
+		operations = decompose_method(qubits)
+	except TypeError:
+		return None
+	if operations is None:
+		return None
+	return _circuit_unitary(Circuit(list(operations)))
 
 
 def has_unitary(value: Any) -> bool:

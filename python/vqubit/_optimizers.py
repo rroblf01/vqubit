@@ -88,6 +88,19 @@ def single_qubit_matrix_to_phxz(
 	)
 
 
+def deconstruct_single_qubit_matrix_into_angles(
+	matrix: Sequence[Sequence[complex]],
+	*,
+	atol: float = _DEFAULT_ATOL,
+) -> tuple[float, float, float]:
+	"""Return ``(x, y, z)`` half-turn angles for a ``PhasedXZGate`` equal to ``matrix``.
+
+	The gate is ``PhasedXZGate(x_exponent=x, z_exponent=z, axis_phase_exponent=y)``.
+	"""
+	alpha, beta, gamma = _zyz_angles(matrix, atol)
+	return (beta / math.pi, 0.5 - gamma / math.pi, (alpha + gamma) / math.pi)
+
+
 def single_qubit_matrix_to_operations(
 	matrix: Sequence[Sequence[complex]],
 	qubit: Qid,
@@ -99,6 +112,7 @@ def single_qubit_matrix_to_operations(
 
 
 __all__ = [
+	"deconstruct_single_qubit_matrix_into_angles",
 	"single_qubit_matrix_to_gates",
 	"single_qubit_matrix_to_operations",
 	"single_qubit_matrix_to_phased_x_z",

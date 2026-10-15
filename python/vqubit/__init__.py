@@ -106,6 +106,7 @@ from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzi
 from ._kak import kak_decomposition, two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
 from ._ops import GateOperation, Moment, Operation
 from ._optimizers import (
+	deconstruct_single_qubit_matrix_into_angles,
 	single_qubit_matrix_to_gates,
 	single_qubit_matrix_to_operations,
 	single_qubit_matrix_to_phased_x_z,
@@ -136,6 +137,19 @@ from ._protocols import (
 	unitary,
 )
 from ._qasm import qasm
+from ._qis import (
+	bloch_vector_from_state_vector,
+	density_matrix,
+	fidelity,
+	kraus_channel,
+	partial_trace,
+	random_density_matrix,
+	random_state_vector,
+	state_vector,
+	to_valid_density_matrix,
+	to_valid_state_vector,
+	von_neumann_entropy,
+)
 from ._qubits import GridQubit, LineQubit, NamedQubit, Qid, Qubit
 from ._sim import (
 	DensityMatrix,
@@ -270,15 +284,19 @@ __all__ = [
 	"apply_unitary",
 	"bit_flip",
 	"bit_phase_flip",
+	"bloch_vector_from_state_vector",
 	"cirq_type_from_json",
 	"commutes",
 	"decompose",
 	"decompose_once",
+	"deconstruct_single_qubit_matrix_into_angles",
 	"definitely_commutes",
+	"density_matrix",
 	"depolarize",
 	"drop_empty_moments",
 	"drop_negligible_operations",
 	"expand_composite",
+	"fidelity",
 	"get_engine",
 	"has_kraus",
 	"has_unitary",
@@ -288,6 +306,7 @@ __all__ = [
 	"json_cirq_type",
 	"kak_decomposition",
 	"kraus",
+	"kraus_channel",
 	"measure",
 	"measure_each",
 	"measurement_key_names",
@@ -295,6 +314,7 @@ __all__ = [
 	"merge_single_qubit_moments_to_phxz",
 	"num_qubits",
 	"optimize_for_target_gateset",
+	"partial_trace",
 	"pauli_expansion",
 	"phase_by",
 	"phase_damp",
@@ -302,6 +322,8 @@ __all__ = [
 	"pow",
 	"qasm",
 	"qid_shape",
+	"random_density_matrix",
+	"random_state_vector",
 	"read_json",
 	"read_json_gzip",
 	"reset",
@@ -314,11 +336,15 @@ __all__ = [
 	"single_qubit_matrix_to_operations",
 	"single_qubit_matrix_to_phased_x_z",
 	"single_qubit_matrix_to_phxz",
+	"state_vector",
 	"stratified_circuit",
 	"to_json",
 	"to_json_gzip",
+	"to_valid_density_matrix",
+	"to_valid_state_vector",
 	"two_qubit_matrix_to_cz_operations",
 	"two_qubit_matrix_to_operations",
 	"unitary",
 	"value_equality",
+	"von_neumann_entropy",
 ]

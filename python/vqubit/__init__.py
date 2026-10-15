@@ -52,6 +52,7 @@ from ._channels_extra import (
 )
 from ._circuits import Circuit, CircuitOperation, FrozenCircuit, InsertStrategy
 from ._clifford import CliffordSimulationResult, CliffordSimulator, CliffordState, CliffordTableau
+from ._clifford_gates import CXSWAP, CZSWAP, CliffordGate, SingleQubitCliffordGate
 from ._control_values import AbstractControlValues, ProductOfSums, SumOfProducts
 from ._controlled import ControlledOperation
 from ._devices import (
@@ -375,8 +376,10 @@ __all__ = [
 	"CONTROL_TAG",
 	"CSWAP",
 	"CX",
+	"CXSWAP",
 	"CY",
 	"CZ",
+	"CZSWAP",
 	"FREDKIN",
 	"ISWAP",
 	"ISWAP_INV",
@@ -419,6 +422,7 @@ __all__ = [
 	"CZTargetGateset",
 	"Circuit",
 	"CircuitOperation",
+	"CliffordGate",
 	"CliffordSimulationResult",
 	"CliffordSimulator",
 	"CliffordState",
@@ -526,6 +530,7 @@ __all__ = [
 	"Sampler",
 	"SimulationResult",
 	"Simulator",
+	"SingleQubitCliffordGate",
 	"SingleQubitPauliStringGateOperation",
 	"SingleSweep",
 	"SqrtISwapGate",

@@ -104,6 +104,7 @@ from ._gates import (
 )
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._kak import kak_decomposition, two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
+from ._measurement_key import MeasurementKey
 from ._ops import GateOperation, Moment, Operation
 from ._optimizers import (
 	deconstruct_single_qubit_matrix_into_angles,
@@ -116,10 +117,13 @@ from ._parameter import Parameter, ParamResolver
 from ._pauli import Pauli, PauliString, PauliSum
 from ._protocols import (
 	apply_unitary,
+	approx_eq,
 	commutes,
+	control_keys,
 	decompose,
 	decompose_once,
 	definitely_commutes,
+	equal_up_to_global_phase,
 	has_kraus,
 	has_unitary,
 	inverse,
@@ -127,6 +131,8 @@ from ._protocols import (
 	is_parameterized,
 	kraus,
 	measurement_key_names,
+	measurement_key_obj,
+	measurement_key_objs,
 	measurement_keys_touched,
 	num_qubits,
 	pauli_expansion,
@@ -134,7 +140,9 @@ from ._protocols import (
 	pow,
 	qid_shape,
 	resolve_parameters,
+	trace_distance_bound,
 	unitary,
+	with_measurement_key_mapping,
 )
 from ._qasm import qasm
 from ._qis import (
@@ -234,6 +242,7 @@ __all__ = [
 	"Linspace",
 	"MatrixGate",
 	"MeasurementGate",
+	"MeasurementKey",
 	"Moment",
 	"NamedQubit",
 	"NeutralAtomDevice",
@@ -282,11 +291,13 @@ __all__ = [
 	"align_right",
 	"amplitude_damp",
 	"apply_unitary",
+	"approx_eq",
 	"bit_flip",
 	"bit_phase_flip",
 	"bloch_vector_from_state_vector",
 	"cirq_type_from_json",
 	"commutes",
+	"control_keys",
 	"decompose",
 	"decompose_once",
 	"deconstruct_single_qubit_matrix_into_angles",
@@ -295,6 +306,7 @@ __all__ = [
 	"depolarize",
 	"drop_empty_moments",
 	"drop_negligible_operations",
+	"equal_up_to_global_phase",
 	"expand_composite",
 	"fidelity",
 	"get_engine",
@@ -310,6 +322,8 @@ __all__ = [
 	"measure",
 	"measure_each",
 	"measurement_key_names",
+	"measurement_key_obj",
+	"measurement_key_objs",
 	"measurement_keys_touched",
 	"merge_single_qubit_moments_to_phxz",
 	"num_qubits",
@@ -342,9 +356,11 @@ __all__ = [
 	"to_json_gzip",
 	"to_valid_density_matrix",
 	"to_valid_state_vector",
+	"trace_distance_bound",
 	"two_qubit_matrix_to_cz_operations",
 	"two_qubit_matrix_to_operations",
 	"unitary",
 	"value_equality",
 	"von_neumann_entropy",
+	"with_measurement_key_mapping",
 ]

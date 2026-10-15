@@ -7,6 +7,7 @@ on. They accept gates, operations and circuits wherever that makes sense.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Sequence
 from typing import Any
 
@@ -15,6 +16,7 @@ import vqubit_native as _native
 from ._circuits import Circuit
 from ._gates import Gate, MatrixGate, MeasurementGate, ZPowGate
 from ._linalg import Matrix, dagger, from_flat, identity, matmul, to_flat, vector_from_flat, vector_to_flat
+from ._measurement_key import MeasurementKey
 from ._ops import GateOperation, Moment, Operation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._pauli import Pauli, PauliString, PauliSum
@@ -367,3 +369,105 @@ def has_kraus(value: Any) -> bool:
 	except TypeError:
 		return False
 	return True
+
+
+def _matrices_approx_equal(a: Matrix, b: Matrix, atol: float) -> bool:
+	return len(a) == len(b) and bool(_native.matrix_allclose(to_flat(a), to_flat(b), len(a), atol))
+
+
+def _matrices_phase_equal(a: Matrix, b: Matrix, atol: float) -> bool:
+	if len(a) != len(b):
+		return False
+	phase = None
+	for i in range(len(b)):
+		for j in range(len(b)):
+			if abs(b[i][j]) > 1e-9:
+				phase = a[i][j] / b[i][j]
+				break
+		if phase is not None:
+			break
+	if phase is None:
+		return True
+	scaled = [[phase * entry for entry in row] for row in b]
+	return bool(_native.matrix_allclose(to_flat(a), to_flat(scaled), len(a), atol))
+
+
+def approx_eq(val1: Any, val2: Any, *, atol: float = 1e-8) -> bool:
+	"""Report whether two values are equal, comparing unitaries approximately."""
+	try:
+		u1 = unitary(val1)
+		u2 = unitary(val2)
+	except TypeError:
+		return bool(val1 == val2)
+	return _matrices_approx_equal(u1, u2, atol)
+
+
+def equal_up_to_global_phase(val1: Any, val2: Any, *, atol: float = 1e-8) -> bool:
+	"""Report whether two values are equal up to a global phase."""
+	try:
+		u1 = unitary(val1)
+		u2 = unitary(val2)
+	except TypeError:
+		return bool(val1 == val2)
+	return _matrices_phase_equal(u1, u2, atol)
+
+
+def measurement_key_obj(value: Any) -> MeasurementKey | None:
+	"""Return the :class:`~vqubit.MeasurementKey` a measurement names, if any."""
+	if isinstance(value, (GateOperation, Operation)):
+		return value.gate._measurement_key_obj_()
+	if isinstance(value, Gate):
+		return value._measurement_key_obj_()
+	return None
+
+
+def measurement_key_objs(value: Any) -> frozenset[MeasurementKey]:
+	"""Return the measurement keys ``value`` depends on."""
+	if isinstance(value, Circuit):
+		operations: Iterable[Any] = value.all_operations()
+	elif isinstance(value, Moment):
+		operations = value.operations
+	elif isinstance(value, (GateOperation, Operation, Gate)):
+		operations = [value]
+	else:
+		return frozenset()
+	keys = (measurement_key_obj(operation) for operation in operations)
+	return frozenset(key for key in keys if key is not None)
+
+
+def control_keys(value: Any) -> frozenset[MeasurementKey]:
+	"""Return the classical keys that control ``value`` (none yet)."""
+	return frozenset()
+
+
+def with_measurement_key_mapping(value: Any, mapping: Any) -> Any:
+	"""Return ``value`` with its measurement keys renamed by ``mapping``."""
+
+	def remap(key: str) -> str:
+		for source, target in dict(mapping).items():
+			name = source.name if isinstance(source, MeasurementKey) else str(source)
+			if name == key:
+				return target.name if isinstance(target, MeasurementKey) else str(target)
+		return key
+
+	if isinstance(value, MeasurementGate):
+		return MeasurementGate(remap(value.key), num_qubits=value.num_qubits, invert_mask=value.invert_mask)
+	if isinstance(value, (GateOperation, Operation)):
+		return with_measurement_key_mapping(value.gate, mapping).on(*value.qubits)
+	if isinstance(value, Circuit):
+		return Circuit([with_measurement_key_mapping(op, mapping) for op in value.all_operations()])
+	return value
+
+
+def trace_distance_bound(value: Any) -> float:
+	"""Return an upper bound on the trace distance of ``value`` from the identity."""
+	hook = getattr(value, "_trace_distance_bound_", None)
+	if hook is not None:
+		return float(hook())
+	try:
+		matrix = unitary(value)
+	except TypeError:
+		return 1.0
+	dim = len(matrix)
+	trace = sum(matrix[i][i] for i in range(dim)) / dim
+	return math.sqrt(max(0.0, 1.0 - abs(trace) ** 2))

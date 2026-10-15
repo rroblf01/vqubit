@@ -56,6 +56,9 @@ class Gate:
 	def _measurement_key_name_(self) -> str | None:
 		return None
 
+	def _measurement_key_obj_(self) -> Any:
+		return None
+
 	def _is_parameterized_(self) -> bool:
 		return False
 
@@ -565,6 +568,11 @@ class MeasurementGate(Gate):
 
 	def _measurement_key_name_(self) -> str | None:
 		return self._key
+
+	def _measurement_key_obj_(self) -> Any:
+		from ._measurement_key import MeasurementKey
+
+		return MeasurementKey(self._key)
 
 	def __str__(self) -> str:
 		return f"measure({self._key!r})"

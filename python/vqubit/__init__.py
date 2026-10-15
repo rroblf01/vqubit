@@ -23,6 +23,7 @@ from __future__ import annotations
 from vqubit_native import version as _native_version
 
 from . import linalg, testing
+from ._arithmetic import ArithmeticGate, BooleanHamiltonianGate
 from ._channels import (
 	AmplitudeDampingChannel,
 	BitFlipChannel,
@@ -413,11 +414,13 @@ __all__ = [
 	"AmplitudeDampingChannel",
 	"AnyIntegerPowerGateFamily",
 	"AnyUnitaryGateFamily",
+	"ArithmeticGate",
 	"AsymmetricDepolarizingChannel",
 	"AxisAngleDecomposition",
 	"BaseDensePauliString",
 	"BitFlipChannel",
 	"BitPhaseFlipChannel",
+	"BooleanHamiltonianGate",
 	"BorrowableQubit",
 	"CCNotPowGate",
 	"CCXGate",

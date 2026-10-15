@@ -619,6 +619,70 @@ fn channel_permutation_into(mut rho []f64, perm []int, targets []int, num_qubits
 	}
 }
 
+// channel_diagonal_into applies a channel whose Kraus operators are all diagonal.
+//
+// For diagonal `K`, `(K rho K^dagger)[i][j] = K[i][i] conj(K[j][j]) rho[i][j]`,
+// so each block entry is scaled by a precomputed coefficient.
+fn channel_diagonal_into(mut rho []f64, ops []f64, num_ops int, op_dim int, targets []int, num_qubits int) {
+	dim := 1 << num_qubits
+	k := targets.len
+	mut off := []int{len: op_dim, init: 0}
+	mut tmask := 0
+	for r in 0 .. op_dim {
+		mut o := 0
+		for j in 0 .. k {
+			if ((r >> (k - 1 - j)) & 1) == 1 {
+				o |= 1 << (num_qubits - 1 - targets[j])
+			}
+		}
+		off[r] = o
+		tmask |= o
+	}
+	size := 2 * op_dim * op_dim
+	mut coeff_r := []f64{len: op_dim * op_dim, init: 0.0}
+	mut coeff_i := []f64{len: op_dim * op_dim, init: 0.0}
+	unsafe {
+		for o in 0 .. num_ops {
+			for i in 0 .. op_dim {
+				dir := ops[o * size + 2 * (i * op_dim + i)]
+				dii := ops[o * size + 2 * (i * op_dim + i) + 1]
+				for j in 0 .. op_dim {
+					djr := ops[o * size + 2 * (j * op_dim + j)]
+					dji := ops[o * size + 2 * (j * op_dim + j) + 1]
+					coeff_r[i * op_dim + j] += dir * djr + dii * dji
+					coeff_i[i * op_dim + j] += dii * djr - dir * dji
+				}
+			}
+		}
+		p := &f64(rho.data)
+		mut valid := []int{cap: dim}
+		for i in 0 .. dim {
+			if (i & tmask) == 0 {
+				valid << i
+			}
+		}
+		for rbi in 0 .. valid.len {
+			rb := valid[rbi]
+			for cbi in 0 .. valid.len {
+				cb := valid[cbi]
+				base := rb * dim + cb
+				for i in 0 .. op_dim {
+					row_off := off[i] * dim
+					for j in 0 .. op_dim {
+						idx := 2 * (base + row_off + off[j])
+						vr := p[idx]
+						vi := p[idx + 1]
+						cr := coeff_r[i * op_dim + j]
+						ci := coeff_i[i * op_dim + j]
+						p[idx] = vr * cr - vi * ci
+						p[idx + 1] = vr * ci + vi * cr
+					}
+				}
+			}
+		}
+	}
+}
+
 // channel_subspace_into applies `sum_i K_i rho K_i^dagger` on the `targets` of a
 // density matrix in place.
 //
@@ -665,6 +729,34 @@ fn channel_subspace_into(mut rho []f64, ops []f64, num_ops int, op_dim int, targ
 		channel_subspace_2x2_into(mut rho, ops, num_ops, targets, num_qubits)
 		return
 	}
+	// A diagonal Kraus scales each block entry directly, so CZ/CCZ and other
+	// diagonal multi-qubit gates avoid the full block arithmetic.
+	mut is_diagonal := true
+	op_size := 2 * op_dim * op_dim
+	for o in 0 .. num_ops {
+		for row in 0 .. op_dim {
+			for c in 0 .. op_dim {
+				if row != c {
+					re := ops[o * op_size + 2 * (row * op_dim + c)]
+					im := ops[o * op_size + 2 * (row * op_dim + c) + 1]
+					if re * re + im * im > 1e-18 {
+						is_diagonal = false
+						break
+					}
+				}
+			}
+			if !is_diagonal {
+				break
+			}
+		}
+		if !is_diagonal {
+			break
+		}
+	}
+	if is_diagonal {
+		channel_diagonal_into(mut rho, ops, num_ops, op_dim, targets, num_qubits)
+		return
+	}
 	dim := 1 << num_qubits
 	k := targets.len
 	mut off := []int{len: op_dim, init: 0}
@@ -680,67 +772,105 @@ fn channel_subspace_into(mut rho []f64, ops []f64, num_ops int, op_dim int, targ
 		tmask |= o
 	}
 	size := 2 * op_dim * op_dim
-	mut ar := []f64{len: op_dim * op_dim, init: 0.0}
-	mut ai := []f64{len: op_dim * op_dim, init: 0.0}
-	mut br := []f64{len: op_dim * op_dim, init: 0.0}
-	mut bi := []f64{len: op_dim * op_dim, init: 0.0}
+	od2 := op_dim * op_dim
+	// Hoist the Kraus operators into flat arrays so the block loop does not
+	// rebuild the per-op slice and re-read `ops` for every block.
+	mut kr := []f64{len: num_ops * od2, init: 0.0}
+	mut ki := []f64{len: num_ops * od2, init: 0.0}
+	mut ar := []f64{len: od2, init: 0.0}
+	mut ai := []f64{len: od2, init: 0.0}
+	mut br := []f64{len: od2, init: 0.0}
+	mut bi := []f64{len: od2, init: 0.0}
+	mut crr := []f64{len: od2, init: 0.0}
+	mut cri := []f64{len: od2, init: 0.0}
 	unsafe {
-	for rb in 0 .. dim {
-		if (rb & tmask) != 0 {
-			continue
+		kp := &f64(kr.data)
+		kip := &f64(ki.data)
+		arp := &f64(ar.data)
+		aip := &f64(ai.data)
+		brp := &f64(br.data)
+		bip := &f64(bi.data)
+		crrp := &f64(crr.data)
+		crip := &f64(cri.data)
+		pp := &f64(rho.data)
+		for o in 0 .. num_ops {
+			for t in 0 .. od2 {
+				kp[o * od2 + t] = ops[o * size + 2 * t]
+				kip[o * od2 + t] = ops[o * size + 2 * t + 1]
+			}
 		}
-		for cb in 0 .. dim {
-			if (cb & tmask) != 0 {
-				continue
+		// Only the indices whose target bits are clear label a block; enumerating
+		// them avoids scanning all `dim*dim` index pairs.
+		mut valid := []int{cap: dim}
+		for i in 0 .. dim {
+			if (i & tmask) == 0 {
+				valid << i
 			}
-			base := rb * dim + cb
-			for b in 0 .. op_dim {
-				row_off := off[b] * dim
-				for d in 0 .. op_dim {
-					idx := 2 * (base + row_off + off[d])
-					ar[b * op_dim + d] = rho[idx]
-					ai[b * op_dim + d] = rho[idx + 1]
+		}
+		for rbi in 0 .. valid.len {
+			rb := valid[rbi]
+			for cbi in 0 .. valid.len {
+				cb := valid[cbi]
+				base := rb * dim + cb
+				for b in 0 .. op_dim {
+					row_off := off[b] * dim
+					for d in 0 .. op_dim {
+						idx := 2 * (base + row_off + off[d])
+						arp[b * op_dim + d] = pp[idx]
+						aip[b * op_dim + d] = pp[idx + 1]
+					}
 				}
-			}
-			for idx in 0 .. op_dim * op_dim {
-				br[idx] = 0.0
-				bi[idx] = 0.0
-			}
-			for o in 0 .. num_ops {
-				kop := ops[o * size..(o + 1) * size]
-				for ri in 0 .. op_dim {
-					for rj in 0 .. op_dim {
-						mut sr := 0.0
-						mut si := 0.0
-						for b in 0 .. op_dim {
-							kr := kop[2 * (ri * op_dim + b)]
-							ki := kop[2 * (ri * op_dim + b) + 1]
-							for d in 0 .. op_dim {
-								dr := kop[2 * (rj * op_dim + d)]
-								di := -kop[2 * (rj * op_dim + d) + 1]
-								avr := ar[b * op_dim + d]
-								avi := ai[b * op_dim + d]
-								mr := avr * dr - avi * di
-								mi := avr * di + avi * dr
-								sr += kr * mr - ki * mi
-								si += kr * mi + ki * mr
+				for idx in 0 .. od2 {
+					brp[idx] = 0.0
+					bip[idx] = 0.0
+				}
+				for o in 0 .. num_ops {
+					obase := o * od2
+					// C = K A.
+					for ri in 0 .. op_dim {
+						for d in 0 .. op_dim {
+							mut cr := 0.0
+							mut ci := 0.0
+							for b in 0 .. op_dim {
+								krb := kp[obase + ri * op_dim + b]
+								kib := kip[obase + ri * op_dim + b]
+								avr := arp[b * op_dim + d]
+								avi := aip[b * op_dim + d]
+								cr += krb * avr - kib * avi
+								ci += krb * avi + kib * avr
 							}
+							crrp[ri * op_dim + d] = cr
+							crip[ri * op_dim + d] = ci
 						}
-						br[ri * op_dim + rj] += sr
-						bi[ri * op_dim + rj] += si
+					}
+					// B += C K^dagger.
+					for ri in 0 .. op_dim {
+						for rj in 0 .. op_dim {
+							mut sr := 0.0
+							mut si := 0.0
+							for d in 0 .. op_dim {
+								cr := crrp[ri * op_dim + d]
+								ci := crip[ri * op_dim + d]
+								dr := kp[obase + rj * op_dim + d]
+								di := -kip[obase + rj * op_dim + d]
+								sr += cr * dr - ci * di
+								si += cr * di + ci * dr
+							}
+							brp[ri * op_dim + rj] += sr
+							bip[ri * op_dim + rj] += si
+						}
+					}
+				}
+				for ri in 0 .. op_dim {
+					row_off := off[ri] * dim
+					for rj in 0 .. op_dim {
+						idx := 2 * (base + row_off + off[rj])
+						pp[idx] = brp[ri * op_dim + rj]
+						pp[idx + 1] = bip[ri * op_dim + rj]
 					}
 				}
 			}
-			for ri in 0 .. op_dim {
-				row_off := off[ri] * dim
-				for rj in 0 .. op_dim {
-					idx := 2 * (base + row_off + off[rj])
-					rho[idx] = br[ri * op_dim + rj]
-					rho[idx + 1] = bi[ri * op_dim + rj]
-				}
-			}
 		}
-	}
 	}
 }
 

@@ -134,9 +134,7 @@ def test_other_compilation_helpers_run() -> None:
 	assert isinstance(vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(0.3, 0.4)), tuple)
 	assert len(vqubit.decompose_cphase_into_two_fsim(q0, q1)) > 0
 	assert len(vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(q0, q1)) == 4
-	diagonal, operations = vqubit.two_qubit_matrix_to_diagonal_and_cz_operations(
-		vqubit.unitary(vqubit.CNOT), qubits=(q0, q1)
-	)
+	diagonal, operations = vqubit.two_qubit_matrix_to_diagonal_and_cz_operations(q0, q1, vqubit.unitary(vqubit.CNOT))
 	assert diagonal.num_qubits == 2
 	assert len(operations) > 0
 	assert len(vqubit.two_qubit_matrix_to_cz_isometry(q0, q1, [[1, 0], [0, 1], [0, 0], [0, 0]])) > 0

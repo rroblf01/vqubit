@@ -77,11 +77,9 @@ def test_merge_operations() -> None:
 	q0 = vqubit.LineQubit(0)
 	circuit = vqubit.Circuit(vqubit.X(q0), vqubit.X(q0))
 
-	def merge_func(*ops):
-		if len(ops) == 1:
-			return "X" if isinstance(ops[0].gate, vqubit.XPowGate) else None
-		matrix = vqubit.dot(vqubit.unitary(ops[1].gate), vqubit.unitary(ops[0].gate))
-		return vqubit.MatrixGate(matrix).on(ops[0].qubits[0])
+	def merge_func(op1, op2):
+		matrix = vqubit.dot(vqubit.unitary(op2.gate), vqubit.unitary(op1.gate))
+		return vqubit.MatrixGate(matrix).on(op1.qubits[0])
 
 	merged = vqubit.merge_operations(circuit, merge_func)
 	assert len(list(merged.all_operations())) == 1

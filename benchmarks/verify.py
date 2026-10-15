@@ -313,7 +313,7 @@ def check_decompositions(report: Report) -> None:
 	report.check("decompositions", "single_qubit_matches_cirq", up_to_phase(vphxz, cphxz))
 
 	q0, q1 = vq.LineQubit(0), vq.LineQubit(1)
-	vops = vq.two_qubit_matrix_to_cz_operations(u4, qubits=(q0, q1))
+	vops = vq.two_qubit_matrix_to_cz_operations(q0, q1, u4)
 	vcz = vq.unitary(vq.Circuit(vops))
 	report.check("decompositions", "two_qubit_cz_reconstructs", up_to_phase(vcz, u4))
 
@@ -357,12 +357,24 @@ def check_api(report: Report) -> None:
 	missing = sorted(cirq_names - vq_names)
 	report.check("api", "top_level_names", not missing, f"missing {missing}" if missing else "")
 
+	import inspect
+
 	signature_cases = [
-		("two_qubit_matrix_to_cz_operations", "(q0, q1, mat, allow_partial_czs, atol, clean_operations)"),
-		("merge_operations", "(circuit, merge_func, context, atol)"),
+		"two_qubit_matrix_to_cz_operations",
+		"two_qubit_matrix_to_cz_isometry",
+		"two_qubit_matrix_to_diagonal_and_cz_operations",
+		"merge_operations",
+		"merge_moments",
 	]
-	for name, expected in signature_cases:
-		report.check("api", f"signature.{name}", hasattr(vq, name), f"expected {expected}")
+	for name in signature_cases:
+		vparams = list(inspect.signature(getattr(vq, name)).parameters)
+		cparams = list(inspect.signature(getattr(cirq, name)).parameters)
+		report.check(
+			"api",
+			f"signature.{name}",
+			vparams[: len(cparams)] == cparams,
+			f"vqubit {vparams} vs cirq {cparams}",
+		)
 
 
 def main() -> None:

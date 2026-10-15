@@ -34,7 +34,7 @@ def test_two_qubit_synthesis_of_known_gates(gate: vqubit.Gate) -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
 	matrix = vqubit.unitary(gate)
 	cnot_ops = vqubit.two_qubit_matrix_to_operations(matrix, qubits=(q0, q1))
-	cz_ops = vqubit.two_qubit_matrix_to_cz_operations(matrix, qubits=(q0, q1))
+	cz_ops = vqubit.two_qubit_matrix_to_cz_operations(q0, q1, matrix)
 	assert up_to_phase(_circuit_unitary(cnot_ops), matrix, tol=1e-5)
 	assert up_to_phase(_circuit_unitary(cz_ops), matrix, tol=1e-5)
 
@@ -45,7 +45,7 @@ def test_two_qubit_synthesis_of_random_unitaries() -> None:
 	for _ in range(40):
 		matrix = random_unitary(4, rng)
 		cnot_ops = vqubit.two_qubit_matrix_to_operations(matrix, qubits=(q0, q1))
-		cz_ops = vqubit.two_qubit_matrix_to_cz_operations(matrix, qubits=(q0, q1))
+		cz_ops = vqubit.two_qubit_matrix_to_cz_operations(q0, q1, matrix)
 		assert up_to_phase(_circuit_unitary(cnot_ops), matrix, tol=1e-4)
 		assert up_to_phase(_circuit_unitary(cz_ops), matrix, tol=1e-4)
 
@@ -53,7 +53,7 @@ def test_two_qubit_synthesis_of_random_unitaries() -> None:
 def test_cz_synthesis_uses_only_czs_and_single_qubit_gates() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
 	rng = random.Random(7)
-	operations = vqubit.two_qubit_matrix_to_cz_operations(random_unitary(4, rng), qubits=(q0, q1))
+	operations = vqubit.two_qubit_matrix_to_cz_operations(q0, q1, random_unitary(4, rng))
 	for operation in operations:
 		assert len(operation.qubits) == 1 or isinstance(operation.gate, vqubit.CZGate)
 

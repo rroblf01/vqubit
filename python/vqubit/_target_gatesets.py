@@ -91,8 +91,9 @@ class CZTargetGateset(TargetGateset):
 		if matrix is None:
 			return None
 		return two_qubit_matrix_to_cz_operations(
+			operation.qubits[0],
+			operation.qubits[1],
 			[list(row) for row in matrix],
-			qubits=(operation.qubits[0], operation.qubits[1]),
 			atol=self.atol,
 		)
 

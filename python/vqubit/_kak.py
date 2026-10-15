@@ -245,14 +245,17 @@ def _yy_interaction_cz(theta: float, first: Qid, second: Qid) -> list[Operation]
 
 
 def two_qubit_matrix_to_cz_operations(
-	matrix: Sequence[Sequence[complex]],
-	*,
-	qubits: tuple[Qid, Qid],
+	q0: Qid,
+	q1: Qid,
+	mat: Sequence[Sequence[complex]],
+	allow_partial_czs: bool = False,
 	atol: float = 1e-8,
+	clean_operations: bool = True,
 ) -> list[Operation]:
 	"""Decompose an arbitrary two-qubit unitary into single-qubit gates and CZs."""
-	_, (x, y, z), (a1, a2), (b1, b2) = kak_decomposition(matrix, atol=atol)
-	first, second = qubits
+	del allow_partial_czs, clean_operations
+	_, (x, y, z), (a1, a2), (b1, b2) = kak_decomposition(mat, atol=atol)
+	first, second = q0, q1
 	operations: list[Operation] = []
 	operations.extend(_single_qubit_gates(b1, first))
 	operations.extend(_single_qubit_gates(b2, second))

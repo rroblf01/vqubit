@@ -306,7 +306,7 @@ def two_qubit_matrix_to_sqrt_iswap_operations(
 	del kwargs
 	from ._kak import two_qubit_matrix_to_cz_operations
 
-	cz_ops = two_qubit_matrix_to_cz_operations(matrix, qubits=qubits, atol=atol)
+	cz_ops = two_qubit_matrix_to_cz_operations(qubits[0], qubits[1], matrix, atol=atol)
 	operations: list[Operation] = []
 	for operation in cz_ops:
 		if isinstance(operation.gate, CZPowGate) and len(operation.qubits) == 2:
@@ -361,29 +361,41 @@ def _zz_interaction_ms(theta: float, q0: Qid, q1: Qid) -> list[Operation]:
 
 
 def two_qubit_matrix_to_diagonal_and_cz_operations(
-	matrix: Sequence[Sequence[complex]], *, qubits: tuple[Qid, Qid], atol: float = 1e-8, **kwargs: Any
-) -> tuple[Gate, list[Operation]]:
+	q0: Qid,
+	q1: Qid,
+	mat: Sequence[Sequence[complex]],
+	allow_partial_czs: bool = False,
+	atol: float = 1e-8,
+	clean_operations: bool = True,
+) -> tuple[Any, list[Operation]]:
 	"""Return ``(diagonal_gate, operations)`` implementing the two-qubit unitary."""
-	del kwargs
 	from ._gates_more import DiagonalGate
 
-	decomposition = kak_decomposition(matrix, atol=atol)
-	ops = two_qubit_matrix_to_cz_operations(matrix, qubits=qubits, atol=atol)
-	dim = len(to_nested_list(matrix))
+	decomposition = kak_decomposition(mat, atol=atol)
+	ops = two_qubit_matrix_to_cz_operations(
+		q0, q1, mat, allow_partial_czs, atol=atol, clean_operations=clean_operations
+	)
+	dim = len(to_nested_list(mat))
 	diagonal = DiagonalGate([0] * dim)
 	_ = decomposition
 	return diagonal, ops
 
 
 def two_qubit_matrix_to_cz_isometry(
-	q0: Qid, q1: Qid, matrix: Sequence[Sequence[complex]], *, atol: float = 1e-8, **kwargs: Any
+	q0: Qid,
+	q1: Qid,
+	mat: Sequence[Sequence[complex]],
+	allow_partial_czs: bool = False,
+	atol: float = 1e-8,
+	clean_operations: bool = True,
 ) -> list[Operation]:
 	"""Decompose a two-qubit isometry into single-qubit gates and CZs."""
-	del kwargs
-	full = _complete_isometry(to_nested_list(matrix))
+	full = _complete_isometry(to_nested_list(mat))
 	from ._kak import two_qubit_matrix_to_cz_operations
 
-	return two_qubit_matrix_to_cz_operations(full, qubits=(q0, q1), atol=atol)
+	return two_qubit_matrix_to_cz_operations(
+		q0, q1, full, allow_partial_czs, atol=atol, clean_operations=clean_operations
+	)
 
 
 def _complete_isometry(matrix: Matrix) -> Matrix:
@@ -441,7 +453,7 @@ def prepare_two_qubit_state_using_cz(
 	"""Prepare a two-qubit state using CZs."""
 	del kwargs
 	matrix = _state_to_unitary(gate)
-	return two_qubit_matrix_to_cz_operations(matrix, qubits=(qubits[0], qubits[1]), atol=atol)
+	return two_qubit_matrix_to_cz_operations(qubits[0], qubits[1], matrix, atol=atol)
 
 
 def prepare_two_qubit_state_using_iswap(

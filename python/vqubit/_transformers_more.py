@@ -202,47 +202,70 @@ def dephase_measurements(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:
 
 
 def merge_operations(
-	circuit: Circuit, merge_func: Callable[..., Any], *, context: TransformerContext | None = None
+	circuit: Circuit,
+	merge_func: Callable[[Operation, Operation], Operation | None],
+	*,
+	tags_to_ignore: Sequence[Any] = (),
+	deep: bool = False,
 ) -> Circuit:
-	"""Merge adjacent operations sharing a ``merge_func`` key."""
-	del context
-	result = Circuit()
-	pending: Operation | None = None
-	pending_key: Any = None
+	"""Merge adjacent operations with ``merge_func(op1, op2)``.
+
+	``merge_func`` receives two merge-able operations (the qubits of one are a
+	subset of the qubits of the other, with no operation in between) and returns
+	the merged operation, or ``None`` to keep them separate.
+	"""
+	del deep
+	ignored = set(tags_to_ignore)
+	result: list[Operation] = []
+	frontier: dict[Qid, int] = {}
 	for operation in circuit.all_operations():
-		key = merge_func(operation)
-		if key is None:
-			if pending is not None:
-				result.append(pending)
-				pending = None
+		if not ignored.isdisjoint(getattr(operation, "tags", ())):
 			result.append(operation)
+			for qubit in operation.qubits:
+				frontier[qubit] = len(result) - 1
 			continue
-		if pending is not None and pending_key == key:
-			merged = merge_func(pending, operation)
-			if merged is None:
-				result.append(pending)
-				pending = operation
-			else:
-				pending = merged
-		else:
-			if pending is not None:
-				result.append(pending)
-			pending = operation
-			pending_key = key
-	if pending is not None:
-		result.append(pending)
-	return result
+		candidates = sorted({frontier[q] for q in operation.qubits if q in frontier}, reverse=True)
+		merged = False
+		for index in candidates:
+			left = result[index]
+			left_qubits, op_qubits = set(left.qubits), set(operation.qubits)
+			if left_qubits.issubset(op_qubits) or op_qubits.issubset(left_qubits):
+				new_op = merge_func(left, operation)
+				if new_op is not None:
+					if not (left_qubits | op_qubits).issuperset(new_op.qubits):
+						raise ValueError(
+							"Merged operation must act on a subset of the qubits of the original operations"
+						)
+					result[index] = new_op
+					for qubit in new_op.qubits:
+						frontier[qubit] = index
+					merged = True
+					break
+		if not merged:
+			result.append(operation)
+			for qubit in operation.qubits:
+				frontier[qubit] = len(result) - 1
+	return Circuit(result)
 
 
 def merge_moments(
-	circuit: Circuit, merge_func: Callable[..., Any], *, context: TransformerContext | None = None
+	circuit: Circuit,
+	merge_func: Callable[[Moment, Moment], Moment | None],
+	*,
+	tags_to_ignore: Sequence[Any] = (),
+	deep: bool = False,
 ) -> Circuit:
 	"""Merge adjacent moments using ``merge_func(moment1, moment2)``."""
-	del context
+	del deep
+	ignored = set(tags_to_ignore)
+
+	def has_ignored_tag(moment: Moment) -> bool:
+		return any(not ignored.isdisjoint(getattr(op, "tags", ())) for op in moment.operations)
+
 	moments = list(circuit.moments)
 	result: list[Moment] = []
 	for moment in moments:
-		if result:
+		if result and not has_ignored_tag(result[-1]) and not has_ignored_tag(moment):
 			merged = merge_func(result[-1], moment)
 			if merged is not None:
 				result[-1] = merged
@@ -252,10 +275,14 @@ def merge_moments(
 
 
 def merge_moments_batch(
-	circuit: Circuit, merge_func: Callable[..., Any], *, context: TransformerContext | None = None
+	circuit: Circuit,
+	merge_func: Callable[[Moment, Moment], Moment | None],
+	*,
+	tags_to_ignore: Sequence[Any] = (),
+	deep: bool = False,
 ) -> Circuit:
 	"""Batch version of :func:`merge_moments` (delegates to it)."""
-	return merge_moments(circuit, merge_func, context=context)
+	return merge_moments(circuit, merge_func, tags_to_ignore=tags_to_ignore, deep=deep)
 
 
 def merge_operations_to_circuit_op(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:

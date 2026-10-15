@@ -314,6 +314,7 @@ from ._qis import (
 	to_valid_state_vector,
 	von_neumann_entropy,
 )
+from ._qubit_manager import BorrowableQubit, CleanQubit, GreedyQubitManager, QubitManager, SimpleQubitManager
 from ._qubit_order import QubitOrder, QubitOrderOrList
 from ._qubits import GridQid, GridQubit, LineQid, LineQubit, NamedQid, NamedQubit, Qid, Qubit
 from ._sim import (
@@ -405,6 +406,7 @@ __all__ = [
 	"BaseDensePauliString",
 	"BitFlipChannel",
 	"BitPhaseFlipChannel",
+	"BorrowableQubit",
 	"CCNotPowGate",
 	"CCXGate",
 	"CCXPowGate",
@@ -422,6 +424,7 @@ __all__ = [
 	"CZTargetGateset",
 	"Circuit",
 	"CircuitOperation",
+	"CleanQubit",
 	"CliffordGate",
 	"CliffordSimulationResult",
 	"CliffordSimulator",
@@ -448,6 +451,7 @@ __all__ = [
 	"Gateset",
 	"GeneralizedAmplitudeDampingChannel",
 	"GlobalPhaseGate",
+	"GreedyQubitManager",
 	"GridDevice",
 	"GridQid",
 	"GridQubit",
@@ -511,6 +515,7 @@ __all__ = [
 	"Qid",
 	"QuantumFourierTransformGate",
 	"Qubit",
+	"QubitManager",
 	"QubitOrder",
 	"QubitOrderOrList",
 	"QubitPermutationGate",
@@ -528,6 +533,7 @@ __all__ = [
 	"S",
 	"SWAPGate",
 	"Sampler",
+	"SimpleQubitManager",
 	"SimulationResult",
 	"Simulator",
 	"SingleQubitCliffordGate",

@@ -111,6 +111,7 @@ from ._gates import (
 	measure,
 	measure_each,
 )
+from ._interop import quirk_url
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._kak import kak_decomposition, two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
 from ._measurement_key import MeasurementKey
@@ -153,7 +154,7 @@ from ._protocols import (
 	unitary,
 	with_measurement_key_mapping,
 )
-from ._qasm import qasm
+from ._qasm import QasmArgs, qasm
 from ._qis import (
 	bloch_vector_from_state_vector,
 	density_matrix,
@@ -296,6 +297,7 @@ __all__ = [
 	"PhasedXZGate",
 	"Points",
 	"Product",
+	"QasmArgs",
 	"Qid",
 	"Qubit",
 	"QubitOrder",
@@ -388,6 +390,7 @@ __all__ = [
 	"pow",
 	"qasm",
 	"qid_shape",
+	"quirk_url",
 	"random_density_matrix",
 	"random_state_vector",
 	"read_json",

@@ -152,3 +152,34 @@ def qasm(value: Any) -> str:
 	for operation in operations:
 		lines.extend(_operation_lines(operation, qubit_ids, ""))
 	return "\n".join(lines)
+
+
+class QasmArgs:
+	"""The context passed to a gate's QASM writer.
+
+	Mirrors Cirq's ``QasmArgs``: it maps qubits to the names QASM uses and
+	carries the precision and the free arguments.
+	"""
+
+	def __init__(
+		self,
+		*,
+		qubit_id_map: Any = None,
+		precision: int = 15,
+		version: str = "2.0",
+		args: Any = None,
+	) -> None:
+		self.qubit_id_map = dict(qubit_id_map or {})
+		self.precision = int(precision)
+		self.version = version
+		self.args = dict(args or {})
+
+	def format(self, text: str) -> str:
+		"""Return ``text`` unchanged (the writer already formatted it)."""
+		return text
+
+	def __repr__(self) -> str:
+		return f"vqubit.QasmArgs(version={self.version!r})"
+
+
+__all__ = ["QasmArgs", "qasm"]

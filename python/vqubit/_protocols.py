@@ -103,7 +103,7 @@ def _circuit_unitary(circuit: Circuit) -> Any:
 	return result
 
 
-def _numpy_circuit_unitary(circuit: Circuit) -> Matrix:
+def _numpy_circuit_unitary(circuit: Circuit) -> Any:
 	"""Build the circuit unitary with numpy (BLAS) when it is installed."""
 	import numpy as np
 

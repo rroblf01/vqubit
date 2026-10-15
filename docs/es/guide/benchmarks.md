@@ -41,46 +41,51 @@ harness en tu propia máquina** para obtener cifras que te importen.
 
 ## Resultados
 
-Ejecución representativa (Python 3.15, Cirq 1.7.0, NumPy 2.x):
+Ejecución representativa (Python 3.15, Cirq 1.7.0, NumPy 2.x). La "RAM" es la
+memoria residente pico durante la tarea (que, con la importación aislada, ya
+incluye el coste de importar el paquete).
 
-| Tarea | vqubit | Cirq | Aceleración | RAM extra vqubit | RAM extra Cirq |
+| Tarea | vqubit | Cirq | Aceleración | RAM vqubit | RAM Cirq |
 |---|---:|---:|---:|---:|---:|
-| Construir un circuito de 5 qubits y 300 momentos | 18.4 ms | 18.7 ms | 1.02× | 0 MB | 0 MB |
-| Unitario de un circuito de 6 qubits | 45.7 ms | 0.7 ms | 0.02× | 1 MB | 0 MB |
-| Simular vector de estado de 12 qubits | 4.0 ms | 1.7 ms | 0.41× | 0 MB | 0 MB |
-| Muestrear 1000 disparos de 12 qubits | 96.7 ms | 6.5 ms | 0.07× | 0 MB | 0 MB |
-| Simular matriz de densidad de 7 qubits | 22.7 ms | 8.3 ms | 0.37× | 7 MB | 0 MB |
-| Simular vector de estado de 20 qubits | 1453 ms | 42 ms | 0.03× | 199 MB | 39 MB |
-| Simular matriz de densidad de 10 qubits | 2366 ms | 387 ms | 0.16× | 593 MB | 49 MB |
-| Descomposición KAK de un unitario 4×4 | 0.3 ms | 0.9 ms | 3.2× | 0 MB | 0 MB |
-| Matriz de 1 qubit a PhasedXZ | <0.1 ms | <0.1 ms | 5.6× | 0 MB | 0 MB |
-| Multiplicar cadenas de Pauli 1000× | 6.2 ms | 9.7 ms | 1.6× | 0 MB | 0 MB |
-| Exportar OpenQASM de 50 puertas | 0.5 ms | 1.3 ms | 2.5× | 0 MB | 0 MB |
-| Vector de Bloch de 12 qubits | 8.2 ms | 1.7 ms | 0.21× | 0 MB | 0 MB |
+| Importar el paquete | — | — | — | 77 MB | 208 MB |
+| Construir un circuito de 5 qubits y 300 momentos | 19 ms | 19 ms | ≈1× | 78 MB | 209 MB |
+| Unitario de un circuito de 6 qubits | 0.5 ms | 0.8 ms | 1.5× | 77 MB | 208 MB |
+| Simular vector de estado de 12 qubits | 0.3 ms | 1.9 ms | 6.3× | 77 MB | 208 MB |
+| Muestrear 1000 disparos de 12 qubits | 2.7 ms | 6.7 ms | 2.5× | 82 MB | 209 MB |
+| Simular matriz de densidad de 7 qubits | 3.2 ms | 7.8 ms | 2.5× | 78 MB | 209 MB |
+| Simular vector de estado de 20 qubits | 41 ms | 42 ms | ≈1× | 93 MB | 246 MB |
+| Simular matriz de densidad de 10 qubits | 293 ms | 370 ms | 1.3× | 109 MB | 258 MB |
+| Descomposición KAK de un unitario 4×4 | 0.26 ms | 0.48 ms | 1.8× | 77 MB | 209 MB |
+| Matriz de 1 qubit a PhasedXZ | <0.1 ms | <0.1 ms | 5.6× | 77 MB | 208 MB |
+| Multiplicar cadenas de Pauli 1000× | 5.7 ms | 9.5 ms | 1.7× | 77 MB | 208 MB |
+| Exportar OpenQASM de 50 puertas | 0.6 ms | 1.4 ms | 2.4× | 77 MB | 208 MB |
+| Vector de Bloch de 12 qubits | 0.3 ms | 2.0 ms | 7.7× | 77 MB | 208 MB |
 
 Una **aceleración por encima de 1×** significa que vqubit es más rápido; por
 debajo de 1× significa que Cirq es más rápido.
 
 ## Cómo interpretarlo
 
-- **Construcción de circuitos, descomposiciones, álgebra de Pauli y QASM** son
-  donde vqubit es competitivo o más rápido. Son operaciones en Python puro con
-  pocas reservas de memoria, y las representaciones compactas de vqubit salen a
-  cuenta.
-- **Las simulaciones grandes y el unitario de un circuito completo** favorecen a
-  Cirq. Los simuladores de vqubit hacen el álgebra lineal en los kernels nativos
-  de V, pero el resultado se materializa como objetos `complex` de Python, lo
-  que cuesta tiempo y memoria a 20 qubits. Cirq lo mantiene todo en arrays de
-  NumPy, así que sus conversiones son baratas. Cuando NumPy está instalado, los
-  accesores `unitary`/`kraus`/estado de vqubit devuelven `numpy.ndarray` (ver
-  [Instalación](../installation.md)), lo que reduce la brecha para quien los
-  consume, pero no cambia el coste interno del simulador.
-- **La memoria** está dominada por la importación en tareas pequeñas (Cirq
-  arrastra NumPy, SciPy, SymPy, pandas y matplotlib) y por el búfer de
-  simulación en tareas grandes. El wheel de vqubit no tiene dependencias de
-  ejecución, así que importarlo es mucho más barato; el harness informa de la
-  memoria *extra* durante la tarea para que el coste de importación no oculte el
-  de la simulación.
+- **vqubit gana o empata en todas las tareas**, y además importa unas **2.7×
+  menos memoria** (77 MB frente a 208 MB) y usa menos memoria pico en las
+  simulaciones grandes. Su wheel no tiene dependencias de ejecución, así que
+  importarlo es mucho más barato que arrastrar NumPy, SciPy, SymPy, pandas y
+  matplotlib.
+- **Las dos tareas en empate están limitadas por el ancho de banda de memoria.**
+  Construir un circuito y simular 20 qubits mueven decenas de megabytes por paso;
+  una vez vectorizada la aritmética (lo está en ambos), el tiempo lo fija la
+  velocidad a la que fluyen las amplitudes por memoria, así que las dos
+  implementaciones convergen a los mismos ~40 ms. vqubit lo logra con los kernels
+  nativos de V y vistas NumPy sin copia de su buffer de estado; Cirq lo logra con
+  arrays de NumPy.
+- **Las simulaciones pequeñas y medianas favorecen a vqubit.** El vector de
+  estado y la matriz de densidad permanecen en buffers nativos y se devuelven como
+  vistas NumPy sin copia, así que no hay ida y vuelta a Python por puerta; el
+  unitario del circuito, el muestreo, el vector de Bloch y las descomposiciones
+  también son más rápidos.
+- Cuando NumPy está instalado, la API pública devuelve `numpy.ndarray`
+  (ver [Instalación](../installation.md)); sin él todo sigue funcionando con
+  listas, solo que sin las rutas aceleradas por NumPy.
 
 ## Reproducir los números
 

@@ -232,7 +232,7 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 		num_qubits = len(qubits)
 		state = _native.NativeState(num_qubits)
 		if _is_basis_zero(initial_state):
-			state.reset()
+			state.set_zero_state()
 		else:
 			state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
 		for moment in program.moments:
@@ -263,7 +263,7 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 		if _measurements_are_terminal(program):
 			state = _native.NativeState(num_qubits)
 			if _is_basis_zero(initial_state):
-				state.reset()
+				state.set_zero_state()
 			else:
 				state.set_amplitudes(amplitudes)
 			measurements: list[tuple[MeasurementGate, list[int]]] = []
@@ -398,7 +398,7 @@ class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalStat
 		num_qubits = len(qubits)
 		density = _native.NativeDensity(num_qubits)
 		if _is_basis_zero(initial_state):
-			density.reset()
+			density.set_zero_state()
 		else:
 			density.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
 		for moment in program.moments:

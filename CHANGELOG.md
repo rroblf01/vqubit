@@ -12,6 +12,15 @@ framework for Python, with the numerical core written in V.
 
 ### Changed
 
+- **Performance: vqubit now matches or beats Cirq on every benchmark** (see the
+  [benchmarks guide](docs/en/guide/benchmarks.md)). The hot V kernels were
+  rewritten (`apply_gate` as a block gather/apply/scatter with in-place and
+  contiguous 1-/2-qubit paths plus a permutation fast path; reordered
+  `matmul`/`sandwich`; an in-place subspace density channel), the simulator
+  results are handed back as zero-copy NumPy views of the native buffers, the
+  flatten/rebuild helpers, sampling, the Bloch vector and the circuit unitary
+  use NumPy when it is installed, and `|0...0>` needs no Python list. vqubit
+  imports ~2.7x less memory than Cirq (77 MB vs 208 MB).
 - **Circuit construction is now O(1) amortised per operation.** `Circuit`
   caches each moment's qubit set and `append` scans backwards, stopping at the
   first conflicting moment, instead of re-deriving `Moment.qubits` for every

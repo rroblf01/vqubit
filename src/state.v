@@ -51,6 +51,14 @@ pub fn (mut s NativeState) reset() {
 	}
 }
 
+// set_zero_state sets a freshly created (zeroed) state to `|0...0>`.
+@[vc_method]
+pub fn (mut s NativeState) set_zero_state() {
+	if s.state.len > 0 {
+		s.state[0] = 1.0
+	}
+}
+
 // amplitudes returns the state as an interleaved complex buffer.
 @[vc_method]
 pub fn (s &NativeState) amplitudes() []f64 {
@@ -118,6 +126,14 @@ pub fn (mut d NativeDensity) reset() {
 	for i in 0 .. d.rho.len {
 		d.rho[i] = 0.0
 	}
+	if d.rho.len > 0 {
+		d.rho[0] = 1.0
+	}
+}
+
+// set_zero_state sets a freshly created (zeroed) density matrix to `|0><0|`.
+@[vc_method]
+pub fn (mut d NativeDensity) set_zero_state() {
 	if d.rho.len > 0 {
 		d.rho[0] = 1.0
 	}

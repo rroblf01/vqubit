@@ -23,15 +23,34 @@ from collections.abc import Callable
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
-import vqubit as vq
+# The packages are imported lazily so that each measured subprocess only pays for
+# the package under test, which makes the import footprint comparison fair.
+vq: object = None
+cirq: object = None
 
-try:
-	import cirq
 
-	HAS_CIRQ = True
-except ImportError:  # pragma: no cover - depends on the environment
-	cirq = None
-	HAS_CIRQ = False
+def _ensure(package: str) -> None:
+	global vq, cirq
+	if package == "vqubit" and vq is None:
+		import vqubit
+
+		vq = vqubit
+	elif package == "cirq" and cirq is None:
+		import cirq as _cirq
+
+		cirq = _cirq
+
+
+def _has_cirq() -> bool:
+	return subprocess.run([sys.executable, "-c", "import cirq"], capture_output=True).returncode == 0
+
+
+HAS_CIRQ = _has_cirq()
+
+
+def _noop() -> None:
+	return None
+
 
 # --- task parameters ---------------------------------------------------------
 
@@ -266,6 +285,7 @@ def cq_bloch_vector() -> None:
 
 
 TASKS: dict[str, tuple[str, Callable[[], None], Callable[[], None] | None]] = {
+	"import": ("Import the package (memory footprint)", _noop, _noop),
 	"build_circuit": ("Build a 5-qubit, 300-moment circuit", vq_build_circuit, cq_build_circuit if HAS_CIRQ else None),
 	"unitary": (f"Unitary of a {UNITARY_QUBITS}-qubit circuit", vq_unitary, cq_unitary if HAS_CIRQ else None),
 	"simulate": (
@@ -328,11 +348,14 @@ def _peak_rss_kb() -> int:
 
 
 def _run_one(name: str, package: str) -> dict[str, float]:
+	_ensure(package)
 	task = TASKS[name][1] if package == "vqubit" else TASKS[name][2]
 	assert task is not None
 	task()  # warm up imports and caches
 	gc.collect()
 	baseline = _rss_kb()
+	if name == "import":
+		return {"time_s": 0.0, "baseline_kb": baseline, "peak_kb": _peak_rss_kb()}
 	best = float("inf")
 	for _ in range(REPEATS):
 		start = time.perf_counter()
@@ -378,6 +401,11 @@ def main() -> None:
 	print(header)
 	print("-" * len(header))
 	for name, _description, v, c in rows:
+		if name == "import":
+			vram = v["baseline_kb"] / 1024
+			cram = f"{c['baseline_kb'] / 1024:.1f}MB" if c is not None else "n/a"
+			print(f"{name:<24}{'n/a':>14}{'n/a':>14}{'n/a':>10}{vram:>12.1f}MB{cram:>14}")
+			continue
 		if c is None:
 			print(
 				f"{name:<24}{v['time_s'] * 1000:>12.1f}ms{'n/a':>14}{'n/a':>10}{v['peak_kb'] / 1024:>12.1f}MB{'n/a':>14}"

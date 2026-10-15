@@ -152,10 +152,6 @@ class Result:
 		return f"vqubit.Result(keys={list(self._measurements)!r})"
 
 
-def _sample_outcome(probabilities: Sequence[float], rng: random.Random) -> int:
-	return int(_native.sample_outcome(list(probabilities), rng.random()))
-
-
 def _record_bits(
 	gate: MeasurementGate,
 	outcome: int,
@@ -188,10 +184,11 @@ class Simulator:
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
-		state = vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits))
+		state = _native.NativeState(num_qubits)
+		state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
 		for moment in program.moments:
-			state = self._apply_moment(state, moment, index, num_qubits, rng=None, measurements=None)
-		return SimulationResult(qubits, StateVector(vector_from_flat(state), qubits))
+			self._apply_moment(state, moment, index, rng=None, measurements=None)
+		return SimulationResult(qubits, StateVector(vector_from_flat(state.amplitudes()), qubits))
 
 	def run(
 		self,
@@ -208,42 +205,40 @@ class Simulator:
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
 		dim = 1 << num_qubits
+		amplitudes = vector_to_flat(_initial_state_vector(initial_state, dim))
 		rng = random.Random(self._seed if seed is None else seed)
 		records: dict[str, list[list[int]]] = {}
 		for _ in range(repetitions):
-			state = vector_to_flat(_initial_state_vector(initial_state, dim))
+			state = _native.NativeState(num_qubits)
+			state.set_amplitudes(amplitudes)
 			for moment in program.moments:
-				state = self._apply_moment(state, moment, index, num_qubits, rng=rng, measurements=records)
+				self._apply_moment(state, moment, index, rng=rng, measurements=records)
 		return Result(records)
 
 	sample = run
 
 	def _apply_moment(
 		self,
-		state: list[float],
+		state: Any,
 		moment: Moment,
 		index: dict[Qid, int],
-		num_qubits: int,
 		*,
 		rng: random.Random | None,
 		measurements: dict[str, list[list[int]]] | None,
-	) -> list[float]:
+	) -> None:
 		for operation in moment.operations:
 			gate = operation.gate
 			targets = [index[q] for q in operation.qubits]
 			if isinstance(gate, MeasurementGate):
 				if rng is None or measurements is None:
 					raise ValueError("simulate() cannot run a circuit with measurements; use run()")
-				probabilities = _native.state_probabilities(state, targets, num_qubits)
-				outcome = _sample_outcome(probabilities, rng)
-				state = list(_native.collapse_state(state, targets, outcome, num_qubits))
+				outcome = state.measure(targets, rng.random())
 				_record_bits(gate, outcome, len(targets), measurements)
 				continue
 			matrix = gate._unitary_()
 			if matrix is None:
 				raise TypeError(f"{gate!r} has no unitary and cannot be simulated")
-			state = list(_native.apply_gate(state, to_flat([list(row) for row in matrix]), num_qubits, targets))
-		return state
+			state.apply_gate(to_flat([list(row) for row in matrix]), targets)
 
 
 class DensityMatrix:
@@ -292,11 +287,6 @@ class DensityMatrixTrialResult:
 		return f"vqubit.DensityMatrixTrialResult({self._final_density_matrix!r})"
 
 
-def _initial_density_flat(initial_state: Any, dim: int) -> list[float]:
-	vector = _initial_state_vector(initial_state, dim)
-	return list(_native.state_to_density(vector_to_flat(vector)))
-
-
 def _density_flat_to_nested(flat: Sequence[float], dim: int) -> list[list[complex]]:
 	return [[complex(flat[2 * (i * dim + j)], flat[2 * (i * dim + j) + 1]) for j in range(dim)] for i in range(dim)]
 
@@ -317,10 +307,11 @@ class DensityMatrixSimulator:
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
-		density = _initial_density_flat(initial_state, 1 << num_qubits)
+		density = _native.NativeDensity(num_qubits)
+		density.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
 		for moment in program.moments:
-			density = self._apply_moment(density, moment, index, num_qubits, rng=None, measurements=None)
-		matrix = DensityMatrix(_density_flat_to_nested(density, 1 << num_qubits), qubits)
+			self._apply_moment(density, moment, index, rng=None, measurements=None)
+		matrix = DensityMatrix(_density_flat_to_nested(density.density_matrix(), 1 << num_qubits), qubits)
 		return DensityMatrixTrialResult(qubits, matrix)
 
 	def run(
@@ -337,36 +328,34 @@ class DensityMatrixSimulator:
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
+		amplitudes = vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits))
 		rng = random.Random(self._seed if seed is None else seed)
 		records: dict[str, list[list[int]]] = {}
 		for _ in range(repetitions):
-			density = _initial_density_flat(initial_state, 1 << num_qubits)
+			density = _native.NativeDensity(num_qubits)
+			density.set_from_amplitudes(amplitudes)
 			for moment in program.moments:
-				density = self._apply_moment(density, moment, index, num_qubits, rng=rng, measurements=records)
+				self._apply_moment(density, moment, index, rng=rng, measurements=records)
 		return Result(records)
 
 	sample = run
 
 	def _apply_moment(
 		self,
-		density: list[float],
+		density: Any,
 		moment: Moment,
 		index: dict[Qid, int],
-		num_qubits: int,
 		*,
 		rng: random.Random | None,
 		measurements: dict[str, list[list[int]]] | None,
-	) -> list[float]:
-		dim = 1 << num_qubits
+	) -> None:
 		for operation in moment.operations:
 			gate = operation.gate
 			targets = [index[q] for q in operation.qubits]
 			if isinstance(gate, MeasurementGate):
 				if rng is None or measurements is None:
 					raise ValueError("simulate() cannot run a circuit with measurements; use run()")
-				probabilities = _native.density_probabilities(density, targets, num_qubits)
-				outcome = _sample_outcome(probabilities, rng)
-				density = list(_native.density_collapse(density, targets, outcome, num_qubits))
+				outcome = density.measure(targets, rng.random())
 				_record_bits(gate, outcome, len(targets), measurements)
 				continue
 			operators = gate._kraus_()
@@ -375,9 +364,7 @@ class DensityMatrixSimulator:
 				if matrix is None:
 					raise TypeError(f"{gate!r} has neither a unitary nor Kraus operators")
 				operators = [matrix]
-			embedded: list[float] = []
+			flat: list[float] = []
 			for operator in operators:
-				rows = [list(row) for row in operator]
-				embedded.extend(_native.embed_operator(to_flat(rows), len(rows), targets, num_qubits))
-			density = list(_native.channel(density, embedded, len(operators), dim))
-		return density
+				flat.extend(to_flat([list(row) for row in operator]))
+			density.apply_channel(flat, len(operators), targets)

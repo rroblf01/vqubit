@@ -148,7 +148,7 @@ _PAULI_BITS = {
 class CliffordState:
 	"""A stabilizer state, with the qubits it lives on."""
 
-	def __init__(self, tableau: CliffordTableau, qubits: Sequence[Qid]) -> None:
+	def __init__(self, tableau: Any, qubits: Sequence[Qid]) -> None:
 		self._tableau = tableau
 		self._qubits = tuple(qubits)
 
@@ -157,11 +157,12 @@ class CliffordState:
 		return self._qubits
 
 	def state_vector(self) -> list[complex]:
-		vector = _native.clifford_state_vector(self._tableau._flat, self._tableau.num_qubits)
-		return vector_from_flat(vector)
+		return vector_from_flat(self._tableau.state_vector())
 
 	def stabilizers(self) -> list[Any]:
-		return self._tableau.stabilizer_pauli_strings()
+		flat = self._tableau.stabilizer_tableau()
+		tableau = CliffordTableau.from_flat(flat, len(self._qubits))
+		return tableau.stabilizer_pauli_strings()
 
 	def dirac_notation(self, decimals: int = 3) -> str:
 		from ._sim import StateVector
@@ -203,9 +204,16 @@ class CliffordSimulator:
 	) -> CliffordSimulationResult:
 		qubits = self._resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
-		instructions, _, _ = _build_instructions(program, index, allow_measurements=False)
-		flat = _native.clifford_tableau(instructions, len(qubits))
-		tableau = CliffordTableau.from_flat(flat, len(qubits))
+		tableau = _native.NativeTableau(len(qubits))
+		for operation in program.all_operations():
+			gate = operation.gate
+			if isinstance(gate, MeasurementGate):
+				raise ValueError("simulate() cannot run a circuit with measurements; use run()")
+			code = _instruction_code(gate)
+			if code is None:
+				continue
+			targets = [index[q] for q in operation.qubits]
+			tableau.apply(code, targets[0], targets[1] if len(targets) > 1 else 0)
 		return CliffordSimulationResult(CliffordState(tableau, qubits))
 
 	def run(

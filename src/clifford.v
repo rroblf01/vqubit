@@ -5,11 +5,14 @@ module vqubit_native
 // A stabilizer state is a binary tableau: `2 * n + 1` rows (the last one is
 // scratch space) of `2 * n + 1` columns -- `n` x-bits, `n` z-bits and a phase
 // bit. Rows `0..n-1` are the destabilizers, rows `n..2n-1` the stabilizers.
-// Circuits arrive as a flat stream of `[code, a, b]` triples, so the whole
-// simulation runs in one call with no per-gate crossings.
+//
+// The tableau is stored flat (row-major, `(2n+1)` by `n`) so the same routines
+// serve both the batched `clifford_run` and a `NativeTableau` whose `@[vc_buffer]`
+// fields keep the state for the object's lifetime.
 
 import rand
 import math
+import vcraft
 
 // Instruction codes shared with the Python side.
 const instr_h = 0
@@ -25,32 +28,26 @@ const instr_measure = 9
 
 struct Tableau {
 mut:
-	n    int
-	rows int
-	x    [][]int
-	z    [][]int
-	r    []int
+	n int
+	x []int
+	z []int
+	r []int
 }
 
 fn new_tableau(n int) Tableau {
 	rows := 2*n + 1
-	mut x := [][]int{}
-	mut z := [][]int{}
-	for _ in 0 .. rows {
-		x << []int{len: n, init: 0}
-		z << []int{len: n, init: 0}
-	}
+	mut x := []int{len: rows * n, init: 0}
+	mut z := []int{len: rows * n, init: 0}
 	mut r := []int{len: rows, init: 0}
 	for i in 0 .. n {
-		x[i][i] = 1
-		z[n+i][i] = 1
+		x[i*n + i] = 1
+		z[(n+i)*n + i] = 1
 	}
 	return Tableau{
-		n:    n
-		rows: rows
-		x:    x
-		z:    z
-		r:    r
+		n: n
+		x: x
+		z: z
+		r: r
 	}
 }
 
@@ -70,40 +67,40 @@ fn g(x1 int, z1 int, x2 int, z2 int) int {
 fn (mut t Tableau) rowsum(h int, i int) {
 	mut total := 2*t.r[h] + 2*t.r[i]
 	for j in 0 .. t.n {
-		total += g(t.x[i][j], t.z[i][j], t.x[h][j], t.z[h][j])
+		total += g(t.x[i*t.n + j], t.z[i*t.n + j], t.x[h*t.n + j], t.z[h*t.n + j])
 	}
 	t.r[h] = if total % 4 == 0 { 0 } else { 1 }
 	for j in 0 .. t.n {
-		t.x[h][j] ^= t.x[i][j]
-		t.z[h][j] ^= t.z[i][j]
+		t.x[h*t.n + j] ^= t.x[i*t.n + j]
+		t.z[h*t.n + j] ^= t.z[i*t.n + j]
 	}
 }
 
 fn (mut t Tableau) hadamard(a int) {
 	for i in 0 .. 2*t.n {
-		t.r[i] ^= t.x[i][a] * t.z[i][a]
-		x := t.x[i][a]
-		t.x[i][a] = t.z[i][a]
-		t.z[i][a] = x
+		t.r[i] ^= t.x[i*t.n + a] * t.z[i*t.n + a]
+		value := t.x[i*t.n + a]
+		t.x[i*t.n + a] = t.z[i*t.n + a]
+		t.z[i*t.n + a] = value
 	}
 }
 
 fn (mut t Tableau) phase(a int) {
 	for i in 0 .. 2*t.n {
-		t.r[i] ^= t.x[i][a] * t.z[i][a]
-		t.z[i][a] ^= t.x[i][a]
+		t.r[i] ^= t.x[i*t.n + a] * t.z[i*t.n + a]
+		t.z[i*t.n + a] ^= t.x[i*t.n + a]
 	}
 }
 
 fn (mut t Tableau) pauli_x(a int) {
 	for i in 0 .. 2*t.n {
-		t.r[i] ^= t.z[i][a]
+		t.r[i] ^= t.z[i*t.n + a]
 	}
 }
 
 fn (mut t Tableau) pauli_z(a int) {
 	for i in 0 .. 2*t.n {
-		t.r[i] ^= t.x[i][a]
+		t.r[i] ^= t.x[i*t.n + a]
 	}
 }
 
@@ -114,9 +111,9 @@ fn (mut t Tableau) pauli_y(a int) {
 
 fn (mut t Tableau) cnot(a int, b int) {
 	for i in 0 .. 2*t.n {
-		t.r[i] ^= t.x[i][a] * t.z[i][b] * (t.x[i][b] ^ t.z[i][a] ^ 1)
-		t.x[i][b] ^= t.x[i][a]
-		t.z[i][a] ^= t.z[i][b]
+		t.r[i] ^= t.x[i*t.n + a] * t.z[i*t.n + b] * (t.x[i*t.n + b] ^ t.z[i*t.n + a] ^ 1)
+		t.x[i*t.n + b] ^= t.x[i*t.n + a]
+		t.z[i*t.n + a] ^= t.z[i*t.n + b]
 	}
 }
 
@@ -132,42 +129,44 @@ fn (mut t Tableau) swap(a int, b int) {
 	t.cnot(a, b)
 }
 
-fn (mut t Tableau) measure(a int) int {
+// measure measures qubit `a` in the Z basis, using `u` (a uniform draw in
+// [0, 1)) for a random outcome, and returns the bit.
+fn (mut t Tableau) measure(a int, u f64) int {
 	n := t.n
 	mut p := -1
 	for i in n .. 2*n {
-		if t.x[i][a] == 1 {
+		if t.x[i*n + a] == 1 {
 			p = i
 			break
 		}
 	}
 	if p != -1 {
 		for i in 0 .. 2*n {
-			if i != p && t.x[i][a] == 1 {
+			if i != p && t.x[i*n + a] == 1 {
 				t.rowsum(i, p)
 			}
 		}
 		for j in 0 .. n {
-			t.x[p-n][j] = t.x[p][j]
-			t.z[p-n][j] = t.z[p][j]
+			t.x[(p-n)*n + j] = t.x[p*n + j]
+			t.z[(p-n)*n + j] = t.z[p*n + j]
 		}
 		t.r[p-n] = t.r[p]
 		for j in 0 .. n {
-			t.x[p][j] = 0
-			t.z[p][j] = 0
+			t.x[p*n + j] = 0
+			t.z[p*n + j] = 0
 		}
-		t.z[p][a] = 1
-		t.r[p] = rand.intn(2) or { 0 }
+		t.z[p*n + a] = 1
+		t.r[p] = if u < 0.5 { 0 } else { 1 }
 		return t.r[p]
 	}
 	scratch := 2 * n
 	for j in 0 .. n {
-		t.x[scratch][j] = 0
-		t.z[scratch][j] = 0
+		t.x[scratch*n + j] = 0
+		t.z[scratch*n + j] = 0
 	}
 	t.r[scratch] = 0
 	for i in 0 .. n {
-		if t.x[i][a] == 1 {
+		if t.x[i*n + a] == 1 {
 			t.rowsum(scratch, i+n)
 		}
 	}
@@ -198,8 +197,8 @@ fn (t &Tableau) to_flat() []int {
 	mut out := []int{len: side * side, init: 0}
 	for i in 0 .. side {
 		for j in 0 .. t.n {
-			out[i*side + j] = t.x[i][j]
-			out[i*side + t.n + j] = t.z[i][j]
+			out[i*side + j] = t.x[i*t.n + j]
+			out[i*side + t.n + j] = t.z[i*t.n + j]
 		}
 		out[i*side + 2*t.n] = t.r[i]
 	}
@@ -231,7 +230,7 @@ pub fn clifford_run(instructions []int, num_qubits int, invert_mask []int, repet
 			a := instructions[i*3 + 1]
 			b := instructions[i*3 + 2]
 			if code == instr_measure {
-				bit := t.measure(a)
+				bit := t.measure(a, rand.f64())
 				inv := if m < invert_mask.len { invert_mask[m] } else { 0 }
 				out[rep*num_meas + m] = bit ^ inv
 				m++
@@ -295,7 +294,6 @@ pub fn clifford_state_vector(tableau []int, num_qubits int) []f64 {
 			mdim *= 2
 		}
 		sign := if tableau[row*side + 2*n] == 1 { -1.0 } else { 1.0 }
-		// projector = I + sign * mat
 		mut proj := []f64{len: 2 * dim * dim, init: 0.0}
 		for i in 0 .. dim {
 			for j in 0 .. dim {
@@ -324,4 +322,87 @@ pub fn clifford_state_vector(tableau []int, num_qubits int) []f64 {
 		}
 	}
 	return []f64{len: 2 * dim, init: 0.0}
+}
+
+// NativeTableau is a stabilizer state whose tableau lives in `@[vc_buffer]`
+// fields for the object's lifetime, so a circuit can be applied one gate at a
+// time without rebuilding the state.
+@[vc_class]
+pub struct NativeTableau {
+mut:
+	@[vc_buffer] x []int
+	@[vc_buffer] z []int
+	@[vc_buffer] r []int
+	@[vc_field] num_qubits int
+}
+
+// new_native_tableau creates the tableau of `|0...0>`.
+@[vc_fn]
+pub fn new_native_tableau(num_qubits int) &NativeTableau {
+	n := num_qubits
+	rows := 2*n + 1
+	mut tableau := &NativeTableau{
+		x:          vcraft.buffer_new_int(rows * n)
+		z:          vcraft.buffer_new_int(rows * n)
+		r:          vcraft.buffer_new_int(rows)
+		num_qubits: n
+	}
+	tableau.reset()
+	return tableau
+}
+
+fn (t &NativeTableau) view() Tableau {
+	return Tableau{
+		n: t.num_qubits
+		x: t.x
+		z: t.z
+		r: t.r
+	}
+}
+
+// reset returns the tableau to `|0...0>`.
+@[vc_method]
+pub fn (mut t NativeTableau) reset() {
+	n := t.num_qubits
+	for k in 0 .. t.x.len {
+		t.x[k] = 0
+	}
+	for k in 0 .. t.z.len {
+		t.z[k] = 0
+	}
+	for k in 0 .. t.r.len {
+		t.r[k] = 0
+	}
+	for i in 0 .. n {
+		t.x[i*n + i] = 1
+		t.z[(n+i)*n + i] = 1
+	}
+}
+
+// apply runs one instruction (see the `instr_*` codes) in place.
+@[vc_method]
+pub fn (mut t NativeTableau) apply(code int, a int, b int) {
+	mut tableau := t.view()
+	tableau.apply(code, a, b)
+}
+
+// measure measures qubit `a` with a random outcome drawn from `u` in [0, 1).
+@[vc_method]
+pub fn (mut t NativeTableau) measure(a int, u f64) int {
+	mut tableau := t.view()
+	return tableau.measure(a, u)
+}
+
+// state_vector reconstructs the state, up to a global phase.
+@[vc_method]
+pub fn (t &NativeTableau) state_vector() []f64 {
+	tableau := t.view()
+	return clifford_state_vector(tableau.to_flat(), t.num_qubits)
+}
+
+// stabilizer_tableau returns the flattened tableau, for inspection.
+@[vc_method]
+pub fn (t &NativeTableau) stabilizer_tableau() []int {
+	tableau := t.view()
+	return tableau.to_flat()
 }

@@ -242,3 +242,68 @@ class NamedQid(Qid):
 
 	def __repr__(self) -> str:
 		return f"vqubit.NamedQid({self._name!r})"
+
+
+class VariableQid(Qid):
+	"""A qid whose index is a free variable (used by parameterized circuits)."""
+
+	def __init__(self, name: Any) -> None:
+		self._name = name
+
+	@property
+	def name(self) -> Any:
+		return self._name
+
+	def _comparison_key(self) -> Any:
+		return (str(self._name),)
+
+	def __str__(self) -> str:
+		return str(self._name)
+
+	def __repr__(self) -> str:
+		return f"vqubit.VariableQid({self._name!r})"
+
+
+class VariableLineQid(Qid):
+	"""A line qid with a possibly-symbolic position."""
+
+	def __init__(self, x: Any) -> None:
+		self._x = x
+
+	@property
+	def x(self) -> Any:
+		return self._x
+
+	def _comparison_key(self) -> Any:
+		return (str(self._x),)
+
+	def __str__(self) -> str:
+		return str(self._x)
+
+	def __repr__(self) -> str:
+		return f"vqubit.VariableLineQid({self._x!r})"
+
+
+class VariableGridQid(Qid):
+	"""A grid qid with possibly-symbolic coordinates."""
+
+	def __init__(self, row: Any, col: Any) -> None:
+		self._row = row
+		self._col = col
+
+	@property
+	def row(self) -> Any:
+		return self._row
+
+	@property
+	def col(self) -> Any:
+		return self._col
+
+	def _comparison_key(self) -> Any:
+		return (str(self._row), str(self._col))
+
+	def __str__(self) -> str:
+		return f"({self._row}, {self._col})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.VariableGridQid({self._row!r}, {self._col!r})"

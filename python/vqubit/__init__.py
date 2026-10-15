@@ -316,7 +316,19 @@ from ._qis import (
 )
 from ._qubit_manager import BorrowableQubit, CleanQubit, GreedyQubitManager, QubitManager, SimpleQubitManager
 from ._qubit_order import QubitOrder, QubitOrderOrList
-from ._qubits import GridQid, GridQubit, LineQid, LineQubit, NamedQid, NamedQubit, Qid, Qubit
+from ._qubits import (
+	GridQid,
+	GridQubit,
+	LineQid,
+	LineQubit,
+	NamedQid,
+	NamedQubit,
+	Qid,
+	Qubit,
+	VariableGridQid,
+	VariableLineQid,
+	VariableQid,
+)
 from ._sim import (
 	DensityMatrix,
 	DensityMatrixSimulator,
@@ -554,6 +566,9 @@ __all__ = [
 	"TrialResult",
 	"TwoQubitDiagonalGate",
 	"UniformSuperpositionGate",
+	"VariableGridQid",
+	"VariableLineQid",
+	"VariableQid",
 	"VirtualTag",
 	"WaitGate",
 	"X",

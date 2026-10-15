@@ -93,6 +93,7 @@ from ._gates import (
 	HPowGate,
 	I,
 	IdentityGate,
+	InterchangeableQubitsGate,
 	ISWAPGate,
 	M,
 	MatrixGate,
@@ -142,6 +143,7 @@ from ._gates_more import (
 	CZPowGate,
 	DiagonalGate,
 	ISwapPowGate,
+	ParallelGate,
 	PhasedISwapPowGate,
 	QuantumFourierTransformGate,
 	QubitPermutationGate,
@@ -153,6 +155,7 @@ from ._gates_more import (
 	global_phase_operation,
 	identity_each,
 	ms,
+	parallel_gate_op,
 	q,
 	qft,
 	reset_each,
@@ -161,7 +164,7 @@ from ._gates_more import (
 	rz,
 	wait,
 )
-from ._gateset import GateFamily, Gateset
+from ._gateset import AnyIntegerPowerGateFamily, AnyUnitaryGateFamily, GateFamily, Gateset, ParallelGateFamily
 from ._interop import quirk_url
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._kak import two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
@@ -314,6 +317,7 @@ from ._study import (
 	to_resolvers,
 	to_sweep,
 )
+from ._tags import RoutingSwapTag, VirtualTag
 from ._target_gatesets import (
 	CNOTTargetGateset,
 	CZTargetGateset,
@@ -366,6 +370,8 @@ __all__ = [
 	"ZZ",
 	"AQTDevice",
 	"AmplitudeDampingChannel",
+	"AnyIntegerPowerGateFamily",
+	"AnyUnitaryGateFamily",
 	"AsymmetricDepolarizingChannel",
 	"AxisAngleDecomposition",
 	"BitFlipChannel",
@@ -421,6 +427,7 @@ __all__ = [
 	"ISwapPowGate",
 	"IdentityGate",
 	"InsertStrategy",
+	"InterchangeableQubitsGate",
 	"IonDevice",
 	"KakDecomposition",
 	"KrausChannel",
@@ -439,6 +446,8 @@ __all__ = [
 	"NamedQubit",
 	"NeutralAtomDevice",
 	"Operation",
+	"ParallelGate",
+	"ParallelGateFamily",
 	"ParamResolver",
 	"Parameter",
 	"Pauli",
@@ -463,6 +472,7 @@ __all__ = [
 	"RandomGateChannel",
 	"ResetChannel",
 	"Result",
+	"RoutingSwapTag",
 	"Rx",
 	"RxGate",
 	"Ry",
@@ -488,6 +498,7 @@ __all__ = [
 	"ThreeQubitDiagonalGate",
 	"TrialResult",
 	"TwoQubitDiagonalGate",
+	"VirtualTag",
 	"WaitGate",
 	"X",
 	"XPowGate",
@@ -591,6 +602,7 @@ __all__ = [
 	"num_cnots_required",
 	"num_qubits",
 	"optimize_for_target_gateset",
+	"parallel_gate_op",
 	"partial_trace",
 	"partial_trace_of_state_vector_as_mixture",
 	"pauli_expansion",

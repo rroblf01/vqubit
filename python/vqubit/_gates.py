@@ -133,6 +133,14 @@ class Gate:
 		return type(self).__name__
 
 
+class InterchangeableQubitsGate:
+	"""Marker mixin for gates that are symmetric under permuting their qubits.
+
+	Subclassing this (alongside :class:`Gate`) tells optimizers that the order of
+	the gate's qubits does not matter.
+	"""
+
+
 @value_equality
 class EigenGate(Gate):
 	"""A single-qubit gate defined by its eigencomponents and an exponent."""

@@ -86,4 +86,59 @@ class Gateset:
 		return f"vqubit.Gateset({list(self.gates)!r}, name={self.name!r})"
 
 
-__all__ = ["GateFamily", "Gateset"]
+class AnyUnitaryGateFamily(GateFamily):
+	"""A gate family matching every gate that has a unitary."""
+
+	def __init__(self, name: str | None = None, description: str | None = None) -> None:
+		super().__init__(predicate=self._match, name=name or "AnyUnitaryGateFamily", description=description)
+
+	@staticmethod
+	def _match(gate: Gate) -> bool:
+		from ._protocols import has_unitary
+
+		return has_unitary(gate)
+
+
+class AnyIntegerPowerGateFamily(GateFamily):
+	"""A gate family matching integer powers of a base gate."""
+
+	def __init__(self, gate: Gate, name: str | None = None, description: str | None = None) -> None:
+		super().__init__(
+			gate, name=name or f"AnyIntegerPowerGateFamily({gate})", description=description, predicate=self._match
+		)
+
+	def _match(self, gate: Gate) -> bool:
+		if self.gate is None or not isinstance(gate, type(self.gate)):
+			return False
+		exponent = getattr(gate, "exponent", None)
+		if exponent is None or isinstance(exponent, bool):
+			return False
+		return float(exponent).is_integer()
+
+
+class ParallelGateFamily(GateFamily):
+	"""A gate family matching a base gate applied in parallel to disjoint qubits."""
+
+	def __init__(self, gate: Gate | GateFamily, name: str | None = None, description: str | None = None) -> None:
+		self._inner = gate if isinstance(gate, GateFamily) else GateFamily(gate)
+		super().__init__(
+			predicate=self._match,
+			name=name or f"ParallelGateFamily({self._inner.name})",
+			description=description,
+		)
+
+	def _match(self, gate: Gate) -> bool:
+		from ._gates_more import ParallelGate
+
+		if self._inner._matches_gate(gate):
+			return True
+		return isinstance(gate, ParallelGate) and self._inner._matches_gate(gate.sub_gate)
+
+
+__all__ = [
+	"AnyIntegerPowerGateFamily",
+	"AnyUnitaryGateFamily",
+	"GateFamily",
+	"Gateset",
+	"ParallelGateFamily",
+]

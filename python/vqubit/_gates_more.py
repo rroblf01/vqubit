@@ -472,6 +472,49 @@ def q(index: int) -> Qid:
 	return LineQubit(index)
 
 
+@value_equality
+class ParallelGate(Gate):
+	"""Applies a sub gate to two disjoint groups of qubits in parallel."""
+
+	def __init__(self, sub_gate: Gate) -> None:
+		if sub_gate.num_qubits == 0:
+			raise ValueError("ParallelGate needs a sub gate on at least one qubit")
+		self._sub_gate = sub_gate
+
+	@property
+	def sub_gate(self) -> Gate:
+		return self._sub_gate
+
+	def _num_qubits_(self) -> int:
+		return 2 * self._sub_gate.num_qubits
+
+	def _unitary_(self) -> Matrix | None:
+		sub = self._sub_gate._unitary_()
+		if sub is None:
+			return None
+		from ._linalg import kron
+
+		return kron(sub, sub)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._sub_gate,)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		half = self._sub_gate.num_qubits
+		return self._sub_gate._diagram_symbols_(qubits[:half]) + self._sub_gate._diagram_symbols_(qubits[half:])
+
+	def __str__(self) -> str:
+		return f"ParallelGate({self._sub_gate})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.ParallelGate({self._sub_gate!r})"
+
+
+def parallel_gate_op(sub_gate: Gate, *qubits: Qid) -> Any:
+	"""Return a parallel application of ``sub_gate`` to disjoint qubit groups."""
+	return ParallelGate(sub_gate).on(*qubits)
+
+
 __all__ = [
 	"CCNOT",
 	"CCY",

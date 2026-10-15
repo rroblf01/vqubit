@@ -141,9 +141,8 @@ jobs:
 
       - name: install the wheel and the tools
         run: |
-          uv venv
+          uv sync --no-default-groups --group dev --no-install-project
           uv pip install dist/*.whl
-          uv pip install --group dev
 
       - name: ruff check
         run: .venv/bin/ruff check .

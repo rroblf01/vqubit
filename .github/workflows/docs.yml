@@ -27,9 +27,7 @@ jobs:
           python-version: "3.15"
 
       - name: install the documentation toolchain
-        run: |
-          uv venv
-          uv pip install --group docs
+        run: uv sync --no-default-groups --group docs --no-install-project
 
       - name: build
         run: .venv/bin/mkdocs build --strict

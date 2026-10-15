@@ -18,10 +18,12 @@ def _circuit_unitary(operations: list[vqubit.Operation]) -> list[list[complex]]:
 
 
 def test_kak_angles_of_known_gates() -> None:
-	_, angles, _, _ = vqubit.kak_decomposition(vqubit.unitary(vqubit.CNOT))
-	assert sorted(abs(a) for a in angles) == pytest.approx([0, 0, _QUARTER_PI], abs=1e-6)
-	_, swap_angles, _, _ = vqubit.kak_decomposition(vqubit.unitary(vqubit.SWAP))
-	assert sorted(abs(a) for a in swap_angles) == pytest.approx([_QUARTER_PI, _QUARTER_PI, _QUARTER_PI], abs=1e-6)
+	cnot = vqubit.kak_decomposition(vqubit.unitary(vqubit.CNOT))
+	assert sorted(abs(a) for a in cnot.interaction_coefficients) == pytest.approx([0, 0, _QUARTER_PI], abs=1e-6)
+	swap = vqubit.kak_decomposition(vqubit.unitary(vqubit.SWAP))
+	assert sorted(abs(a) for a in swap.interaction_coefficients) == pytest.approx(
+		[_QUARTER_PI, _QUARTER_PI, _QUARTER_PI], abs=1e-6
+	)
 
 
 @pytest.mark.parametrize(

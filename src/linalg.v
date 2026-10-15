@@ -77,12 +77,109 @@ pub fn kron(a []f64, a_dim int, b []f64, b_dim int) []f64 {
 // `targets`, with the first target the most significant. `state` is a flat,
 // interleaved array of `2**num_qubits` amplitudes and the result has the same
 // shape.
+// apply_gate_1q applies a 2x2 gate on one qubit with contiguous inner runs.
+fn apply_gate_1q(mut state []f64, m []f64, num_qubits int, t int) {
+	q := num_qubits - 1 - t
+	stride := 1 << q
+	block := stride << 1
+	n := 1 << num_qubits
+	m00r := m[0]
+	m00i := m[1]
+	m01r := m[2]
+	m01i := m[3]
+	m10r := m[4]
+	m10i := m[5]
+	m11r := m[6]
+	m11i := m[7]
+	unsafe {
+		mut base := 0
+		for base < n {
+			for low in 0 .. stride {
+				i0 := 2 * (base + low)
+				i1 := i0 + 2 * stride
+				a0r := state[i0]
+				a0i := state[i0 + 1]
+				a1r := state[i1]
+				a1i := state[i1 + 1]
+				state[i0] = m00r * a0r - m00i * a0i + m01r * a1r - m01i * a1i
+				state[i0 + 1] = m00r * a0i + m00i * a0r + m01r * a1i + m01i * a1r
+				state[i1] = m10r * a0r - m10i * a0i + m11r * a1r - m11i * a1i
+				state[i1 + 1] = m10r * a0i + m10i * a0r + m11r * a1i + m11i * a1r
+			}
+			base += block
+		}
+	}
+}
+
+// apply_gate_2q_adjacent applies a 4x4 gate on two adjacent qubits with
+// contiguous inner runs; `low` is the less significant of the two.
+fn apply_gate_2q_adjacent(mut state []f64, m []f64, num_qubits int, low int) {
+	q := num_qubits - 1 - low
+	stride := 1 << q
+	block := stride << 2
+	n := 1 << num_qubits
+	mut gr := []f64{len: 16, init: 0.0}
+	mut gi := []f64{len: 16, init: 0.0}
+	for idx in 0 .. 16 {
+		gr[idx] = m[2 * idx]
+		gi[idx] = m[2 * idx + 1]
+	}
+	mut i := []int{len: 4, init: 0}
+	mut xr := []f64{len: 4, init: 0.0}
+	mut xi := []f64{len: 4, init: 0.0}
+	unsafe {
+		mut base := 0
+		for base < n {
+			for l in 0 .. stride {
+				i[0] = 2 * (base + l)
+				i[1] = i[0] + 2 * stride
+				i[2] = i[0] + 4 * stride
+				i[3] = i[0] + 6 * stride
+				for r in 0 .. 4 {
+					xr[r] = state[i[r]]
+					xi[r] = state[i[r] + 1]
+				}
+				for row in 0 .. 4 {
+					mut sr := 0.0
+					mut si := 0.0
+					for r in 0 .. 4 {
+						sr += gr[row * 4 + r] * xr[r] - gi[row * 4 + r] * xi[r]
+						si += gr[row * 4 + r] * xi[r] + gi[row * 4 + r] * xr[r]
+					}
+					state[i[row]] = sr
+					state[i[row] + 1] = si
+				}
+			}
+			base += block
+		}
+	}
+}
+
 // apply_gate_into applies a gate matrix to `targets` of `state` in place.
 //
 // The target subspace of every "base" index is disjoint from the others, so the
 // gather/apply/scatter can run directly on the buffer without a copy.
 fn apply_gate_into(mut state []f64, gate []f64, num_qubits int, targets []int) {
 	if num_qubits <= 0 || targets.len == 0 {
+		return
+	}
+	if targets.len == 1 {
+		apply_gate_1q(mut state, gate, num_qubits, targets[0])
+		return
+	}
+	if targets.len == 2 && (targets[0] - targets[1] == 1 || targets[1] - targets[0] == 1) {
+		low := if targets[0] > targets[1] { targets[0] } else { targets[1] }
+		high := if targets[0] > targets[1] { targets[1] } else { targets[0] }
+		// The gate matrix rows are ordered with the first target most significant;
+		// the adjacent helper expects the less significant target first, so swap
+		// the basis labels when needed.
+		if targets[0] > targets[1] {
+			swapped := swap_2q_basis(gate)
+			apply_gate_2q_adjacent(mut state, swapped, num_qubits, low)
+		} else {
+			apply_gate_2q_adjacent(mut state, gate, num_qubits, low)
+		}
+		_ = high
 		return
 	}
 	n := 1 << num_qubits
@@ -128,6 +225,24 @@ fn apply_gate_into(mut state []f64, gate []f64, num_qubits int, targets []int) {
 			}
 		}
 	}
+}
+
+// swap_2q_basis returns the 4x4 matrix with the two qubit axes exchanged.
+fn swap_2q_basis(m []f64) []f64 {
+	mut out := []f64{len: 32, init: 0.0}
+	for row in 0 .. 4 {
+		r0 := (row >> 1) & 1
+		r1 := row & 1
+		new_row := (r1 << 1) | r0
+		for col in 0 .. 4 {
+			c0 := (col >> 1) & 1
+			c1 := col & 1
+			new_col := (c1 << 1) | c0
+			out[2 * (new_row * 4 + new_col)] = m[2 * (row * 4 + col)]
+			out[2 * (new_row * 4 + new_col) + 1] = m[2 * (row * 4 + col) + 1]
+		}
+	}
+	return out
 }
 
 @[vc_fn]
@@ -259,6 +374,84 @@ pub fn sandwich(a []f64, u []f64, dim int) []f64 {
 	return out
 }
 
+// channel_subspace_2x2_into is a specialised in-place 1-qubit channel.
+fn channel_subspace_2x2_into(mut rho []f64, ops []f64, num_ops int, targets []int, num_qubits int) {
+	dim := 1 << num_qubits
+	bit := 1 << (num_qubits - 1 - targets[0])
+	bitd := bit * dim
+	unsafe {
+		for rb in 0 .. dim {
+			if (rb & bit) != 0 {
+				continue
+			}
+			for cb in 0 .. dim {
+				if (cb & bit) != 0 {
+					continue
+				}
+				base := rb * dim + cb
+				// Gather A = [[a00, a01], [a10, a11]].
+				i00 := 2 * base
+				i01 := i00 + 2 * bit
+				i10 := i00 + 2 * bitd
+				i11 := i10 + 2 * bit
+				a00r := rho[i00]
+				a00i := rho[i00 + 1]
+				a01r := rho[i01]
+				a01i := rho[i01 + 1]
+				a10r := rho[i10]
+				a10i := rho[i10 + 1]
+				a11r := rho[i11]
+				a11i := rho[i11 + 1]
+				mut b00r := 0.0
+				mut b00i := 0.0
+				mut b01r := 0.0
+				mut b01i := 0.0
+				mut b10r := 0.0
+				mut b10i := 0.0
+				mut b11r := 0.0
+				mut b11i := 0.0
+				for o in 0 .. num_ops {
+					k := ops[o * 8..(o + 1) * 8]
+					k00r := k[0]
+					k00i := k[1]
+					k01r := k[2]
+					k01i := k[3]
+					k10r := k[4]
+					k10i := k[5]
+					k11r := k[6]
+					k11i := k[7]
+					// C = K A.
+					c00r := k00r * a00r - k00i * a00i + k01r * a10r - k01i * a10i
+					c00i := k00r * a00i + k00i * a00r + k01r * a10i + k01i * a10r
+					c01r := k00r * a01r - k00i * a01i + k01r * a11r - k01i * a11i
+					c01i := k00r * a01i + k00i * a01r + k01r * a11i + k01i * a11r
+					c10r := k10r * a00r - k10i * a00i + k11r * a10r - k11i * a10i
+					c10i := k10r * a00i + k10i * a00r + k11r * a10i + k11i * a10r
+					c11r := k10r * a01r - k10i * a01i + k11r * a11r - k11i * a11i
+					c11i := k10r * a01i + k10i * a01r + k11r * a11i + k11i * a11r
+					// B += C K^dagger, with K^dagger[d][j] = conj(K[j][d]).
+					b00r += c00r * k00r + c00i * k00i + c01r * k01r + c01i * k01i
+					b00i += c00i * k00r - c00r * k00i + c01i * k01r - c01r * k01i
+					b01r += c00r * k10r + c00i * k10i + c01r * k11r + c01i * k11i
+					b01i += c00i * k10r - c00r * k10i + c01i * k11r - c01r * k11i
+					b10r += c10r * k00r + c10i * k00i + c11r * k01r + c11i * k01i
+					b10i += c10i * k00r - c10r * k00i + c11i * k01r - c11r * k01i
+					b11r += c10r * k10r + c10i * k10i + c11r * k11r + c11i * k11i
+					b11i += c10i * k10r - c10r * k10i + c11i * k11r - c11r * k11i
+				}
+				rho[i00] = b00r
+				rho[i00 + 1] = b00i
+				rho[i01] = b01r
+				rho[i01 + 1] = b01i
+				rho[i10] = b10r
+				rho[i10 + 1] = b10i
+				rho[i11] = b11r
+				rho[i11 + 1] = b11i
+			}
+		}
+	}
+}
+
 // channel_subspace_into applies `sum_i K_i rho K_i^dagger` on the `targets` of a
 // density matrix in place.
 //
@@ -266,6 +459,10 @@ pub fn sandwich(a []f64, u []f64, dim int) []f64 {
 // `dim`-by-`dim` embedded Kraus operators and runs in `O(dim**2 * op_dim)`.
 fn channel_subspace_into(mut rho []f64, ops []f64, num_ops int, op_dim int, targets []int, num_qubits int) {
 	if num_qubits <= 0 || targets.len == 0 {
+		return
+	}
+	if op_dim == 2 && targets.len == 1 {
+		channel_subspace_2x2_into(mut rho, ops, num_ops, targets, num_qubits)
 		return
 	}
 	dim := 1 << num_qubits

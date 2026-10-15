@@ -40,6 +40,17 @@ pub fn (mut s NativeState) apply_gate(gate []f64, targets []int) {
 	apply_gate_into(mut s.state, gate, s.num_qubits, targets)
 }
 
+// reset sets the state to `|0...0>` without building a Python list.
+@[vc_method]
+pub fn (mut s NativeState) reset() {
+	for i in 0 .. s.state.len {
+		s.state[i] = 0.0
+	}
+	if s.state.len > 0 {
+		s.state[0] = 1.0
+	}
+}
+
 // amplitudes returns the state as an interleaved complex buffer.
 @[vc_method]
 pub fn (s &NativeState) amplitudes() []f64 {
@@ -99,6 +110,17 @@ pub fn (mut d NativeDensity) set_from_amplitudes(values []f64) {
 pub fn (mut d NativeDensity) apply_channel(operators []f64, num_operators int, targets []int) {
 	op_dim := op_dimension(operators.len / num_operators)
 	channel_subspace_into(mut d.rho, operators, num_operators, op_dim, targets, d.num_qubits)
+}
+
+// reset sets the density matrix to `|0...0><0...0|` without a Python list.
+@[vc_method]
+pub fn (mut d NativeDensity) reset() {
+	for i in 0 .. d.rho.len {
+		d.rho[i] = 0.0
+	}
+	if d.rho.len > 0 {
+		d.rho[0] = 1.0
+	}
 }
 
 // density_matrix returns the density matrix as an interleaved complex buffer.

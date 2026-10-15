@@ -13,12 +13,17 @@ from collections.abc import Sequence
 
 import vqubit_native as _native
 
+from . import _compat
+
 Matrix = list[list[complex]]
 Vector = list[complex]
 
 
 def to_flat(matrix: Sequence[Sequence[complex]]) -> list[float]:
 	"""Flatten a complex matrix into the native interleaved representation."""
+	fast = _compat.flat_from_matrix(matrix)
+	if fast is not None:
+		return fast
 	flat: list[float] = []
 	for row in matrix:
 		for z in row:
@@ -29,10 +34,16 @@ def to_flat(matrix: Sequence[Sequence[complex]]) -> list[float]:
 
 def from_flat(flat: Sequence[float], dim: int) -> Matrix:
 	"""Rebuild a ``dim``-by-``dim`` complex matrix from the flat buffer."""
+	fast = _compat.matrix_from_flat(flat, dim)
+	if fast is not None:
+		return fast
 	return [[complex(flat[2 * (i * dim + j)], flat[2 * (i * dim + j) + 1]) for j in range(dim)] for i in range(dim)]
 
 
 def vector_to_flat(state: Sequence[complex]) -> list[float]:
+	fast = _compat.flat_from_vector(state)
+	if fast is not None:
+		return fast
 	flat: list[float] = []
 	for z in state:
 		flat.append(float(z.real))
@@ -41,6 +52,9 @@ def vector_to_flat(state: Sequence[complex]) -> list[float]:
 
 
 def vector_from_flat(flat: Sequence[float]) -> Vector:
+	fast = _compat.vector_from_flat(flat)
+	if fast is not None:
+		return fast
 	return [complex(flat[2 * i], flat[2 * i + 1]) for i in range(len(flat) // 2)]
 
 

@@ -59,11 +59,51 @@ def to_nested_list(matrix: Any) -> list[list[complex]]:
 	return [[complex(z) for z in row] for row in matrix]
 
 
+def flat_from_matrix(matrix: Any) -> list[float] | None:
+	"""Flatten a complex matrix to the native interleaved form, fast with numpy."""
+	if not HAS_NUMPY:
+		return None
+	return _np.asarray(matrix, dtype=_np.complex128).ravel().view(_np.float64).tolist()
+
+
+def flat_from_vector(vector: Any) -> list[float] | None:
+	"""Flatten a complex vector to the native interleaved form, fast with numpy."""
+	if not HAS_NUMPY:
+		return None
+	return _np.asarray(vector, dtype=_np.complex128).ravel().view(_np.float64).tolist()
+
+
+def matrix_from_flat(flat: Any, dim: int) -> list[list[complex]] | None:
+	"""Rebuild a nested complex matrix from the flat buffer, fast with numpy."""
+	if not HAS_NUMPY:
+		return None
+	return _np.asarray(flat, dtype=_np.float64).view(_np.complex128).reshape(dim, dim).tolist()
+
+
+def vector_from_flat(flat: Any) -> list[complex] | None:
+	"""Rebuild a complex vector from the flat buffer, fast with numpy."""
+	if not HAS_NUMPY:
+		return None
+	return _np.asarray(flat, dtype=_np.float64).view(_np.complex128).tolist()
+
+
+def native_complex_view(obj: Any) -> Any:
+	"""Return a zero-copy numpy complex view of a native ``@[vc_buffer]`` object."""
+	if not HAS_NUMPY:
+		return None
+	return _np.frombuffer(memoryview(obj).cast("d"), dtype=_np.float64).view(_np.complex128)
+
+
 __all__ = [
 	"HAS_NUMPY",
 	"HAS_SYMPY",
 	"asarray",
 	"asvector",
+	"flat_from_matrix",
+	"flat_from_vector",
 	"is_numpy_array",
+	"matrix_from_flat",
+	"native_complex_view",
 	"to_nested_list",
+	"vector_from_flat",
 ]

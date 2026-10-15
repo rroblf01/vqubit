@@ -13,6 +13,7 @@ from typing import Any
 
 import vqubit_native as _native
 
+from . import _compat
 from ._circuits import Circuit, CircuitOperation
 from ._compat import asarray
 from ._gates import Gate, MatrixGate, MeasurementGate, ZPowGate
@@ -90,7 +91,9 @@ def has_unitary(value: Any) -> bool:
 	return True
 
 
-def _circuit_unitary(circuit: Circuit) -> Matrix:
+def _circuit_unitary(circuit: Circuit) -> Any:
+	if _compat.HAS_NUMPY:
+		return _numpy_circuit_unitary(circuit)
 	qubits = circuit.all_qubits()
 	index = {q: i for i, q in enumerate(qubits)}
 	dim = 1 << len(qubits)
@@ -98,6 +101,44 @@ def _circuit_unitary(circuit: Circuit) -> Matrix:
 	for moment in circuit.moments:
 		result = matmul(_moment_unitary(moment, index, dim), result)
 	return result
+
+
+def _numpy_circuit_unitary(circuit: Circuit) -> Matrix:
+	"""Build the circuit unitary with numpy (BLAS) when it is installed."""
+	import numpy as np
+
+	qubits = circuit.all_qubits()
+	index = {q: i for i, q in enumerate(qubits)}
+	num_qubits = len(qubits)
+	dim = 1 << num_qubits
+	result = np.eye(dim, dtype=np.complex128)
+	for moment in circuit.moments:
+		for operation in moment.operations:
+			if isinstance(operation.gate, MeasurementGate):
+				raise TypeError("a circuit with measurements has no unitary")
+			matrix = _as_matrix(operation.gate._unitary_())
+			if matrix is None:
+				raise TypeError(f"{operation.gate!r} has no unitary")
+			targets = [index[q] for q in operation.qubits]
+			result = _numpy_apply_to_unitary(result, np.asarray(matrix, dtype=np.complex128), num_qubits, targets)
+	return result
+
+
+def _numpy_apply_to_unitary(U: Any, gate_matrix: Any, num_qubits: int, targets: Sequence[int]) -> Any:
+	"""Left-multiply the running unitary by a gate on ``targets``."""
+	import numpy as np
+
+	k = len(targets)
+	gate_tensor = gate_matrix.reshape((2,) * k + (2,) * k)
+	tensor = U.reshape((2,) * (2 * num_qubits))
+	other = [axis for axis in range(2 * num_qubits) if axis not in targets]
+	permuted = tensor.transpose(other + list(targets))
+	contracted = np.tensordot(
+		gate_tensor, permuted, axes=(list(range(k, 2 * k)), list(range(2 * num_qubits - k, 2 * num_qubits)))
+	)
+	moved = np.moveaxis(contracted, list(range(k)), list(targets))
+	dim = 1 << num_qubits
+	return moved.reshape(dim, dim)
 
 
 def _moment_unitary(moment: Moment, index: dict[Qid, int], dim: int) -> Matrix:

@@ -20,7 +20,7 @@ from typing import Any
 import vqubit_native as _native
 
 from ._circuits import Circuit
-from ._compat import asarray, asvector
+from ._compat import HAS_NUMPY, is_numpy_array, native_complex_view
 from ._gates import MeasurementGate
 from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._ops import Moment
@@ -33,6 +33,11 @@ from ._sim_abc import (
 	SimulationTrialResultBase,
 	SimulatorBase,
 )
+
+
+def _is_basis_zero(initial_state: Any) -> bool:
+	"""Report whether ``initial_state`` is the computational basis state ``|0...0>``."""
+	return isinstance(initial_state, int) and not isinstance(initial_state, bool) and initial_state == 0
 
 
 def _resolve_qubits(circuit: Circuit, qubit_order: Sequence[Qid] | None) -> tuple[Qid, ...]:
@@ -63,20 +68,25 @@ def _initial_state_vector(initial_state: Any, dim: int) -> list[complex]:
 class StateVector:
 	"""A state vector together with the qubits it is expressed in."""
 
-	def __init__(self, state: Sequence[complex], qubits: Sequence[Qid]) -> None:
+	def __init__(self, state: Sequence[complex], qubits: Sequence[Qid], *, owner: Any = None) -> None:
 		qubits = tuple(qubits)
-		state = list(state)
-		if len(state) != 1 << len(qubits):
-			raise ValueError(f"state of length {len(state)} does not match {len(qubits)} qubits")
-		self._state = state
+		if is_numpy_array(state):
+			self._state = state
+		else:
+			self._state = list(state)
+		if len(self._state) != 1 << len(qubits):
+			raise ValueError(f"state of length {len(self._state)} does not match {len(qubits)} qubits")
 		self._qubits = qubits
+		self._owner = owner
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
 		return self._qubits
 
-	def state_vector(self) -> list[complex]:
-		"""Return a copy of the amplitudes."""
+	def state_vector(self) -> Any:
+		"""Return the amplitudes (a zero-copy view when numpy is installed)."""
+		if is_numpy_array(self._state):
+			return self._state
 		return list(self._state)
 
 	def dirac_notation(self, decimals: int = 3) -> str:
@@ -117,8 +127,8 @@ class SimulationResult(SimulationTrialResultBase):
 	def final_state(self) -> StateVector:
 		return self._final_state
 
-	def state_vector(self) -> list[complex]:
-		return asvector(self._final_state.state_vector())
+	def state_vector(self) -> Any:
+		return self._final_state.state_vector()
 
 	def dirac_notation(self, decimals: int = 3) -> str:
 		return self._final_state.dirac_notation(decimals)
@@ -221,9 +231,15 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
 		state = _native.NativeState(num_qubits)
-		state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
+		if _is_basis_zero(initial_state):
+			state.reset()
+		else:
+			state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
 		for moment in program.moments:
 			self._apply_moment(state, moment, index, rng=None, measurements=None)
+		view = native_complex_view(state)
+		if view is not None:
+			return SimulationResult(qubits, StateVector(view, qubits, owner=state))
 		return SimulationResult(qubits, StateVector(vector_from_flat(state.amplitudes()), qubits))
 
 	def run(
@@ -246,7 +262,10 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 		records: dict[str, list[list[int]]] = {}
 		if _measurements_are_terminal(program):
 			state = _native.NativeState(num_qubits)
-			state.set_amplitudes(amplitudes)
+			if _is_basis_zero(initial_state):
+				state.reset()
+			else:
+				state.set_amplitudes(amplitudes)
 			measurements: list[tuple[MeasurementGate, list[int]]] = []
 			for moment in program.moments:
 				for operation in moment.operations:
@@ -258,6 +277,16 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 						raise TypeError(f"{operation.gate!r} has no unitary and cannot be simulated")
 					state.apply_gate(to_flat([list(row) for row in matrix]), [index[q] for q in operation.qubits])
 			probabilities = [list(state.probabilities(targets)) for _, targets in measurements]
+			if HAS_NUMPY:
+				import numpy as _np
+
+				np_rng = _np.random.default_rng(self._seed if seed is None else seed)
+				for (gate, targets), probs in zip(measurements, probabilities, strict=True):
+					cumulative = _np.cumsum(_np.asarray(probs, dtype=_np.float64))
+					outcomes = _np.searchsorted(cumulative, np_rng.random(repetitions))
+					for outcome in outcomes.tolist():
+						_record_bits(gate, int(outcome), len(targets), records)
+				return Result(records)
 			for _ in range(repetitions):
 				for (gate, targets), probs in zip(measurements, probabilities, strict=True):
 					_record_bits(gate, _draw_outcome(probs, rng), len(targets), records)
@@ -298,16 +327,22 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 class DensityMatrix:
 	"""A density matrix together with the qubits it is expressed in."""
 
-	def __init__(self, matrix: Sequence[Sequence[complex]], qubits: Sequence[Qid]) -> None:
+	def __init__(self, matrix: Any, qubits: Sequence[Qid], *, owner: Any = None) -> None:
 		self._qubits = tuple(qubits)
-		self._matrix = [[complex(entry) for entry in row] for row in matrix]
+		if is_numpy_array(matrix):
+			self._matrix = matrix
+		else:
+			self._matrix = [[complex(entry) for entry in row] for row in matrix]
+		self._owner = owner
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
 		return self._qubits
 
-	def density_matrix(self) -> list[list[complex]]:
-		"""Return a copy of the density matrix."""
+	def density_matrix(self) -> Any:
+		"""Return the density matrix (a zero-copy view when numpy is installed)."""
+		if is_numpy_array(self._matrix):
+			return self._matrix
 		return [list(row) for row in self._matrix]
 
 	def dirac_notation(self, decimals: int = 3) -> str:
@@ -334,8 +369,8 @@ class DensityMatrixTrialResult(SimulationTrialResultBase):
 	def final_density_matrix(self) -> DensityMatrix:
 		return self._final_density_matrix
 
-	def density_matrix(self) -> list[list[complex]]:
-		return asarray(self._final_density_matrix.density_matrix())
+	def density_matrix(self) -> Any:
+		return self._final_density_matrix.density_matrix()
 
 	def __repr__(self) -> str:
 		return f"vqubit.DensityMatrixTrialResult({self._final_density_matrix!r})"
@@ -362,10 +397,17 @@ class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalStat
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
 		density = _native.NativeDensity(num_qubits)
-		density.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
+		if _is_basis_zero(initial_state):
+			density.reset()
+		else:
+			density.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
 		for moment in program.moments:
 			self._apply_moment(density, moment, index, rng=None, measurements=None)
-		matrix = DensityMatrix(_density_flat_to_nested(density.density_matrix(), 1 << num_qubits), qubits)
+		view = native_complex_view(density)
+		if view is not None:
+			matrix = DensityMatrix(view.reshape(1 << num_qubits, 1 << num_qubits), qubits, owner=density)
+		else:
+			matrix = DensityMatrix(_density_flat_to_nested(density.density_matrix(), 1 << num_qubits), qubits)
 		return DensityMatrixTrialResult(qubits, matrix)
 
 	def run(

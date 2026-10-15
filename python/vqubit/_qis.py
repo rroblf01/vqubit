@@ -121,6 +121,21 @@ def density_matrix(matrix: Any, *, qid_shape: Sequence[int] | None = None) -> Ma
 
 def bloch_vector_from_state_vector(state: StateVectorLike, index: int) -> tuple[float, float, float]:
 	"""Return the Bloch vector ``(x, y, z)`` of qubit ``index`` of ``state``."""
+	if is_numpy_array(state):
+		import numpy as _np
+
+		array = _np.asarray(state, dtype=_np.complex128)
+		num_qubits = array.size.bit_length() - 1
+		if not 0 <= index < num_qubits:
+			raise ValueError(f"index {index} out of range for {num_qubits} qubits")
+		tensor = array.reshape((2,) * num_qubits)
+		zero = _np.take(tensor, 0, axis=index)
+		one = _np.take(tensor, 1, axis=index)
+		product = _np.sum(zero.conj() * one)
+		x = 2 * product.real
+		y = 2 * product.imag
+		z = _np.sum(_np.abs(zero) ** 2) - _np.sum(_np.abs(one) ** 2)
+		return (float(x), float(y), float(z))
 	vector = list(state)
 	num_qubits = len(vector).bit_length() - 1
 	if not 0 <= index < num_qubits:

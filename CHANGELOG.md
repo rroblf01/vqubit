@@ -115,6 +115,32 @@ framework for Python, with the numerical core written in V.
 - **Op trees and gatesets**: `OP_TREE`, `flatten_to_ops`, `flatten_op_tree`,
   `flatten_to_ops_or_moments`, `freeze_op_tree`, `transform_op_tree`,
   `Gateset` and `GateFamily`.
+- **Complete `cirq.ops` surface**: the controlled power gates and swap family,
+  `PhasedISwapPowGate`, `PhasedFSimGate`, `PhaseGradientGate`,
+  `UniformSuperpositionGate`, `DiagonalGate` and its two/three-qubit variants,
+  `QubitPermutationGate`, `QuantumFourierTransformGate`; the Pauli-string
+  operations (`PauliStringGateOperation`, `SingleQubitPauliStringGateOperation`,
+  `MutablePauliString`, `MutableDensePauliString`, `BaseDensePauliString`,
+  `PauliStringPhasor(Gate)`, `PauliMeasurementGate`, `PauliSumExponential`,
+  `ProjectorString`, `ProjectorSum`, `LinearCombinationOfGates/Operations`,
+  `PauliInteractionGate`, `measure_single_paulistring`,
+  `measure_paulistring_terms`); the gate families (`AnyUnitaryGateFamily`,
+  `AnyIntegerPowerGateFamily`, `ParallelGateFamily`, `ParallelGate`,
+  `parallel_gate_op`, `InterchangeableQubitsGate`); the Clifford gates
+  (`CliffordGate`, `SingleQubitCliffordGate`, `CXSWAP`, `CZSWAP`); the extra
+  channels (`AsymmetricDepolarizingChannel`, `GeneralizedAmplitudeDampingChannel`,
+  `KrausChannel`, `MixedUnitaryChannel`, `RandomGateChannel`,
+  `StatePreparationChannel`); control (`ControlledOperation`,
+  `AbstractControlValues`, `SumOfProducts`, `ProductOfSums`); classical control
+  (`ClassicallyControlledOperation`, `If`, `SetVariable`, `Condition`,
+  `KeyCondition`); the qubit managers (`QubitManager`, `SimpleQubitManager`,
+  `GreedyQubitManager`, `BorrowableQubit`, `CleanQubit`); the variable qids
+  (`VariableQid`, `VariableLineQid`, `VariableGridQid`); `ArithmeticGate` and
+  `BooleanHamiltonianGate`; the tags `VirtualTag`/`RoutingSwapTag`; and the
+  aliases `CSwapGate`, `M`, `R`, `QubitOrderOrList`, `PAULI_GATE_LIKE`,
+  `PAULI_STRING_LIKE` and `PauliSumLike`. The factories `q`, `rx`/`ry`/`rz`,
+  `ms`, `cphase`, `givens`, `riswap`, `wait`, `qft`, `reset_each`,
+  `identity_each` and `global_phase_operation` round it out.
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

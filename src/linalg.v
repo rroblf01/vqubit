@@ -124,6 +124,61 @@ fn apply_gate_2q_adjacent(mut state []f64, m []f64, num_qubits int, low int) {
 		gr[idx] = m[2 * idx]
 		gi[idx] = m[2 * idx + 1]
 	}
+	// Permutation fast path (CNOT, CZ, SWAP, ...): gather then scatter.
+	mut perm := []int{len: 4, init: -1}
+	mut sign := []f64{len: 4, init: 1.0}
+	mut is_perm := true
+	for row in 0 .. 4 {
+		mut count := 0
+		mut col := 0
+		mut sgn := 1.0
+		for c in 0 .. 4 {
+			if gr[row * 4 + c] * gr[row * 4 + c] + gi[row * 4 + c] * gi[row * 4 + c] > 1e-18 {
+				count++
+				col = c
+				if math.abs(gi[row * 4 + c]) > 1e-15 {
+					is_perm = false
+				}
+				sgn = if gr[row * 4 + c] < 0 { -1.0 } else { 1.0 }
+			}
+		}
+		if count != 1 || !is_perm {
+			is_perm = false
+			break
+		}
+		perm[row] = col
+		sign[row] = sgn
+	}
+	if is_perm {
+		mut vals_r := []f64{len: 4, init: 0.0}
+		mut vals_i := []f64{len: 4, init: 0.0}
+		unsafe {
+			mut base := 0
+			for base < n {
+				for l in 0 .. stride {
+					i0 := 2 * (base + l)
+					vals_r[0] = state[i0]
+					vals_i[0] = state[i0 + 1]
+					vals_r[1] = state[i0 + 2 * stride]
+					vals_i[1] = state[i0 + 2 * stride + 1]
+					vals_r[2] = state[i0 + 4 * stride]
+					vals_i[2] = state[i0 + 4 * stride + 1]
+					vals_r[3] = state[i0 + 6 * stride]
+					vals_i[3] = state[i0 + 6 * stride + 1]
+					state[i0] = sign[0] * vals_r[perm[0]]
+					state[i0 + 1] = sign[0] * vals_i[perm[0]]
+					state[i0 + 2 * stride] = sign[1] * vals_r[perm[1]]
+					state[i0 + 2 * stride + 1] = sign[1] * vals_i[perm[1]]
+					state[i0 + 4 * stride] = sign[2] * vals_r[perm[2]]
+					state[i0 + 4 * stride + 1] = sign[2] * vals_i[perm[2]]
+					state[i0 + 6 * stride] = sign[3] * vals_r[perm[3]]
+					state[i0 + 6 * stride + 1] = sign[3] * vals_i[perm[3]]
+				}
+				base += block
+			}
+		}
+		return
+	}
 	mut i := []int{len: 4, init: 0}
 	mut xr := []f64{len: 4, init: 0.0}
 	mut xi := []f64{len: 4, init: 0.0}
@@ -199,6 +254,54 @@ fn apply_gate_into(mut state []f64, gate []f64, num_qubits int, targets []int) {
 	}
 	mut xr := []f64{len: g, init: 0.0}
 	mut xi := []f64{len: g, init: 0.0}
+	// Fast path: a permutation matrix (CNOT, CZ, SWAP, X, ...) just moves
+	// amplitudes, so gather then scatter without any multiplications.
+	mut perm := []int{len: g, init: -1}
+	mut sign := []f64{len: g, init: 1.0}
+	mut is_perm := true
+	for row in 0 .. g {
+		mut count := 0
+		mut col := 0
+		mut sgn := 1.0
+		for c in 0 .. g {
+			re := gate[2 * (row * g + c)]
+			im := gate[2 * (row * g + c) + 1]
+			if re * re + im * im > 1e-18 {
+				count++
+				col = c
+				if math.abs(im) > 1e-15 {
+					is_perm = false
+				}
+				sgn = if re < 0 { -1.0 } else { 1.0 }
+			}
+		}
+		if count != 1 || !is_perm {
+			is_perm = false
+			break
+		}
+		perm[row] = col
+		sign[row] = sgn
+	}
+	if is_perm {
+		unsafe {
+			for base in 0 .. n {
+				if (base & tmask) != 0 {
+					continue
+				}
+				for row in 0 .. g {
+					idx := base | off[row]
+					xr[row] = state[2 * idx]
+					xi[row] = state[2 * idx + 1]
+				}
+				for row in 0 .. g {
+					idx := base | off[row]
+					state[2 * idx] = sign[row] * xr[perm[row]]
+					state[2 * idx + 1] = sign[row] * xi[perm[row]]
+				}
+			}
+		}
+		return
+	}
 	unsafe {
 		for base in 0 .. n {
 			if (base & tmask) != 0 {
@@ -452,6 +555,50 @@ fn channel_subspace_2x2_into(mut rho []f64, ops []f64, num_ops int, targets []in
 	}
 }
 
+// channel_permutation_into applies a single permutation Kraus operator
+// `rho -> P rho P^dagger` by permuting rows and columns.
+fn channel_permutation_into(mut rho []f64, perm []int, targets []int, num_qubits int) {
+	dim := 1 << num_qubits
+	k := targets.len
+	op_dim := perm.len
+	mut off := []int{len: op_dim, init: 0}
+	for r in 0 .. op_dim {
+		mut o := 0
+		for j in 0 .. k {
+			if ((r >> (k - 1 - j)) & 1) == 1 {
+				o |= 1 << (num_qubits - 1 - targets[j])
+			}
+		}
+		off[r] = o
+	}
+	mut index_map := []int{len: dim, init: 0}
+	unsafe {
+		for i in 0 .. dim {
+			mut sub := 0
+			for j in 0 .. k {
+				sub = (sub << 1) | ((i >> (num_qubits - 1 - targets[j])) & 1)
+			}
+			index_map[i] = (i & ~off[op_dim - 1]) | off[perm[sub]]
+		}
+	}
+	mut tmp := rho.clone()
+	unsafe {
+		for i in 0 .. dim {
+			mi := index_map[i] * dim
+			for j in 0 .. dim {
+				mj := index_map[j]
+				src := 2 * (mi + mj)
+				dst := 2 * (i * dim + j)
+				tmp[dst] = rho[src]
+				tmp[dst + 1] = rho[src + 1]
+			}
+		}
+	}
+	for i in 0 .. rho.len {
+		rho[i] = tmp[i]
+	}
+}
+
 // channel_subspace_into applies `sum_i K_i rho K_i^dagger` on the `targets` of a
 // density matrix in place.
 //
@@ -460,6 +607,36 @@ fn channel_subspace_2x2_into(mut rho []f64, ops []f64, num_ops int, targets []in
 fn channel_subspace_into(mut rho []f64, ops []f64, num_ops int, op_dim int, targets []int, num_qubits int) {
 	if num_qubits <= 0 || targets.len == 0 {
 		return
+	}
+	if num_ops == 1 {
+		// A single permutation Kraus (a Clifford permutation) just permutes rows
+		// and columns, so it can skip the block arithmetic entirely.
+		mut perm := []int{len: op_dim, init: -1}
+		mut is_perm := true
+		for row in 0 .. op_dim {
+			mut count := 0
+			mut col := 0
+			for c in 0 .. op_dim {
+				re := ops[2 * (row * op_dim + c)]
+				im := ops[2 * (row * op_dim + c) + 1]
+				if re * re + im * im > 1e-18 {
+					count++
+					col = c
+					if math.abs(im) > 1e-15 {
+						is_perm = false
+					}
+				}
+			}
+			if count != 1 || !is_perm {
+				is_perm = false
+				break
+			}
+			perm[row] = col
+		}
+		if is_perm {
+			channel_permutation_into(mut rho, perm, targets, num_qubits)
+			return
+		}
 	}
 	if op_dim == 2 && targets.len == 1 {
 		channel_subspace_2x2_into(mut rho, ops, num_ops, targets, num_qubits)

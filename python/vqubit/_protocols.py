@@ -129,6 +129,15 @@ def _numpy_apply_to_unitary(U: Any, gate_matrix: Any, num_qubits: int, targets: 
 	import numpy as np
 
 	k = len(targets)
+	dim = 1 << num_qubits
+	if k == 1:
+		# Apply a 2x2 gate to the row axis of U with a single contraction.
+		t = targets[0]
+		q = num_qubits - 1 - t
+		tensor = U.reshape(1 << t, 2, 1 << q, dim)
+		contracted = np.tensordot(gate_matrix, tensor, axes=([1], [1]))
+		moved = np.moveaxis(contracted, 0, 1)
+		return moved.reshape(dim, dim)
 	gate_tensor = gate_matrix.reshape((2,) * k + (2,) * k)
 	tensor = U.reshape((2,) * (2 * num_qubits))
 	other = [axis for axis in range(2 * num_qubits) if axis not in targets]
@@ -137,7 +146,6 @@ def _numpy_apply_to_unitary(U: Any, gate_matrix: Any, num_qubits: int, targets: 
 		gate_tensor, permuted, axes=(list(range(k, 2 * k)), list(range(2 * num_qubits - k, 2 * num_qubits)))
 	)
 	moved = np.moveaxis(contracted, list(range(k)), list(targets))
-	dim = 1 << num_qubits
 	return moved.reshape(dim, dim)
 
 

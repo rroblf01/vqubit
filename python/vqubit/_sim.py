@@ -24,6 +24,14 @@ from ._gates import MeasurementGate
 from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._ops import Moment
 from ._qubits import Qid
+from ._sim_abc import (
+	SimulatesAmplitudes,
+	SimulatesFinalState,
+	SimulatesIntermediateState,
+	SimulatesSamples,
+	SimulationTrialResultBase,
+	SimulatorBase,
+)
 
 
 def _resolve_qubits(circuit: Circuit, qubit_order: Sequence[Qid] | None) -> tuple[Qid, ...]:
@@ -93,7 +101,7 @@ def _format_complex(value: complex, decimals: int) -> str:
 	return f"{value:.{decimals}f}"
 
 
-class SimulationResult:
+class SimulationResult(SimulationTrialResultBase):
 	"""The result of :meth:`Simulator.simulate`."""
 
 	def __init__(self, qubits: Sequence[Qid], state: StateVector) -> None:
@@ -164,7 +172,7 @@ def _record_bits(
 	measurements.setdefault(gate.key, []).append(bits)
 
 
-class Simulator:
+class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesFinalState, SimulatesIntermediateState):
 	"""A state-vector simulator.
 
 	``simulate`` evolves a circuit with no measurements and returns the final
@@ -265,7 +273,7 @@ class DensityMatrix:
 		return f"vqubit.DensityMatrix({len(self._qubits)} qubits)"
 
 
-class DensityMatrixTrialResult:
+class DensityMatrixTrialResult(SimulationTrialResultBase):
 	"""The result of :meth:`DensityMatrixSimulator.simulate`."""
 
 	def __init__(self, qubits: Sequence[Qid], density: DensityMatrix) -> None:
@@ -291,7 +299,7 @@ def _density_flat_to_nested(flat: Sequence[float], dim: int) -> list[list[comple
 	return [[complex(flat[2 * (i * dim + j)], flat[2 * (i * dim + j) + 1]) for j in range(dim)] for i in range(dim)]
 
 
-class DensityMatrixSimulator:
+class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalState, SimulatesIntermediateState):
 	"""A simulator that evolves a density matrix, so it can run noisy circuits."""
 
 	def __init__(self, *, seed: int | None = None) -> None:

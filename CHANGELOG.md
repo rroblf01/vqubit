@@ -12,6 +12,16 @@ framework for Python, with the numerical core written in V.
 
 ### Changed
 
+- **Performance: gate-heavy and density-matrix workloads are much faster.** The
+  single-qubit power gates, `PhasedXPowGate` and `PhasedXZGate` now build their
+  matrix in closed form (a `PhasedXZ` matrix went from ~34 µs to ~3 µs); gate
+  unitaries and their native flat form are memoised on the gate, and
+  `value_equality` caches the hash. On the density-matrix side the channel
+  kernels were reworked: the 2x2 Kraus coefficients are hoisted, diagonal Kraus
+  operators (CZ, CCZ, ...) get a direct scaling path, and the general block
+  product is factored into two matrix products. A 250-layer, 12-qubit circuit
+  now simulates in ~30 ms (Cirq: ~184 ms) and `density_large` is ~2x faster than
+  Cirq.
 - **Performance: vqubit now matches or beats Cirq on every benchmark** (see the
   [benchmarks guide](docs/en/guide/benchmarks.md)). The hot V kernels were
   rewritten (`apply_gate` as a block gather/apply/scatter with in-place and

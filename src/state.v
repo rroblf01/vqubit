@@ -37,10 +37,7 @@ pub fn (mut s NativeState) set_amplitudes(values []f64) {
 // apply_gate applies a gate matrix to `targets`, in place.
 @[vc_method]
 pub fn (mut s NativeState) apply_gate(gate []f64, targets []int) {
-	result := apply_gate(s.state, gate, s.num_qubits, targets)
-	for i in 0 .. s.state.len {
-		s.state[i] = result[i]
-	}
+	apply_gate_into(mut s.state, gate, s.num_qubits, targets)
 }
 
 // amplitudes returns the state as an interleaved complex buffer.
@@ -100,17 +97,8 @@ pub fn (mut d NativeDensity) set_from_amplitudes(values []f64) {
 // `targets`: `rho -> sum_i K_i rho K_i^dagger`.
 @[vc_method]
 pub fn (mut d NativeDensity) apply_channel(operators []f64, num_operators int, targets []int) {
-	dim := 1 << d.num_qubits
 	op_dim := op_dimension(operators.len / num_operators)
-	mut embedded := []f64{}
-	for o in 0 .. num_operators {
-		block := operators[o*2*op_dim*op_dim..(o+1)*2*op_dim*op_dim]
-		embedded << embed_operator(block, op_dim, targets, d.num_qubits)
-	}
-	updated := channel(d.rho, embedded, num_operators, dim)
-	for i in 0 .. d.rho.len {
-		d.rho[i] = updated[i]
-	}
+	channel_subspace_into(mut d.rho, operators, num_operators, op_dim, targets, d.num_qubits)
 }
 
 // density_matrix returns the density matrix as an interleaved complex buffer.

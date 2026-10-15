@@ -21,17 +21,20 @@ pub fn matmul(a []f64, b []f64, dim int) []f64 {
 	}
 	mut out := []f64{len: 2 * dim * dim, init: 0.0}
 	for i in 0 .. dim {
+		out_base := 2 * i * dim
+		a_base := 2 * i * dim
 		for k in 0 .. dim {
-			ar := a[2 * (i * dim + k)]
-			ai := a[2 * (i * dim + k) + 1]
+			ar := a[a_base + 2 * k]
+			ai := a[a_base + 2 * k + 1]
 			if ar == 0.0 && ai == 0.0 {
 				continue
 			}
+			b_base := 2 * k * dim
 			for j in 0 .. dim {
-				br := b[2 * (k * dim + j)]
-				bi := b[2 * (k * dim + j) + 1]
-				out[2 * (i * dim + j)] += ar * br - ai * bi
-				out[2 * (i * dim + j) + 1] += ar * bi + ai * br
+				br := b[b_base + 2 * j]
+				bi := b[b_base + 2 * j + 1]
+				out[out_base + 2 * j] += ar * br - ai * bi
+				out[out_base + 2 * j + 1] += ar * bi + ai * br
 			}
 		}
 	}
@@ -74,39 +77,63 @@ pub fn kron(a []f64, a_dim int, b []f64, b_dim int) []f64 {
 // `targets`, with the first target the most significant. `state` is a flat,
 // interleaved array of `2**num_qubits` amplitudes and the result has the same
 // shape.
-@[vc_fn]
-pub fn apply_gate(state []f64, gate []f64, num_qubits int, targets []int) []f64 {
+// apply_gate_into applies a gate matrix to `targets` of `state` in place.
+//
+// The target subspace of every "base" index is disjoint from the others, so the
+// gather/apply/scatter can run directly on the buffer without a copy.
+fn apply_gate_into(mut state []f64, gate []f64, num_qubits int, targets []int) {
 	if num_qubits <= 0 || targets.len == 0 {
-		return state.clone()
+		return
 	}
 	n := 1 << num_qubits
-	g := 1 << targets.len
-	mut out := []f64{len: 2 * n, init: 0.0}
+	k := targets.len
+	g := 1 << k
+	mut off := []int{len: g, init: 0}
 	mut tmask := 0
-	for t in targets {
-		tmask |= 1 << (num_qubits - 1 - t)
-	}
-	for i in 0 .. n {
-		mut sub := 0
-		for t in targets {
-			bit := (i >> (num_qubits - 1 - t)) & 1
-			sub = (sub << 1) | bit
-		}
-		base := i & ~tmask
-		sr := state[2 * i]
-		si := state[2 * i + 1]
-		for row in 0 .. g {
-			mut new_i := base
-			for j, t in targets {
-				bit := (row >> (targets.len - 1 - j)) & 1
-				new_i |= bit << (num_qubits - 1 - t)
+	for r in 0 .. g {
+		mut o := 0
+		for j in 0 .. k {
+			if ((r >> (k - 1 - j)) & 1) == 1 {
+				o |= 1 << (num_qubits - 1 - targets[j])
 			}
-			gr := gate[2 * (row * g + sub)]
-			gi := gate[2 * (row * g + sub) + 1]
-			out[2 * new_i] += gr * sr - gi * si
-			out[2 * new_i + 1] += gr * si + gi * sr
+		}
+		off[r] = o
+		tmask |= o
+	}
+	mut xr := []f64{len: g, init: 0.0}
+	mut xi := []f64{len: g, init: 0.0}
+	unsafe {
+		for base in 0 .. n {
+			if (base & tmask) != 0 {
+				continue
+			}
+			for r in 0 .. g {
+				idx := base | off[r]
+				xr[r] = state[2 * idx]
+				xi[r] = state[2 * idx + 1]
+			}
+			for row in 0 .. g {
+				mut sr := 0.0
+				mut si := 0.0
+				gate_row := 2 * row * g
+				for r in 0 .. g {
+					gr := gate[gate_row + 2 * r]
+					gi := gate[gate_row + 2 * r + 1]
+					sr += gr * xr[r] - gi * xi[r]
+					si += gr * xi[r] + gi * xr[r]
+				}
+				idx := base | off[row]
+				state[2 * idx] = sr
+				state[2 * idx + 1] = si
+			}
 		}
 	}
+}
+
+@[vc_fn]
+pub fn apply_gate(state []f64, gate []f64, num_qubits int, targets []int) []f64 {
+	mut out := state.clone()
+	apply_gate_into(mut out, gate, num_qubits, targets)
 	return out
 }
 
@@ -193,37 +220,131 @@ pub fn sandwich(a []f64, u []f64, dim int) []f64 {
 	size := 2 * dim * dim
 	mut tmp := []f64{len: size, init: 0.0}
 	for i in 0 .. dim {
+		out_base := 2 * i * dim
+		u_base := 2 * i * dim
 		for k in 0 .. dim {
-			ur := u[2 * (i * dim + k)]
-			ui := u[2 * (i * dim + k) + 1]
+			ur := u[u_base + 2 * k]
+			ui := u[u_base + 2 * k + 1]
 			if ur == 0.0 && ui == 0.0 {
 				continue
 			}
+			a_base := 2 * k * dim
 			for j in 0 .. dim {
-				ar := a[2 * (k * dim + j)]
-				ai := a[2 * (k * dim + j) + 1]
-				tmp[2 * (i * dim + j)] += ur * ar - ui * ai
-				tmp[2 * (i * dim + j) + 1] += ur * ai + ui * ar
+				ar := a[a_base + 2 * j]
+				ai := a[a_base + 2 * j + 1]
+				tmp[out_base + 2 * j] += ur * ar - ui * ai
+				tmp[out_base + 2 * j + 1] += ur * ai + ui * ar
 			}
 		}
 	}
 	mut out := []f64{len: size, init: 0.0}
 	for i in 0 .. dim {
+		out_base := 2 * i * dim
+		t_base := 2 * i * dim
 		for k in 0 .. dim {
-			tr := tmp[2 * (i * dim + k)]
-			ti := tmp[2 * (i * dim + k) + 1]
+			tr := tmp[t_base + 2 * k]
+			ti := tmp[t_base + 2 * k + 1]
 			if tr == 0.0 && ti == 0.0 {
 				continue
 			}
 			for j in 0 .. dim {
-				ur := u[2 * (j * dim + k)]
-				ui := -u[2 * (j * dim + k) + 1]
-				out[2 * (i * dim + j)] += tr * ur - ti * ui
-				out[2 * (i * dim + j) + 1] += tr * ui + ti * ur
+				// u^dagger[k][j] is the conjugate of u[j][k].
+				ur := u[2 * j * dim + 2 * k]
+				ui := -u[2 * j * dim + 2 * k + 1]
+				out[out_base + 2 * j] += tr * ur - ti * ui
+				out[out_base + 2 * j + 1] += tr * ui + ti * ur
 			}
 		}
 	}
 	return out
+}
+
+// channel_subspace_into applies `sum_i K_i rho K_i^dagger` on the `targets` of a
+// density matrix in place.
+//
+// It works block by block on the target subspace, so it never builds the full
+// `dim`-by-`dim` embedded Kraus operators and runs in `O(dim**2 * op_dim)`.
+fn channel_subspace_into(mut rho []f64, ops []f64, num_ops int, op_dim int, targets []int, num_qubits int) {
+	if num_qubits <= 0 || targets.len == 0 {
+		return
+	}
+	dim := 1 << num_qubits
+	k := targets.len
+	mut off := []int{len: op_dim, init: 0}
+	mut tmask := 0
+	for r in 0 .. op_dim {
+		mut o := 0
+		for j in 0 .. k {
+			if ((r >> (k - 1 - j)) & 1) == 1 {
+				o |= 1 << (num_qubits - 1 - targets[j])
+			}
+		}
+		off[r] = o
+		tmask |= o
+	}
+	size := 2 * op_dim * op_dim
+	mut ar := []f64{len: op_dim * op_dim, init: 0.0}
+	mut ai := []f64{len: op_dim * op_dim, init: 0.0}
+	mut br := []f64{len: op_dim * op_dim, init: 0.0}
+	mut bi := []f64{len: op_dim * op_dim, init: 0.0}
+	unsafe {
+	for rb in 0 .. dim {
+		if (rb & tmask) != 0 {
+			continue
+		}
+		for cb in 0 .. dim {
+			if (cb & tmask) != 0 {
+				continue
+			}
+			base := rb * dim + cb
+			for b in 0 .. op_dim {
+				row_off := off[b] * dim
+				for d in 0 .. op_dim {
+					idx := 2 * (base + row_off + off[d])
+					ar[b * op_dim + d] = rho[idx]
+					ai[b * op_dim + d] = rho[idx + 1]
+				}
+			}
+			for idx in 0 .. op_dim * op_dim {
+				br[idx] = 0.0
+				bi[idx] = 0.0
+			}
+			for o in 0 .. num_ops {
+				kop := ops[o * size..(o + 1) * size]
+				for ri in 0 .. op_dim {
+					for rj in 0 .. op_dim {
+						mut sr := 0.0
+						mut si := 0.0
+						for b in 0 .. op_dim {
+							kr := kop[2 * (ri * op_dim + b)]
+							ki := kop[2 * (ri * op_dim + b) + 1]
+							for d in 0 .. op_dim {
+								dr := kop[2 * (rj * op_dim + d)]
+								di := -kop[2 * (rj * op_dim + d) + 1]
+								avr := ar[b * op_dim + d]
+								avi := ai[b * op_dim + d]
+								mr := avr * dr - avi * di
+								mi := avr * di + avi * dr
+								sr += kr * mr - ki * mi
+								si += kr * mi + ki * mr
+							}
+						}
+						br[ri * op_dim + rj] += sr
+						bi[ri * op_dim + rj] += si
+					}
+				}
+			}
+			for ri in 0 .. op_dim {
+				row_off := off[ri] * dim
+				for rj in 0 .. op_dim {
+					idx := 2 * (base + row_off + off[rj])
+					rho[idx] = br[ri * op_dim + rj]
+					rho[idx + 1] = bi[ri * op_dim + rj]
+				}
+			}
+		}
+	}
+	}
 }
 
 // channel returns `sum_i K_i @ rho @ K_i^dagger` for a list of `num_ops`
@@ -247,24 +368,33 @@ pub fn channel(rho []f64, ops []f64, num_ops int, dim int) []f64 {
 @[vc_fn]
 pub fn embed_operator(operator []f64, op_dim int, targets []int, num_qubits int) []f64 {
 	dim := 1 << num_qubits
-	mut out := []f64{len: 2 * dim * dim, init: 0.0}
+	k := targets.len
+	mut off := []int{len: op_dim, init: 0}
 	mut tmask := 0
-	for t in targets {
-		tmask |= 1 << (num_qubits - 1 - t)
-	}
-	for i in 0 .. dim {
-		mut sub := 0
-		for t in targets {
-			sub = (sub << 1) | ((i >> (num_qubits - 1 - t)) & 1)
-		}
-		base := i & ~tmask
-		for row in 0 .. op_dim {
-			mut new_i := base
-			for j, t in targets {
-				new_i |= ((row >> (targets.len - 1 - j)) & 1) << (num_qubits - 1 - t)
+	for r in 0 .. op_dim {
+		mut o := 0
+		for j in 0 .. k {
+			if ((r >> (k - 1 - j)) & 1) == 1 {
+				o |= 1 << (num_qubits - 1 - targets[j])
 			}
-			out[2 * (new_i * dim + i)] = operator[2 * (row * op_dim + sub)]
-			out[2 * (new_i * dim + i) + 1] = operator[2 * (row * op_dim + sub) + 1]
+		}
+		off[r] = o
+		tmask |= o
+	}
+	mut out := []f64{len: 2 * dim * dim, init: 0.0}
+	for base in 0 .. dim {
+		if (base & tmask) != 0 {
+			continue
+		}
+		for col in 0 .. op_dim {
+			icol := base | off[col]
+			op_base := 2 * col
+			for row in 0 .. op_dim {
+				irow := base | off[row]
+				slot := 2 * (irow * dim + icol)
+				out[slot] = operator[2 * (row * op_dim) + op_base]
+				out[slot + 1] = operator[2 * (row * op_dim) + op_base + 1]
+			}
 		}
 	}
 	return out

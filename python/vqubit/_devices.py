@@ -37,6 +37,10 @@ class DeviceMetadata:
 	def __repr__(self) -> str:
 		return f"vqubit.DeviceMetadata(name={self.name!r})"
 
+	def duration_of(self, operation: Operation) -> Any:
+		"""Return the duration recorded for ``operation``'s gate, or ``None``."""
+		return self.gate_durations.get(type(operation.gate).__name__)
+
 
 class Device:
 	"""A set of qubits a circuit may act on."""
@@ -163,6 +167,17 @@ class Sycamore(GridDevice):
 		super().__init__(qubits, metadata=DeviceMetadata(name="Sycamore", qubit_set=qubits))
 
 
+class XmonDevice(GridDevice):
+	"""A superconducting-grid device, with optional gate durations."""
+
+	def __init__(self, qubits: Iterable[GridQubit], *, gate_durations: dict[str, Any] | None = None) -> None:
+		qubit_set = frozenset(qubits)
+		super().__init__(
+			qubit_set,
+			metadata=DeviceMetadata(name="XmonDevice", qubit_set=qubit_set, gate_durations=gate_durations),
+		)
+
+
 class IonDevice(Device):
 	"""An ion-trap device: all qubits are mutually connected."""
 
@@ -200,4 +215,5 @@ __all__ = [
 	"NeutralAtomDevice",
 	"Sycamore",
 	"SycamoreGate",
+	"XmonDevice",
 ]

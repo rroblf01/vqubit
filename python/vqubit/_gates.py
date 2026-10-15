@@ -1077,3 +1077,121 @@ class WaitGate(Gate):
 def global_phase(exponent: Any) -> GlobalPhaseGate:
 	"""Return a :class:`GlobalPhaseGate` with the given exponent."""
 	return GlobalPhaseGate(exponent)
+
+
+@value_equality
+class FSimGate(Gate):
+	"""The fSim gate: an iSWAP with a conditional phase, ``fSim(theta, phi)``."""
+
+	def __init__(self, theta: Any, phi: Any) -> None:
+		self._theta = theta if is_symbolic(theta) else float(theta)
+		self._phi = phi if is_symbolic(phi) else float(phi)
+
+	@property
+	def theta(self) -> Any:
+		return self._theta
+
+	@property
+	def phi(self) -> Any:
+		return self._phi
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		c = math.cos(self._theta)
+		s = math.sin(self._theta)
+		phase = cmath.exp(-1j * self._phi)
+		return [
+			[1 + 0j, 0j, 0j, 0j],
+			[0j, c + 0j, -1j * s, 0j],
+			[0j, -1j * s, c + 0j, 0j],
+			[0j, 0j, 0j, phase],
+		]
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._theta) or is_symbolic(self._phi)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> FSimGate:
+		if not self._is_parameterized_():
+			return self
+		return FSimGate(resolve_value(self._theta, resolver), resolve_value(self._phi, resolver))
+
+	def _inverse_(self) -> FSimGate:
+		return FSimGate(-self._theta, -self._phi)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._theta, self._phi)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("fSim", "fSim")
+
+	def __str__(self) -> str:
+		return f"FSimGate({_describe(self._theta)}, {_describe(self._phi)})"
+
+
+class SqrtISwapGate(_FixedGate):
+	"""The square root of the iSWAP gate."""
+
+	@staticmethod
+	def _base_symbols() -> tuple[str, ...]:
+		return ("√iSwap", "√iSwap")
+
+	@staticmethod
+	def _base_matrix() -> Matrix:
+		r = 1 / math.sqrt(2)
+		return [
+			[1 + 0j, 0j, 0j, 0j],
+			[0j, r + 0j, 1j * r, 0j],
+			[0j, 1j * r, r + 0j, 0j],
+			[0j, 0j, 0j, 1 + 0j],
+		]
+
+
+@value_equality
+class MSGate(Gate):
+	"""The Mølmer-Sørensen gate on two qubits: ``exp(-i theta/2 X X)``."""
+
+	def __init__(self, num_qubits: int, theta: Any) -> None:
+		if int(num_qubits) != 2:
+			raise ValueError("MSGate is implemented for two qubits")
+		self._num_qubits = 2
+		self._theta = theta if is_symbolic(theta) else float(theta)
+
+	@property
+	def theta(self) -> Any:
+		return self._theta
+
+	def _num_qubits_(self) -> int:
+		return self._num_qubits
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		x = _PAULI_2X2["X"]
+		xx = kron(x, x)
+		c = math.cos(self._theta / 2)
+		s = math.sin(self._theta / 2)
+		return [[(c if i == j else 0j) - 1j * s * xx[i][j] for j in range(4)] for i in range(4)]
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._theta)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> MSGate:
+		if not self._is_parameterized_():
+			return self
+		return MSGate(2, resolve_value(self._theta, resolver))
+
+	def _value_equality_values_(self) -> Any:
+		return (self._num_qubits, self._theta)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("MS", "MS")
+
+	def __str__(self) -> str:
+		return f"MSGate(2, {_describe(self._theta)})"
+
+
+SQRT_ISWAP: SqrtISwapGate = SqrtISwapGate()

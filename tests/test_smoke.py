@@ -32,6 +32,12 @@ def test_version_matches_changelog() -> None:
 	assert vqubit.__version__ == match.group(1)
 
 
+def test_version_matches_readme() -> None:
+	"""The README (the PyPI description) must mention the current version."""
+	text = (ROOT / "README.md").read_text(encoding="utf-8")
+	assert vqubit.__version__ in text
+
+
 @pytest.mark.parametrize("name", ["vqubit_native"])
 def test_native_module_available(name: str) -> None:
 	module = pytest.importorskip(name)

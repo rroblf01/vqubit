@@ -63,6 +63,7 @@ REPETITIONS = 1000
 UNITARY_QUBITS = 6
 QASM_GATES = 50
 PAULI_MULTIPLY_COUNT = 1000
+DENSE_LAYERS = 250
 REPEATS = 2
 
 
@@ -183,6 +184,30 @@ def vq_bloch_vector() -> None:
 	vq.bloch_vector_from_state_vector(vector, 0)
 
 
+_DENSE_VQ: object = None
+_DENSE_CQ: object = None
+
+
+def vq_dense_simulate() -> None:
+	global _DENSE_VQ
+	if _DENSE_VQ is None:
+		rng = random.Random(0)
+		qubits = vq.LineQubit.range(SIM_QUBITS)
+		circuit = vq.Circuit()
+		for _ in range(DENSE_LAYERS):
+			circuit.append(
+				[
+					vq.PhasedXZGate(x_exponent=rng.random(), z_exponent=rng.random(), axis_phase_exponent=rng.random())(
+						q
+					)
+					for q in qubits
+				]
+			)
+			circuit.append([vq.CNOT(qubits[i], qubits[i + 1]) for i in range(0, SIM_QUBITS - 1, 2)])
+		_DENSE_VQ = circuit
+	vq.Simulator().simulate(_DENSE_VQ).state_vector()
+
+
 # --- cirq tasks --------------------------------------------------------------
 
 
@@ -284,6 +309,26 @@ def cq_bloch_vector() -> None:
 	cirq.bloch_vector_from_state_vector(vector, 0)
 
 
+def cq_dense_simulate() -> None:
+	global _DENSE_CQ
+	if _DENSE_CQ is None:
+		rng = random.Random(0)
+		qubits = cirq.LineQubit.range(SIM_QUBITS)
+		circuit = cirq.Circuit()
+		for _ in range(DENSE_LAYERS):
+			circuit.append(
+				[
+					cirq.PhasedXZGate(
+						x_exponent=rng.random(), z_exponent=rng.random(), axis_phase_exponent=rng.random()
+					)(q)
+					for q in qubits
+				]
+			)
+			circuit.append([cirq.CNOT(qubits[i], qubits[i + 1]) for i in range(0, SIM_QUBITS - 1, 2)])
+		_DENSE_CQ = circuit
+	cirq.Simulator().simulate(_DENSE_CQ).state_vector()
+
+
 TASKS: dict[str, tuple[str, Callable[[], None], Callable[[], None] | None]] = {
 	"import": ("Import the package (memory footprint)", _noop, _noop),
 	"build_circuit": ("Build a 5-qubit, 300-moment circuit", vq_build_circuit, cq_build_circuit if HAS_CIRQ else None),
@@ -322,6 +367,11 @@ TASKS: dict[str, tuple[str, Callable[[], None], Callable[[], None] | None]] = {
 	),
 	"qasm": (f"OpenQASM export of a {QASM_GATES}-gate circuit", vq_qasm, cq_qasm if HAS_CIRQ else None),
 	"bloch_vector": (f"Bloch vector of {SIM_QUBITS} qubits", vq_bloch_vector, cq_bloch_vector if HAS_CIRQ else None),
+	"dense_simulate": (
+		f"Simulate a {DENSE_LAYERS}-layer, {SIM_QUBITS}-qubit circuit",
+		vq_dense_simulate,
+		cq_dense_simulate if HAS_CIRQ else None,
+	),
 }
 
 

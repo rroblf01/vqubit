@@ -63,6 +63,7 @@ from ._circuits_extra import (
 from ._classical import ClassicallyControlledOperation, Condition, If, KeyCondition, SetVariable
 from ._clifford import CliffordSimulationResult, CliffordSimulator, CliffordState, CliffordTableau
 from ._clifford_gates import CXSWAP, CZSWAP, CliffordGate, SingleQubitCliffordGate
+from ._compat import with_debug
 from ._compilation import (
 	CompilationTargetGateset,
 	SqrtIswapTargetGateset,
@@ -668,6 +669,19 @@ from ._value_extra import (
 	state_vector_to_probabilities,
 	validate_probability,
 )
+from ._vis import (
+	Heatmap,
+	Point,
+	PolygonUnit,
+	TwoQubitInteractionHeatmap,
+	get_state_histogram,
+	integrated_histogram,
+	plot_density_matrix,
+	plot_state_histogram,
+	relative_luminance,
+	scatter_plot_normalized_kak_interaction_coefficients,
+)
+from ._work import CircuitSampleJob, Collector, PauliSumCollector, ZerosSampler
 
 __version__ = _native_version()
 
@@ -760,6 +774,7 @@ __all__ = [
 	"CircuitDiagramInfoArgs",
 	"CircuitFunction",
 	"CircuitOperation",
+	"CircuitSampleJob",
 	"ClassicalDataDictionaryStore",
 	"ClassicalDataStore",
 	"ClassicalDataStoreReader",
@@ -774,6 +789,7 @@ __all__ = [
 	"CliffordTableau",
 	"CliffordTableauSimulationState",
 	"CliffordTrialResult",
+	"Collector",
 	"CompilationTargetGateset",
 	"Concat",
 	"Condition",
@@ -812,6 +828,7 @@ __all__ = [
 	"HPowGate",
 	"HardCodedInitialMapper",
 	"HasJSONNamespace",
+	"Heatmap",
 	"I",
 	"ISWAPGate",
 	"ISwapPowGate",
@@ -870,6 +887,7 @@ __all__ = [
 	"PauliStringPhasor",
 	"PauliStringPhasorGate",
 	"PauliSum",
+	"PauliSumCollector",
 	"PauliSumExponential",
 	"PauliSumLike",
 	"PeriodicValue",
@@ -880,9 +898,11 @@ __all__ = [
 	"PhasedISwapPowGate",
 	"PhasedXPowGate",
 	"PhasedXZGate",
+	"Point",
 	"PointOptimizationSummary",
 	"PointOptimizer",
 	"Points",
+	"PolygonUnit",
 	"Product",
 	"ProductOfSums",
 	"ProductState",
@@ -1004,6 +1024,7 @@ __all__ = [
 	"TwoQubitDiagonalGate",
 	"TwoQubitGateTabulation",
 	"TwoQubitGateTabulationResult",
+	"TwoQubitInteractionHeatmap",
 	"UniformSuperpositionGate",
 	"UnitSweep",
 	"VariableGridQid",
@@ -1021,6 +1042,7 @@ __all__ = [
 	"Z",
 	"ZPowGate",
 	"ZZPowGate",
+	"ZerosSampler",
 	"Zip",
 	"ZipLongest",
 	"__version__",
@@ -1114,6 +1136,7 @@ __all__ = [
 	"generalized_amplitude_damp",
 	"get_engine",
 	"get_placements",
+	"get_state_histogram",
 	"givens",
 	"global_phase",
 	"global_phase_operation",
@@ -1125,6 +1148,7 @@ __all__ = [
 	"hog_score_xeb_fidelity_from_probabilities",
 	"identity_each",
 	"index_tags",
+	"integrated_histogram",
 	"inverse",
 	"is_cptp",
 	"is_diagonal",
@@ -1209,6 +1233,8 @@ __all__ = [
 	"phase_by",
 	"phase_damp",
 	"phase_flip",
+	"plot_density_matrix",
+	"plot_state_histogram",
 	"pow",
 	"pow_pauli_combination",
 	"prepare_two_qubit_state_using_cz",
@@ -1228,6 +1254,7 @@ __all__ = [
 	"read_json",
 	"read_json_gzip",
 	"reflection_matrix_pow",
+	"relative_luminance",
 	"remove_tags",
 	"reset",
 	"reset_each",
@@ -1246,6 +1273,7 @@ __all__ = [
 	"sample_state_vector",
 	"sample_sweep",
 	"sampler",
+	"scatter_plot_normalized_kak_interaction_coefficients",
 	"single_qubit_matrix_to_gates",
 	"single_qubit_matrix_to_operations",
 	"single_qubit_matrix_to_pauli_rotations",
@@ -1302,6 +1330,7 @@ __all__ = [
 	"value_equality",
 	"von_neumann_entropy",
 	"wait",
+	"with_debug",
 	"with_key_path",
 	"with_key_path_prefix",
 	"with_measurement_key_mapping",

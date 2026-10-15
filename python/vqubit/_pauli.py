@@ -159,6 +159,24 @@ class PauliString:
 		"""Report whether this string commutes with ``other``."""
 		return bool((self * other).coefficient == (other * self).coefficient)
 
+	def __bool__(self) -> bool:
+		return bool(self._map)
+
+	def keys(self) -> Any:
+		return self._map.keys()
+
+	def __truediv__(self, other: Any) -> PauliString:
+		if isinstance(other, complex | int | float):
+			return PauliString(self._map, self._coefficient / other)
+		return NotImplemented
+
+	def to_z_basis_ops(self) -> Iterator[Any]:
+		"""Return single-qubit operations that rotate each Pauli to the Z basis."""
+		from ._clifford_gates import SingleQubitCliffordGate
+
+		for qubit, pauli in self.items():
+			yield SingleQubitCliffordGate.from_single_map({pauli: (Pauli.Z, False)}).on(qubit)
+
 	def _value_equality_values_(self) -> Any:
 		return (self._coefficient, tuple(sorted(self._map.items())))
 
@@ -192,6 +210,41 @@ class PauliSum:
 				if abs(coefficient) > 0:
 					self._terms[pauli_string] = complex(coefficient)
 
+	@classmethod
+	def wrap(cls, value: Any) -> PauliSum:
+		"""Convert a ``PauliSumLike`` (number, PauliString or PauliSum) to a ``PauliSum``."""
+		if isinstance(value, PauliSum):
+			return value
+		return cls() + value
+
+	@classmethod
+	def from_pauli_strings(cls, terms: Any) -> PauliSum:
+		"""Build a ``PauliSum`` from one or more ``PauliString`` terms."""
+		if isinstance(terms, PauliString):
+			terms = [terms]
+		result = cls()
+		for term in terms:
+			result = result + term
+		return result
+
+	def __add__(self, other: Any) -> PauliSum:
+		terms = dict(self._terms)
+		if isinstance(other, PauliSum):
+			items: Any = other._terms.items()
+		elif isinstance(other, PauliString):
+			items = [(other, other.coefficient)]
+		elif isinstance(other, complex | int | float):
+			items = [(PauliString(), complex(other))]
+		else:
+			return NotImplemented
+		for pauli_string, coefficient in items:
+			unit = PauliString(pauli_string._map)
+			terms[unit] = terms.get(unit, 0j) + coefficient
+		return PauliSum(terms)
+
+	def __radd__(self, other: Any) -> PauliSum:
+		return self + other
+
 	def __getitem__(self, pauli_string: PauliString) -> complex:
 		return self._terms.get(pauli_string, 0j)
 
@@ -199,7 +252,8 @@ class PauliSum:
 		return iter(self._terms.items())
 
 	def __iter__(self) -> Iterator[PauliString]:
-		return iter(self._terms)
+		for pauli_string, coefficient in self._terms.items():
+			yield PauliString(pauli_string._map, coefficient)
 
 	def __len__(self) -> int:
 		return len(self._terms)

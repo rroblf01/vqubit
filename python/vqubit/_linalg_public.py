@@ -17,7 +17,7 @@ from typing import Any
 import vqubit_native as _native
 
 from . import _linalg as _la
-from ._compat import asarray, asvector, is_numpy_array, to_nested_list
+from ._compat import as_real_matrix, as_real_vector, asarray, asvector, is_numpy_array, to_nested_list
 
 Matrix = list[list[complex]]
 Vector = list[complex]
@@ -1178,9 +1178,9 @@ def kak_vector(
 	if not unitary:
 		return asarray([])
 	first = unitary[0]
-	if isinstance(first[0], (list, tuple)):
-		return asarray([list(_kak_vector_one(u, rtol, atol, check_preconditions)) for u in unitary])  # type: ignore[arg-type]
-	return asvector(_kak_vector_one(unitary, rtol, atol, check_preconditions))  # type: ignore[arg-type]
+	if isinstance(first[0], (list, tuple)) or is_numpy_array(first[0]):
+		return as_real_matrix([_kak_vector_one(u, rtol, atol, check_preconditions) for u in unitary])  # type: ignore[arg-type]
+	return as_real_vector(_kak_vector_one(unitary, rtol, atol, check_preconditions))  # type: ignore[arg-type]
 
 
 def _kak_vector_one(matrix: Any, rtol: float, atol: float, check_preconditions: bool) -> Any:

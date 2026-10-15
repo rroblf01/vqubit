@@ -12,8 +12,25 @@ on a bare install, and every helper degrades to the dependency-free behavior.
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import importlib
+from collections.abc import Generator
 from typing import Any
+
+# A Cirq-compatible debug flag: when False, validations may be skipped for speed.
+__cirq_debug__: contextvars.ContextVar[bool] = contextvars.ContextVar("__cirq_debug__", default=__debug__)
+
+
+@contextlib.contextmanager
+def with_debug(value: bool) -> Generator[None, None, None]:
+	"""Set ``__cirq_debug__`` for the duration of the context, then restore it."""
+	token = __cirq_debug__.set(value)
+	try:
+		yield
+	finally:
+		__cirq_debug__.reset(token)
+
 
 _np: Any = None
 _sympy: Any = None
@@ -52,6 +69,26 @@ def asvector(vector: Any) -> Any:
 			return vector
 		return _np.array([complex(z) for z in vector], dtype=complex)
 	return [complex(z) for z in vector]
+
+
+def _real(value: Any) -> float:
+	return float(value.real) if isinstance(value, complex) else float(value)
+
+
+def as_real_vector(vector: Any) -> Any:
+	"""Return ``vector`` as a real numpy array (or list), like Cirq's ``kak_vector``."""
+	values = [_real(z) for z in vector]
+	if HAS_NUMPY:
+		return _np.array(values, dtype=float)
+	return values
+
+
+def as_real_matrix(rows: Any) -> Any:
+	"""Return a list of rows as a real numpy array (or list of lists)."""
+	values = [[_real(z) for z in row] for row in rows]
+	if HAS_NUMPY:
+		return _np.array(values, dtype=float)
+	return values
 
 
 def to_nested_list(matrix: Any) -> list[list[complex]]:

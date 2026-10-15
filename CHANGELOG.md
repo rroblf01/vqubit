@@ -186,6 +186,20 @@ framework for Python, with the numerical core written in V.
   `SqrtIswapTargetGateset`); and routing (`AbstractInitialMapper`,
   `HardCodedInitialMapper`, `LineInitialMapper`, `MappingManager`, `RouteCQC`,
   `routed_circuit_with_mapping`).
+- **Devices and values, completed**: noise models (`NoiseModel`,
+  `ConstantQubitNoiseModel`, `NoiseModelFromNoiseProperties`, `NoiseProperties`,
+  `SuperconductingQubitsNoiseProperties`, `NO_NOISE`), `OpIdentifier`,
+  `GridDeviceMetadata`, `UNCONSTRAINED_DEVICE`, the topologies (`NamedTopology`,
+  `LineTopology`, `TiltedSquareLattice`) with `get_placements`/
+  `is_valid_placement`/`draw_gridlike`/`draw_placements`; the `cirq.value`
+  helpers (`big_endian_*`, `canonicalize_half_turns`, `chosen_angle_to_*`,
+  `state_vector_to_probabilities`, `validate_probability`, `alternative`,
+  `ABCMetaImplementAnyOneOf`, `LinearDict`), the `Duration`/`Timestamp`/
+  `PeriodicValue`/`MeasurementType` values, the conditions
+  (`BitMaskKeyCondition`, `SympyCondition`), the classical data stores
+  (`ClassicalDataStore`, `ClassicalDataDictionaryStore`,
+  `ClassicalDataStoreReader`), the `KET_*`/`PAULI_STATES` constants and
+  `ProductState`.
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

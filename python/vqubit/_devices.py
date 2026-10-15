@@ -28,7 +28,7 @@ class DeviceMetadata:
 		*,
 		name: str = "device",
 		qubit_set: Iterable[Qid] | None = None,
-		gate_durations: dict[str, Any] | None = None,
+		gate_durations: dict[Any, Any] | None = None,
 	) -> None:
 		self.name = name
 		self.qubit_set = frozenset(qubit_set) if qubit_set is not None else None

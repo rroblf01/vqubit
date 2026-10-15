@@ -1005,3 +1005,75 @@ def measure_each(*qubits: Qid, key_func: Any = None) -> tuple[GateOperation, ...
 	if key_func is None:
 		key_func = str
 	return tuple(MeasurementGate(key_func(q), num_qubits=1).on(q) for q in qubits)
+
+
+@value_equality
+class GlobalPhaseGate(Gate):
+	"""A phase applied to the whole state, acting on no qubits."""
+
+	def __init__(self, exponent: Any = 0.0) -> None:
+		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
+
+	@property
+	def exponent(self) -> Any:
+		return self._exponent
+
+	def _num_qubits_(self) -> int:
+		return 0
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		return [[cmath.exp(1j * math.pi * self._exponent)]]
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._exponent)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> GlobalPhaseGate:
+		if not self._is_parameterized_():
+			return self
+		return GlobalPhaseGate(resolve_value(self._exponent, resolver))
+
+	def _value_equality_values_(self) -> Any:
+		return (self._exponent,)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ()
+
+	def __str__(self) -> str:
+		return f"GlobalPhaseGate(exponent={_describe(self._exponent)})"
+
+
+@value_equality
+class WaitGate(Gate):
+	"""An idle wait of ``duration_nanos`` on ``num_qubits`` qubits."""
+
+	def __init__(self, duration_nanos: float, num_qubits: int = 1) -> None:
+		if duration_nanos < 0:
+			raise ValueError("WaitGate duration must be non-negative")
+		self._duration = float(duration_nanos)
+		self._num_qubits = int(num_qubits)
+
+	@property
+	def duration_nanos(self) -> float:
+		return self._duration
+
+	def _num_qubits_(self) -> int:
+		return self._num_qubits
+
+	def _unitary_(self) -> Matrix:
+		return identity(1 << self._num_qubits)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._duration, self._num_qubits)
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("Wait",) * self._num_qubits
+
+	def __str__(self) -> str:
+		return f"WaitGate({self._duration}, num_qubits={self._num_qubits})"
+
+
+def global_phase(exponent: Any) -> GlobalPhaseGate:
+	"""Return a :class:`GlobalPhaseGate` with the given exponent."""
+	return GlobalPhaseGate(exponent)

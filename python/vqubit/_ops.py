@@ -127,3 +127,55 @@ class Moment:
 		"""Return a new moment with every operation on ``qubits`` removed."""
 		qubits = set(qubits)
 		return Moment(op for op in self._operations if not qubits.intersection(op.qubits))
+
+
+@value_equality
+class TaggedOperation(Operation):
+	"""An operation carrying tags, e.g. a hardware label or a grouping.
+
+	The tags do not change what the operation does; they travel with it so a
+	transformer or a serializer can act on them.
+	"""
+
+	def __init__(self, sub_operation: Operation, *tags: Any) -> None:
+		if not isinstance(sub_operation, Operation):
+			raise TypeError("TaggedOperation needs an Operation")
+		if len(tags) == 0:
+			raise ValueError("TaggedOperation needs at least one tag")
+		self._sub_operation = sub_operation
+		self._tags = tuple(tags)
+
+	@property
+	def sub_operation(self) -> Operation:
+		return self._sub_operation
+
+	@property
+	def tags(self) -> tuple[Any, ...]:
+		return self._tags
+
+	@property
+	def qubits(self) -> tuple[Qid, ...]:
+		return self._sub_operation.qubits
+
+	@property
+	def gate(self) -> Gate:
+		return self._sub_operation.gate
+
+	def untagged(self) -> Operation:
+		"""Return the wrapped operation without its tags."""
+		return self._sub_operation
+
+	def _circuit_diagram_info_(self) -> tuple[str, ...]:
+		symbols = list(self._sub_operation._circuit_diagram_info_())
+		if symbols:
+			symbols[0] = f"{symbols[0]}[{', '.join(str(tag) for tag in self._tags)}]"
+		return tuple(symbols)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._sub_operation, self._tags)
+
+	def __str__(self) -> str:
+		return f"{self._sub_operation}[{', '.join(str(tag) for tag in self._tags)}]"
+
+	def __repr__(self) -> str:
+		return f"vqubit.TaggedOperation({self._sub_operation!r}, {self._tags!r})"

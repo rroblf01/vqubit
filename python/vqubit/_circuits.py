@@ -14,6 +14,7 @@ from typing import Any
 
 from ._ops import Moment, Operation
 from ._qubits import Qid
+from ._value import value_equality
 
 
 class InsertStrategy(enum.Enum):
@@ -204,3 +205,62 @@ class FrozenCircuit(Circuit):
 
 	def insert(self, index: int, content: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> Circuit:
 		raise TypeError("FrozenCircuit is immutable")
+
+
+@value_equality
+class CircuitOperation(Operation):
+	"""A circuit used as a single operation inside another circuit.
+
+	The wrapped circuit acts on its own qubits; ``repetitions`` runs it several
+	times in a row.
+	"""
+
+	def __init__(self, circuit: Circuit, *, repetitions: int = 1) -> None:
+		if not isinstance(circuit, Circuit):
+			raise TypeError("CircuitOperation needs a Circuit")
+		if repetitions < 1:
+			raise ValueError("repetitions must be at least 1")
+		self._circuit = circuit
+		self._repetitions = int(repetitions)
+
+	@property
+	def circuit(self) -> Circuit:
+		return self._circuit
+
+	@property
+	def repetitions(self) -> int:
+		return self._repetitions
+
+	@property
+	def qubits(self) -> tuple[Qid, ...]:
+		return self._circuit.all_qubits()
+
+	def _num_qubits_(self) -> int:
+		return len(self.qubits)
+
+	def _unitary_(self) -> Any:
+		from ._linalg import matmul
+
+		matrix = self._circuit.unitary()
+		result = matrix
+		for _ in range(self._repetitions - 1):
+			result = matmul(matrix, result)
+		return result
+
+	def _circuit_diagram_info_(self) -> tuple[str, ...]:
+		return ("CircuitOperation",) * len(self.qubits)
+
+	def _is_measurement_(self) -> bool:
+		return any(operation._is_measurement_() for operation in self._circuit.all_operations())
+
+	def _measurement_key_obj_(self) -> Any:
+		return None
+
+	def _value_equality_values_(self) -> Any:
+		return (self._circuit, self._repetitions)
+
+	def __str__(self) -> str:
+		return f"CircuitOperation({self._circuit!r}, repetitions={self._repetitions})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.CircuitOperation({self._circuit!r}, repetitions={self._repetitions})"

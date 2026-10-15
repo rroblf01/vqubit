@@ -38,7 +38,7 @@ from ._channels import (
 	phase_flip,
 	reset,
 )
-from ._circuits import Circuit, FrozenCircuit, InsertStrategy
+from ._circuits import Circuit, CircuitOperation, FrozenCircuit, InsertStrategy
 from ._clifford import CliffordSimulationResult, CliffordSimulator, CliffordState, CliffordTableau
 from ._devices import (
 	AQTDevice,
@@ -72,6 +72,7 @@ from ._gates import (
 	CZGate,
 	EigenGate,
 	Gate,
+	GlobalPhaseGate,
 	H,
 	HPowGate,
 	I,
@@ -90,6 +91,7 @@ from ._gates import (
 	S,
 	SWAPGate,
 	T,
+	WaitGate,
 	X,
 	XPowGate,
 	XXPowGate,
@@ -99,13 +101,14 @@ from ._gates import (
 	Z,
 	ZPowGate,
 	ZZPowGate,
+	global_phase,
 	measure,
 	measure_each,
 )
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._kak import kak_decomposition, two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
 from ._measurement_key import MeasurementKey
-from ._ops import GateOperation, Moment, Operation
+from ._ops import GateOperation, Moment, Operation, TaggedOperation
 from ._optimizers import (
 	deconstruct_single_qubit_matrix_into_angles,
 	single_qubit_matrix_to_gates,
@@ -114,7 +117,7 @@ from ._optimizers import (
 	single_qubit_matrix_to_phxz,
 )
 from ._parameter import Parameter, ParamResolver
-from ._pauli import Pauli, PauliString, PauliSum
+from ._pauli import DensePauliString, Pauli, PauliString, PauliSum
 from ._protocols import (
 	apply_unitary,
 	approx_eq,
@@ -158,6 +161,7 @@ from ._qis import (
 	to_valid_state_vector,
 	von_neumann_entropy,
 )
+from ._qubit_order import QubitOrder
 from ._qubits import GridQubit, LineQubit, NamedQubit, Qid, Qubit
 from ._sim import (
 	DensityMatrix,
@@ -212,11 +216,13 @@ __all__ = [
 	"CZGate",
 	"CZTargetGateset",
 	"Circuit",
+	"CircuitOperation",
 	"CliffordSimulationResult",
 	"CliffordSimulator",
 	"CliffordState",
 	"CliffordTableau",
 	"ControlledGate",
+	"DensePauliString",
 	"DensityMatrix",
 	"DensityMatrixSimulator",
 	"DensityMatrixTrialResult",
@@ -228,6 +234,7 @@ __all__ = [
 	"FrozenCircuit",
 	"Gate",
 	"GateOperation",
+	"GlobalPhaseGate",
 	"GridDevice",
 	"GridQubit",
 	"H",
@@ -259,6 +266,7 @@ __all__ = [
 	"Points",
 	"Qid",
 	"Qubit",
+	"QubitOrder",
 	"ResetChannel",
 	"Result",
 	"Rx",
@@ -276,7 +284,9 @@ __all__ = [
 	"Sycamore",
 	"SycamoreGate",
 	"T",
+	"TaggedOperation",
 	"TargetGateset",
+	"WaitGate",
 	"X",
 	"XPowGate",
 	"XXPowGate",
@@ -310,6 +320,7 @@ __all__ = [
 	"expand_composite",
 	"fidelity",
 	"get_engine",
+	"global_phase",
 	"has_kraus",
 	"has_unitary",
 	"inverse",

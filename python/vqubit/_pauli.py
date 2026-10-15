@@ -12,7 +12,7 @@ the same qubits, which is what makes them usable as dictionary keys.
 from __future__ import annotations
 
 import enum
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any
 
 from ._gates import I, X, Y, Z
@@ -210,3 +210,72 @@ class PauliSum:
 
 	def __repr__(self) -> str:
 		return f"vqubit.PauliSum({self})"
+
+
+@value_equality
+class DensePauliString:
+	"""A Pauli on every qubit, written densely as a string like ``"IXYZ"``."""
+
+	def __init__(self, pauli_string: str, coefficient: complex = 1) -> None:
+		if not isinstance(pauli_string, str):
+			raise TypeError("DensePauliString needs a string like 'IXYZ'")
+		self._paulis = tuple(Pauli(letter) for letter in pauli_string)
+		self._coefficient = complex(coefficient)
+
+	@property
+	def paulis(self) -> tuple[Pauli, ...]:
+		return self._paulis
+
+	@property
+	def coefficient(self) -> complex:
+		return self._coefficient
+
+	def __len__(self) -> int:
+		return len(self._paulis)
+
+	def __getitem__(self, index: int) -> Pauli:
+		return self._paulis[index]
+
+	def _value_equality_values_(self) -> Any:
+		return (self._paulis, self._coefficient)
+
+	def to_pauli_string(self, qubits: Sequence[Qid]) -> PauliString:
+		"""Return the sparse :class:`~vqubit.PauliString` over ``qubits``."""
+		qubit_pauli_map: dict[Qid, Pauli] = {}
+		for qubit, pauli in zip(qubits, self._paulis, strict=True):
+			if pauli is not Pauli.I:
+				qubit_pauli_map[qubit] = pauli
+		return PauliString(qubit_pauli_map, coefficient=self._coefficient)
+
+	def matrix(self) -> Matrix:
+		"""Return the full matrix, coefficient included."""
+		result: Matrix = [[self._coefficient]]
+		for pauli in self._paulis:
+			result = kron(result, pauli.matrix())
+		return result
+
+	def __mul__(self, other: Any) -> DensePauliString:
+		if isinstance(other, DensePauliString):
+			if len(other) != len(self):
+				raise ValueError("DensePauliString lengths must match")
+			coefficient = self._coefficient * other._coefficient
+			paulis: list[Pauli] = []
+			for left, right in zip(self._paulis, other._paulis, strict=True):
+				product, factor = _product(left.value, right.value)
+				coefficient *= factor
+				paulis.append(Pauli(product))
+			return DensePauliString("".join(p.value for p in paulis), coefficient)
+		if isinstance(other, complex | int | float):
+			return DensePauliString("".join(p.value for p in self._paulis), self._coefficient * other)
+		return NotImplemented
+
+	def __rmul__(self, other: Any) -> DensePauliString:
+		if isinstance(other, complex | int | float):
+			return DensePauliString("".join(p.value for p in self._paulis), other * self._coefficient)
+		return NotImplemented
+
+	def __str__(self) -> str:
+		return "".join(pauli.value for pauli in self._paulis)
+
+	def __repr__(self) -> str:
+		return f"vqubit.DensePauliString({self!s})"

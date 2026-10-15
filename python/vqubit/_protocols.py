@@ -13,7 +13,7 @@ from typing import Any
 
 import vqubit_native as _native
 
-from ._circuits import Circuit
+from ._circuits import Circuit, CircuitOperation
 from ._gates import Gate, MatrixGate, MeasurementGate, ZPowGate
 from ._linalg import Matrix, dagger, from_flat, identity, matmul, to_flat, vector_from_flat, vector_to_flat
 from ._measurement_key import MeasurementKey
@@ -40,6 +40,8 @@ def unitary(value: Any) -> Matrix:
 	"""
 	if isinstance(value, Circuit):
 		return _circuit_unitary(value)
+	if isinstance(value, CircuitOperation):
+		return value._unitary_()
 	if isinstance(value, (GateOperation, Operation)):
 		matrix = _as_matrix(value.gate._unitary_())
 		if matrix is None:

@@ -141,6 +141,31 @@ framework for Python, with the numerical core written in V.
   `PAULI_STRING_LIKE` and `PauliSumLike`. The factories `q`, `rx`/`ry`/`rz`,
   `ms`, `cphase`, `givens`, `riswap`, `wait`, `qft`, `reset_each`,
   `identity_each` and `global_phase_operation` round it out.
+- **Quantum information, completed**: the state validators
+  (`validate_qid_shape`, `validate_normalized_state_vector`,
+  `validate_density_matrix`, `validate_indices`), the Choi/superoperator
+  conversions (`kraus_to_choi`, `choi_to_kraus`, `kraus_to_superoperator`,
+  `superoperator_to_kraus`, `choi_to_superoperator`, `superoperator_to_choi`,
+  `operation_to_choi`, `operation_to_superoperator`),
+  `density_matrix_from_state_vector`, `dirac_notation`, `one_hot`,
+  `eye_tensor`, `entanglement_fidelity`, and the `QuantumState`/
+  `QuantumStateRepresentation`/`quantum_state`/`StabilizerState` types.
+- **Step-by-step simulation**: the simulator interfaces (`SimulatorBase`,
+  `SimulatesSamples`, `SimulatesAmplitudes`, `SimulatesExpectationValues`,
+  `SimulatesFinalState`, `SimulatesIntermediateState`,
+  `SimulatesIntermediateStateVector`, `SimulationStateBase`, `StepResultBase`,
+  `SimulationTrialResultBase`, `ClassicalStateSimulator`, `CIRCUIT_LIKE`), the
+  concrete simulation states (`StateVectorSimulationState`,
+  `DensityMatrixSimulationState`, `CliffordTableauSimulationState`,
+  `StabilizerSimulationState`, `StabilizerChFormSimulationState`,
+  `StabilizerStateChForm`, `SimulationState`, `SimulationProductState`), the
+  step and trial results (`StepResult`, `StateVectorStepResult`,
+  `DensityMatrixStepResult`, `CliffordSimulatorStepResult`,
+  `SparseSimulatorStep`, `SimulationTrialResult`, `StateVectorTrialResult`,
+  `CliffordTrialResult`, `StateVectorMixin`), `StabilizerSampler`, and the
+  helpers `measure_state_vector`, `measure_density_matrix`,
+  `final_state_vector`, `final_density_matrix`, `sample_state_vector`,
+  `sample_density_matrix` and `sample_sweep`.
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

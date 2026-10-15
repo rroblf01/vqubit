@@ -65,6 +65,31 @@ framework for Python, with the numerical core written in V.
 - **Devices and local execution**: `Device`, `GridDevice`, `LineDevice`, local
   emulations of Google's `Sycamore` (device and `SycamoreGate`), an ion trap, a
   neutral-atom register and AQT, and an `Engine` that runs circuits locally.
+- **Quantum information**: `state_vector`, `density_matrix`, the
+  `to_valid_state_vector` / `to_valid_density_matrix` helpers,
+  `bloch_vector_from_state_vector`, `partial_trace`, `fidelity`,
+  `von_neumann_entropy`, `random_state_vector`, `random_density_matrix` and
+  `kraus_channel`.
+- **More protocols**: `approx_eq`, `equal_up_to_global_phase`, `MeasurementKey`,
+  `measurement_key_obj` / `measurement_key_objs`, `control_keys`,
+  `with_measurement_key_mapping` and `trace_distance_bound`.
+- **More operations and values**: `TaggedOperation`, `CircuitOperation`,
+  `GlobalPhaseGate` / `global_phase`, `WaitGate`, `QubitOrder` and
+  `DensePauliString`.
+- **Study**: the `Sweep` hierarchy (`SingleSweep`, `Zip`, `Product`, `Concat`),
+  `to_sweep`, `to_resolvers`, `TrialResult` and `run_batch`.
+- **More transformers**: `map_operations`, `map_moments`, `toggle_tags`,
+  `merge_k_qubit_unitaries` and `synchronize_terminal_measurements`.
+- **More gates and devices**: the `FSimGate`, `SqrtISwapGate` (`SQRT_ISWAP`) and
+  `MSGate` two-qubit gates, the `XmonDevice`, and
+  `DeviceMetadata.duration_of`.
+- **Testing helpers**: a `vqubit.testing` module with `assert_equivalent_repr`,
+  `assert_same_circuits`,
+  `assert_circuits_with_terminal_measurements_are_equivalent`,
+  `assert_allclose_up_to_global_phase` and `random_circuit`, and eval-able gate
+  `repr`s.
+- **Interop**: `QasmArgs` and `quirk_url`, which renders a circuit as a Quirk
+  link.
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

@@ -60,6 +60,21 @@ measure q[1] -> m_m[1];
 Las puertas sin instrucción nativa (como la de Fredkin) se expanden con su
 descomposición antes de escribirse.
 
+## Quirk
+
+`quirk_url` convierte un circuito en un enlace al simulador
+[Quirk](https://algassert.com/quirk), para las puertas que Quirk entiende de
+forma nativa:
+
+```python
+q0, q1 = vq.LineQubit.range(2)
+circuito = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1))
+print(vq.quirk_url(circuito))   # https://algassert.com/quirk#circuit=...
+```
+
+El objeto `QasmArgs` transporta el contexto (nombres de qubits, precisión y
+argumentos libres) que recibe el escritor QASM de una puerta.
+
 ## Siguientes pasos
 
 - Ejecuta tus circuitos en [dispositivos](devices.md) locales.

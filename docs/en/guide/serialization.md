@@ -59,6 +59,21 @@ measure q[1] -> m_m[1];
 Gates without a native instruction (like the Fredkin gate) are expanded through
 their decomposition before being written.
 
+## Quirk
+
+`quirk_url` renders a circuit as a link to the
+[Quirk](https://algassert.com/quirk) simulator, for the gates Quirk understands
+natively:
+
+```python
+q0, q1 = vq.LineQubit.range(2)
+circuit = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1))
+print(vq.quirk_url(circuit))   # https://algassert.com/quirk#circuit=...
+```
+
+The `QasmArgs` object carries the context (qubit names, precision and free
+arguments) that a gate's QASM writer receives.
+
 ## Next steps
 
 - Run your circuits on local [devices](devices.md).

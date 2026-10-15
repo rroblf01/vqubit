@@ -36,6 +36,9 @@ docs = [
 # Optional interoperability, tested by a dedicated CI job: with numpy installed
 # the public API returns ndarray results. The published wheel never depends on it.
 interop = ["numpy==2.5.4", "sympy==1.14.0"]
+# The visualization helpers (`vqubit.vis`) import matplotlib lazily; never a
+# runtime dependency, but installed for type checking and manual use.
+vis = ["matplotlib==3.11.2"]
 # Comparison harness (benchmarks/compare.py) installs Cirq to measure against it.
 bench = ["cirq-core==1.7.0"]
 

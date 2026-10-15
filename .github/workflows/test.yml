@@ -141,7 +141,7 @@ jobs:
 
       - name: install the wheel and the tools
         run: |
-          uv sync --no-default-groups --group dev --no-install-project
+          uv sync --no-default-groups --group dev --group interop --group vis --no-install-project
           uv pip install dist/*.whl
 
       - name: ruff check

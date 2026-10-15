@@ -12,7 +12,7 @@ import vcraft
 @[vc_class]
 pub struct NativeState {
 mut:
-	@[vc_buffer] state []f64
+	@[vc_buffer; vc_buffer_typed] state []f64
 	@[vc_field] num_qubits int
 }
 
@@ -89,7 +89,7 @@ pub fn (mut s NativeState) measure(targets []int, u f64) int {
 @[vc_class]
 pub struct NativeDensity {
 mut:
-	@[vc_buffer] rho []f64
+	@[vc_buffer; vc_buffer_typed] rho []f64
 	@[vc_field] num_qubits int
 }
 

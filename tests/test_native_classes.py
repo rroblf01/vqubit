@@ -39,8 +39,9 @@ def test_native_state_superposition() -> None:
 def test_native_state_memoryview_is_zero_copy() -> None:
 	state = native.NativeState(1)
 	state.set_amplitudes(ZERO_ZERO)
-	view = memoryview(state).cast("d")  # ty: ignore[invalid-argument-type]
-	view[0] = 0.25
+	view = memoryview(state)  # ty: ignore[invalid-argument-type]
+	assert view.format == "d"
+	view[0] = 0.25  # ty: ignore[invalid-assignment]
 	assert state.amplitudes()[0] == 0.25
 
 

@@ -12,6 +12,13 @@ framework for Python, with the numerical core written in V.
 
 ### Changed
 
+- **Toolchain: built with vcraft 1.3.0.** The native extension now keeps its
+  instance state inside the object instead of behind a pointer, so construction
+  and native method calls are faster (a no-op `apply_gate` on a two-qubit state
+  went from ~0.34 µs to ~0.31 µs) and a failed native constructor no longer leaks
+  the object. The `NativeState`/`NativeDensity` buffers are exposed as typed
+  `memoryview`s (`format "d"`, `itemsize 8`), and the generated CI build
+  containers were regenerated for 1.3.0.
 - **Performance: gate-heavy and density-matrix workloads are much faster.** The
   single-qubit power gates, `PhasedXPowGate` and `PhasedXZGate` now build their
   matrix in closed form (a `PhasedXZ` matrix went from ~34 µs to ~3 µs); gate

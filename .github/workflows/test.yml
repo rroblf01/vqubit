@@ -95,6 +95,32 @@ jobs:
       - name: run the test suite with numpy installed
         run: pytest
 
+  cirq-parity:
+    name: cirq parity
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.15"
+
+      - name: fetch the wheel
+        uses: actions/download-artifact@v6
+        with:
+          name: wheel-ubuntu-latest
+          path: dist
+
+      - name: install the wheel, cirq-core and numpy
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl cirq-core numpy
+
+      - name: cross-validate the results against Cirq
+        run: python benchmarks/verify.py
+
   lint:
     name: lint and type check
     needs: build

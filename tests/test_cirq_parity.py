@@ -588,6 +588,21 @@ CIRQ_CORE_NAMES = [
 	"with_rescoped_keys",
 	"is_native_neutral_atom_gate",
 	"is_native_neutral_atom_op",
+	"CircuitSampleJob",
+	"Collector",
+	"Heatmap",
+	"PauliSumCollector",
+	"Point",
+	"PolygonUnit",
+	"TwoQubitInteractionHeatmap",
+	"ZerosSampler",
+	"get_state_histogram",
+	"integrated_histogram",
+	"plot_density_matrix",
+	"plot_state_histogram",
+	"relative_luminance",
+	"scatter_plot_normalized_kak_interaction_coefficients",
+	"with_debug",
 ]
 
 
@@ -595,3 +610,17 @@ def test_all_cirq_core_names_are_exported() -> None:
 	have = set(vqubit.__all__)
 	missing = sorted(name for name in CIRQ_CORE_NAMES if name not in have)
 	assert missing == [], f"missing cirq-core names: {missing}"
+
+
+def test_matches_the_installed_cirq() -> None:
+	"""When Cirq is installed, derive the expected names from it directly."""
+	import types
+
+	import pytest
+
+	cirq = pytest.importorskip("cirq")
+	expected = {
+		name for name in dir(cirq) if not name.startswith("_") and not isinstance(getattr(cirq, name), types.ModuleType)
+	}
+	missing = sorted(expected - set(vqubit.__all__))
+	assert missing == [], f"names present in the installed cirq but missing from vqubit: {missing}"

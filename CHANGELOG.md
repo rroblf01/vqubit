@@ -40,8 +40,39 @@ framework for Python, with the numerical core written in V.
   the file instead of overwriting it). The standalone requirements and config
   files are gone.
 
+### Fixed
+
+- **Numerical results are now cross-validated against Cirq.** A new harness
+  (`benchmarks/verify.py`, run by the `cirq parity` CI job) compares gate
+  unitaries, channels, circuit simulation, sampling, decompositions, Pauli and
+  Clifford algebra, and the public API surface. It found and this release fixes:
+  - `DensityMatrixSimulator` dropped the sign of diagonal two-qubit gates such
+    as `CZ`/`CCZ` (the permutation fast path treated any real entry of modulus
+    one as an unsigned permutation), so superposed states came out wrong.
+  - `PhasedISwapPowGate` conjugated the wrong off-diagonal phase factor.
+  - `MSGate`/`ms` used `exp(-i theta/2 XX)` instead of Cirq's `exp(-i rads XX)`;
+    `MSGate` is now `MSGate(*, rads)`.
+  - `QuantumFourierTransformGate`/`qft` used the wrong qubit reversal; it now
+    returns the standard DFT and `qft` returns an `Operation`.
+  - `DiagonalGate`/`TwoQubitDiagonalGate`/`ThreeQubitDiagonalGate` took the
+    diagonal entries instead of the diagonal angles.
+  - `QubitPermutationGate` permuted basis states instead of qubits.
+  - `kak_vector` now accepts a batch of matrices and returns real values.
+- **Signatures now match Cirq** for `two_qubit_matrix_to_cz_operations` and its
+  isometry/diagonal variants, and for `merge_operations`/`merge_moments` (whose
+  `merge_func` now takes two operations/moments).
+
 ### Added
 
+- **Full `cirq.CliffordTableau` API**: the tableau stores the stabilizer
+  generators and implements the Aaronson-Gottesman updates (`apply_x/y/z/h/cx/cz`,
+  `stabilizers`, `destabilizers`, `measure`, `then`, `inverse`, `matrix`, ...).
+- **`vqubit.work`**: `ZerosSampler`, `CircuitSampleJob`, `Collector` and
+  `PauliSumCollector`; **`vqubit.vis`**: `get_state_histogram`,
+  `plot_state_histogram`, `integrated_histogram`, `Heatmap`,
+  `TwoQubitInteractionHeatmap`, `plot_density_matrix` and
+  `scatter_plot_normalized_kak_interaction_coefficients` (Matplotlib/NumPy are
+  imported lazily, so the core stays dependency-free); and `with_debug`.
 - **Metadata**: authors and maintainers reach the wheel's `METADATA`, and the
   `LICENSE` file travels with the wheel.
 - **Qubits**: `Qid`, `Qubit`, `LineQubit`, `GridQubit`, `NamedQubit`.

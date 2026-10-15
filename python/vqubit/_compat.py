@@ -35,6 +35,10 @@ def with_debug(value: bool) -> Generator[None, None, None]:
 _np: Any = None
 _sympy: Any = None
 
+# Matrices up to this side use the pure-Python flatten, which beats the numpy
+# round trip for a handful of entries.
+_NUMPY_FLATTEN_MIN = 8
+
 try:  # pragma: no cover - exercised only when numpy is installed
 	_np = importlib.import_module("numpy")
 	HAS_NUMPY = True
@@ -99,15 +103,19 @@ def to_nested_list(matrix: Any) -> list[list[complex]]:
 
 
 def flat_from_matrix(matrix: Any) -> list[float] | None:
-	"""Flatten a complex matrix to the native interleaved form, fast with numpy."""
-	if not HAS_NUMPY:
+	"""Flatten a complex matrix to the native interleaved form, fast with numpy.
+
+	Small gate matrices are left to the pure-Python fallback, which is faster
+	than paying the numpy round trip for a handful of entries.
+	"""
+	if not HAS_NUMPY or len(matrix) <= _NUMPY_FLATTEN_MIN:
 		return None
 	return _np.asarray(matrix, dtype=_np.complex128).ravel().view(_np.float64).tolist()
 
 
 def flat_from_vector(vector: Any) -> list[float] | None:
 	"""Flatten a complex vector to the native interleaved form, fast with numpy."""
-	if not HAS_NUMPY:
+	if not HAS_NUMPY or len(vector) <= _NUMPY_FLATTEN_MIN:
 		return None
 	return _np.asarray(vector, dtype=_np.complex128).ravel().view(_np.float64).tolist()
 

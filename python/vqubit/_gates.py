@@ -18,7 +18,7 @@ import math
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from ._linalg import Matrix, identity, kron
+from ._linalg import Matrix, identity, kron, to_flat
 from ._ops import GateOperation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._qubits import Qid
@@ -56,6 +56,16 @@ class Gate:
 			with contextlib.suppress(AttributeError):  # pragma: no cover - slotted gate
 				object.__setattr__(self, "_unitary_cache", cached)
 		return cached
+
+	def _cached_flat_unitary_(self) -> list[float] | None:
+		"""The native interleaved form of :meth:`_cached_unitary_`, memoised too."""
+		flat: Any = getattr(self, "_flat_cache", _MISSING)
+		if flat is _MISSING:
+			matrix = self._cached_unitary_()
+			flat = None if matrix is None else to_flat(matrix)
+			with contextlib.suppress(AttributeError):  # pragma: no cover - slotted gate
+				object.__setattr__(self, "_flat_cache", flat)
+		return flat
 
 	def _inverse_(self) -> Gate | None:
 		"""Return the inverse gate, or ``None`` when there is none."""

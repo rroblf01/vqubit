@@ -272,10 +272,10 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 					if isinstance(operation.gate, MeasurementGate):
 						measurements.append((operation.gate, [index[q] for q in operation.qubits]))
 						continue
-					matrix = operation.gate._cached_unitary_()
-					if matrix is None:
+					flat = operation.gate._cached_flat_unitary_()
+					if flat is None:
 						raise TypeError(f"{operation.gate!r} has no unitary and cannot be simulated")
-					state.apply_gate(to_flat([list(row) for row in matrix]), [index[q] for q in operation.qubits])
+					state.apply_gate(flat, [index[q] for q in operation.qubits])
 			probabilities = [list(state.probabilities(targets)) for _, targets in measurements]
 			if HAS_NUMPY:
 				import numpy as _np
@@ -318,10 +318,10 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 				outcome = state.measure(targets, rng.random())
 				_record_bits(gate, outcome, len(targets), measurements)
 				continue
-			matrix = gate._cached_unitary_()
-			if matrix is None:
+			flat = gate._cached_flat_unitary_()
+			if flat is None:
 				raise TypeError(f"{gate!r} has no unitary and cannot be simulated")
-			state.apply_gate(to_flat([list(row) for row in matrix]), targets)
+			state.apply_gate(flat, targets)
 
 
 class DensityMatrix:

@@ -14,8 +14,9 @@ from typing import Any
 import vqubit_native as _native
 
 from ._circuits import Circuit
+from ._gates import MatrixGate
 from ._linalg import matmul, to_flat
-from ._ops import Moment, Operation
+from ._ops import Moment, Operation, TaggedOperation
 from ._optimizers import single_qubit_matrix_to_phxz
 from ._protocols import decompose
 from ._qubits import Qid
@@ -163,6 +164,104 @@ __all__ = [
 	"drop_empty_moments",
 	"drop_negligible_operations",
 	"expand_composite",
+	"map_moments",
+	"map_operations",
+	"merge_k_qubit_unitaries",
 	"merge_single_qubit_moments_to_phxz",
 	"stratified_circuit",
+	"synchronize_terminal_measurements",
+	"toggle_tags",
 ]
+
+
+def map_operations(circuit: Circuit, map_func: Callable[[Operation], Any]) -> Circuit:
+	"""Return a circuit with every operation replaced by ``map_func``'s result.
+
+	``map_func`` may return an operation or an iterable of operations.
+	"""
+	result = Circuit()
+	for operation in circuit.all_operations():
+		mapped = map_func(operation)
+		if isinstance(mapped, Operation):
+			result.append(mapped)
+		else:
+			for item in mapped:
+				result.append(item)
+	return result
+
+
+def map_moments(circuit: Circuit, map_func: Callable[[Moment], Moment]) -> Circuit:
+	"""Return a circuit with every moment replaced by ``map_func``'s result."""
+	return Circuit.from_moments(map_func(moment) for moment in circuit.moments)
+
+
+def toggle_tags(circuit: Circuit, *tags: Any) -> Circuit:
+	"""Return ``circuit`` with ``tags`` added to every operation."""
+
+	def add_tags(operation: Operation) -> Operation:
+		if isinstance(operation, TaggedOperation):
+			return TaggedOperation(operation.sub_operation, *operation.tags, *tags)
+		return TaggedOperation(operation, *tags)
+
+	return map_operations(circuit, add_tags)
+
+
+def merge_k_qubit_unitaries(circuit: Circuit, k: int = 1, *, atol: float = 1e-8) -> Circuit:
+	"""Merge runs of unitary gates on at most ``k`` qubits into ``MatrixGate``s.
+
+	Consecutive unitary operations on the same qubits are composed into a single
+	``MatrixGate``. A measurement or an operation on more than ``k`` qubits ends
+	the runs it touches.
+	"""
+	result = Circuit()
+	pending: dict[tuple[Qid, ...], list[list[complex]]] = {}
+
+	def flush() -> None:
+		if not pending:
+			return
+		operations: list[Operation] = []
+		for qubits, matrix in pending.items():
+			if not _matrix_is_identity(matrix, atol):
+				operations.append(MatrixGate(matrix).on(*qubits))
+		if operations:
+			result.append(operations)
+		pending.clear()
+
+	for operation in circuit.all_operations():
+		gate = operation.gate
+		matrix = None if gate._is_measurement_() else gate._unitary_()
+		if len(operation.qubits) <= k and matrix is not None:
+			key = operation.qubits
+			composed = [list(row) for row in matrix]
+			pending[key] = composed if key not in pending else matmul(composed, pending[key])
+			continue
+		flush()
+		result.append(operation)
+	flush()
+	return result
+
+
+def synchronize_terminal_measurements(circuit: Circuit) -> Circuit:
+	"""Move all terminal measurements into a single final moment.
+
+	A measurement is terminal when nothing but measurements happen after it on
+	its qubits. If any measurement is not terminal, the circuit is returned
+	unchanged.
+	"""
+	operations = list(circuit.all_operations())
+	measurements = [operation for operation in operations if operation.gate._is_measurement_()]
+	if not measurements:
+		return Circuit.from_moments(circuit.moments)
+	for index, operation in enumerate(operations):
+		if not operation.gate._is_measurement_():
+			continue
+		qubits = set(operation.qubits)
+		for later in operations[index + 1 :]:
+			if not later.gate._is_measurement_() and qubits.intersection(later.qubits):
+				return Circuit.from_moments(circuit.moments)
+	result = Circuit(operation for operation in operations if not operation.gate._is_measurement_())
+	try:
+		result.append(Moment(measurements))
+	except ValueError:
+		return Circuit.from_moments(circuit.moments)
+	return result

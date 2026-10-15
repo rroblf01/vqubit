@@ -54,7 +54,7 @@ prueba).
 | Simular vector de estado de 12 qubits | 0.2 ms | 2.5 ms | 12.2× | 77 MB | 209 MB |
 | Muestrear 1000 disparos de 12 qubits | 3.6 ms | 6.6 ms | 1.8× | 82 MB | 209 MB |
 | Simular matriz de densidad de 7 qubits | 2.1 ms | 7.3 ms | 3.5× | 78 MB | 209 MB |
-| Simular vector de estado de 20 qubits | 38 ms | 41 ms | 1.1× | 93 MB | 247 MB |
+| Simular vector de estado de 20 qubits | ≈40 ms | ≈42 ms | ≈1× | 93 MB | 247 MB |
 | Simular matriz de densidad de 10 qubits | 162 ms | 360 ms | 2.2× | 125 MB | 257 MB |
 | Simular un circuito de 250 capas y 12 qubits | 31 ms | 193 ms | 6.3× | 82 MB | 212 MB |
 | Descomposición KAK de un unitario 4×4 | 0.25 ms | 0.45 ms | 1.8× | 77 MB | 209 MB |

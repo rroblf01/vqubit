@@ -53,7 +53,7 @@ peak resident memory during the task, which includes importing the package
 | State-vector simulate 12 qubits | 0.2 ms | 2.5 ms | 12.2× | 77 MB | 209 MB |
 | Sample 1000 shots of 12 qubits | 3.6 ms | 6.6 ms | 1.8× | 82 MB | 209 MB |
 | Density-matrix simulate 7 qubits | 2.1 ms | 7.3 ms | 3.5× | 78 MB | 209 MB |
-| State-vector simulate 20 qubits | 38 ms | 41 ms | 1.1× | 93 MB | 247 MB |
+| State-vector simulate 20 qubits | ≈40 ms | ≈42 ms | ≈1× | 93 MB | 247 MB |
 | Density-matrix simulate 10 qubits | 162 ms | 360 ms | 2.2× | 125 MB | 257 MB |
 | Simulate a 250-layer, 12-qubit circuit | 31 ms | 193 ms | 6.3× | 82 MB | 212 MB |
 | KAK decomposition of a 4×4 unitary | 0.25 ms | 0.45 ms | 1.8× | 77 MB | 209 MB |

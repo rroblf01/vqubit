@@ -44,7 +44,15 @@ def _coerce_ops(content: Any) -> list[Operation]:
 	raise TypeError(f"cannot append {type(content).__name__} to a circuit")
 
 
-class Circuit:
+class AbstractCircuit:
+	"""The base class of :class:`Circuit` and :class:`FrozenCircuit`."""
+
+	@property
+	def moments(self) -> tuple[Any, ...]:
+		raise NotImplementedError
+
+
+class Circuit(AbstractCircuit):
 	"""A mutable, time-ordered sequence of moments."""
 
 	def __init__(self, *contents: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> None:

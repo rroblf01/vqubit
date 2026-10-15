@@ -222,6 +222,16 @@ framework for Python, with the numerical core written in V.
   `assert_pauli_expansion_is_consistent_with_unitary`,
   `assert_qasm_is_consistent_with_unitary`, `assert_has_consistent_qid_shape`,
   `equals_tester`).
+- **Full cirq-core surface**: the last circuits classes (`AbstractCircuit`,
+  `Alignment`, `CircuitFunction`, `PointOptimizationSummary`, `PointOptimizer`,
+  `QasmOutput`, `TextDiagramDrawer`), the study helpers (`Sweepable`, `symbol`,
+  `flatten*`, `to_sweeps`, `ListSweep`, `ZipLongest`, `UnitSweep`/`UNIT_SWEEP`,
+  `dict_to_*_sweep`, `list_of_dicts_to_zip`, `ResultDict`, `ExpressionMap`) and
+  the experiments helpers (`linear_`/`log_xeb_fidelity*`, `xeb_fidelity`,
+  `hog_score_xeb_fidelity_from_probabilities`,
+  `estimate_*_readout_errors`, `measure_confusion_matrix`,
+  `TensoredConfusionMatrices`). With these, **every one of cirq-core's 583
+  top-level names is exported** (checked by a parity test).
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

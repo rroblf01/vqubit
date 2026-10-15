@@ -292,20 +292,136 @@ class Sampler:
 	sample = run
 
 
+Sweepable = Any
+ParamDictType = Any
+ParamMappingType = Any
+ParamResolverOrSimilarType = Any
+
+
+def symbol(name: str) -> Parameter:
+	"""Return a parameter symbol with the given name."""
+	return Parameter(name)
+
+
+class ListSweep(_Resolvers):
+	"""A sweep over an explicit list of resolvers."""
+
+
+class UnitSweep(Sweep):
+	"""A sweep with a single, empty parameter assignment."""
+
+	@property
+	def param_resolvers(self) -> list[ParamResolver]:
+		return [ParamResolver({})]
+
+	def __repr__(self) -> str:
+		return "vqubit.UnitSweep()"
+
+
+UNIT_SWEEP = UnitSweep()
+
+
+class ZipLongest(Sweep):
+	"""Runs several sweeps in step, padding the shorter ones with empty points."""
+
+	def __init__(self, *sweeps: Any) -> None:
+		self._sweeps = [to_sweep(sweep) for sweep in sweeps]
+		if not self._sweeps:
+			raise ValueError("ZipLongest needs at least one sweep")
+
+	@property
+	def param_resolvers(self) -> list[ParamResolver]:
+		all_resolvers = [sweep.param_resolvers for sweep in self._sweeps]
+		length = max(len(resolvers) for resolvers in all_resolvers)
+		result: list[ParamResolver] = []
+		for index in range(length):
+			picked = [resolvers[index] if index < len(resolvers) else ParamResolver({}) for resolvers in all_resolvers]
+			result.append(_merge(picked))
+		return result
+
+
+def to_sweeps(value: Any) -> list[Sweep]:
+	"""Return ``value`` as a list of sweeps."""
+	if isinstance(value, Sweep):
+		return [value]
+	if isinstance(value, Sequence) and not isinstance(value, str):
+		return [to_sweep(item) for item in value]
+	return [to_sweep(value)]
+
+
+def flatten(sweepable: Any) -> list[ParamResolver]:
+	"""Return the parameter resolvers of a sweepable object."""
+	return to_resolvers(sweepable)
+
+
+def flatten_with_params(sweepable: Any) -> tuple[list[ParamResolver], dict[str, Any]]:
+	"""Return the resolvers and the parameter values of a sweepable object."""
+	return to_resolvers(sweepable), {}
+
+
+def flatten_with_sweep(sweepable: Any) -> tuple[list[ParamResolver], Sweep]:
+	"""Return the resolvers and the sweep of a sweepable object."""
+	return to_resolvers(sweepable), to_sweep(sweepable)
+
+
+def dict_to_product_sweep(factors: Mapping[Any, Sequence[Any]]) -> Sweep:
+	"""Build a product sweep from a mapping of parameters to value lists."""
+	return Product(*[SingleSweep(key, points) for key, points in factors.items()])
+
+
+def dict_to_zip_sweep(factors: Mapping[Any, Sequence[Any]]) -> Sweep:
+	"""Build a zip sweep from a mapping of parameters to value lists."""
+	return Zip(*[SingleSweep(key, points) for key, points in factors.items()])
+
+
+def list_of_dicts_to_zip(points: Sequence[Mapping[Any, Any]]) -> Sweep:
+	"""Build a zip sweep from a list of parameter-assignment dictionaries."""
+	return ListSweep([ParamResolver(point) for point in points])
+
+
+class ResultDict(dict):
+	"""A dictionary of measurement results keyed by measurement key."""
+
+
+class ExpressionMap(dict):
+	"""A mapping from parameter names to their values."""
+
+	def __getitem__(self, key: Any) -> Any:
+		return dict.__getitem__(self, key.name if hasattr(key, "name") else key)
+
+
 __all__ = [
+	"UNIT_SWEEP",
 	"Concat",
+	"ExpressionMap",
 	"Linspace",
+	"ListSweep",
+	"ParamDictType",
+	"ParamMappingType",
+	"ParamResolverOrSimilarType",
 	"Points",
 	"Product",
+	"ResultDict",
 	"Sampler",
 	"SingleSweep",
 	"Sweep",
+	"Sweepable",
 	"TrialResult",
+	"UnitSweep",
 	"Zip",
+	"ZipLongest",
+	"dict_to_product_sweep",
+	"dict_to_zip_sweep",
+	"flatten",
+	"flatten_with_params",
+	"flatten_with_sweep",
+	"list_of_dicts_to_zip",
 	"run",
 	"run_batch",
 	"run_sweep",
 	"sample",
+	"symbol",
 	"to_resolvers",
 	"to_sweep",
+	"to_sweeps",
 ]

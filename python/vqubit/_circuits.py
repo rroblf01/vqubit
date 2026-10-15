@@ -64,12 +64,12 @@ class Circuit(AbstractCircuit):
 
 	def _split_index(self, operation: Operation) -> int:
 		"""Return the earliest moment index at which ``operation`` may be placed."""
-		index = 0
 		qubits = operation.qubits
-		for i, moment in enumerate(self._moments):
-			if any(q in moment.qubits for q in qubits):
-				index = i + 1
-		return index
+		for i in range(len(self._moments) - 1, -1, -1):
+			moment_qubits = self._moments[i].qubits_set
+			if any(q in moment_qubits for q in qubits):
+				return i + 1
+		return 0
 
 	def _place(self, operation: Operation, split: int, strategy: InsertStrategy) -> None:
 		if strategy is InsertStrategy.NEW:

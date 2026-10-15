@@ -91,14 +91,20 @@ class Moment:
 					raise ValueError(f"overlapping operations on qubit {q!r}")
 				seen.add(q)
 		self._operations = operations
+		self._qubits_set = frozenset(q for op in operations for q in op.qubits)
 
 	@property
 	def operations(self) -> tuple[Operation, ...]:
 		return self._operations
 
 	@property
+	def qubits_set(self) -> frozenset[Qid]:
+		"""The set of qubits this moment touches (cached)."""
+		return self._qubits_set
+
+	@property
 	def qubits(self) -> tuple[Qid, ...]:
-		return tuple(sorted({q for op in self._operations for q in op.qubits}))
+		return tuple(sorted(self._qubits_set))
 
 	def __iter__(self) -> Iterator[Operation]:
 		return iter(self._operations)

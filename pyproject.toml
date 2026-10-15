@@ -15,6 +15,10 @@ mypy_path = "python"
 [tool.ty.environment]
 extra-paths = ["./python"]
 
+# The benchmark harness is not part of the package and needs Cirq installed.
+[tool.ty.src]
+exclude = ["benchmarks"]
+
 # Development-only tooling. None of this ships in the vqubit wheel: the published
 # package has no runtime dependencies. Install a group into the active virtualenv
 # with `uv pip install --group dev` or `--group docs` (not `uv sync`, which would
@@ -25,6 +29,8 @@ docs = ["mkdocs-material", "mkdocs-static-i18n", "mkdocstrings[python]"]
 # Optional interoperability, tested by a dedicated CI job: with numpy installed
 # the public API returns ndarray results. The published wheel never depends on it.
 interop = ["numpy", "sympy"]
+# Comparison harness (benchmarks/compare.py) installs Cirq to measure against it.
+bench = ["cirq-core"]
 
 [tool.ruff]
 line-length = 120

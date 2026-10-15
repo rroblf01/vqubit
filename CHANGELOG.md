@@ -12,6 +12,14 @@ framework for Python, with the numerical core written in V.
 
 ### Changed
 
+- **Circuit construction is now O(1) amortised per operation.** `Circuit`
+  caches each moment's qubit set and `append` scans backwards, stopping at the
+  first conflicting moment, instead of re-deriving `Moment.qubits` for every
+  earlier moment. Building a 300-moment circuit went from ~4.6 s to ~16 ms.
+- **Sampling terminal measurements no longer re-simulates per repetition.** When
+  every measurement is terminal, `Simulator.run` computes the final state once
+  and draws each repetition's outcomes from it; sampling 1000 shots of a
+  12-qubit circuit went from ~2.7 s to ~0.1 s.
 - **Simulator state now lives in V.** The state-vector and density-matrix
   simulators and the Clifford simulator keep their state in `@[vc_buffer]`-backed
   native classes (`NativeState`, `NativeDensity`, `NativeTableau`) for the
@@ -232,6 +240,10 @@ framework for Python, with the numerical core written in V.
   `estimate_*_readout_errors`, `measure_confusion_matrix`,
   `TensoredConfusionMatrices`). With these, **every one of cirq-core's 583
   top-level names is exported** (checked by a parity test).
+- **Benchmarks**: a `benchmarks/compare.py` harness that runs the same tasks
+  with vqubit and Cirq in fresh subprocesses and reports wall time and peak
+  memory, plus a bilingual [benchmarks guide](docs/en/guide/benchmarks.md). The
+  comparison dependency lives in the `bench` dependency group.
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

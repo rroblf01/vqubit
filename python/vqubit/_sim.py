@@ -173,6 +173,33 @@ def _record_bits(
 	measurements.setdefault(gate.key, []).append(bits)
 
 
+def _measurements_are_terminal(program: Circuit) -> bool:
+	"""Report whether every measurement happens after all non-measurements.
+
+	When that holds, the final state can be computed once and sampled directly
+	instead of re-simulating the circuit for every repetition.
+	"""
+	operations = list(program.all_operations())
+	for index, operation in enumerate(operations):
+		if not isinstance(operation.gate, MeasurementGate):
+			continue
+		qubits = set(operation.qubits)
+		for later in operations[index + 1 :]:
+			if not isinstance(later.gate, MeasurementGate) and qubits.intersection(later.qubits):
+				return False
+	return True
+
+
+def _draw_outcome(probabilities: Sequence[float], rng: random.Random) -> int:
+	threshold = rng.random()
+	accumulated = 0.0
+	for index, probability in enumerate(probabilities):
+		accumulated += probability
+		if threshold < accumulated:
+			return index
+	return len(probabilities) - 1
+
+
 class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesFinalState, SimulatesIntermediateState):
 	"""A state-vector simulator.
 
@@ -217,6 +244,24 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 		amplitudes = vector_to_flat(_initial_state_vector(initial_state, dim))
 		rng = random.Random(self._seed if seed is None else seed)
 		records: dict[str, list[list[int]]] = {}
+		if _measurements_are_terminal(program):
+			state = _native.NativeState(num_qubits)
+			state.set_amplitudes(amplitudes)
+			measurements: list[tuple[MeasurementGate, list[int]]] = []
+			for moment in program.moments:
+				for operation in moment.operations:
+					if isinstance(operation.gate, MeasurementGate):
+						measurements.append((operation.gate, [index[q] for q in operation.qubits]))
+						continue
+					matrix = operation.gate._unitary_()
+					if matrix is None:
+						raise TypeError(f"{operation.gate!r} has no unitary and cannot be simulated")
+					state.apply_gate(to_flat([list(row) for row in matrix]), [index[q] for q in operation.qubits])
+			probabilities = [list(state.probabilities(targets)) for _, targets in measurements]
+			for _ in range(repetitions):
+				for (gate, targets), probs in zip(measurements, probabilities, strict=True):
+					_record_bits(gate, _draw_outcome(probs, rng), len(targets), records)
+			return Result(records)
 		for _ in range(repetitions):
 			state = _native.NativeState(num_qubits)
 			state.set_amplitudes(amplitudes)

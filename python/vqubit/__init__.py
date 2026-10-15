@@ -52,6 +52,7 @@ from ._channels_extra import (
 	generalized_amplitude_damp,
 )
 from ._circuits import Circuit, CircuitOperation, FrozenCircuit, InsertStrategy
+from ._classical import ClassicallyControlledOperation, Condition, If, KeyCondition, SetVariable
 from ._clifford import CliffordSimulationResult, CliffordSimulator, CliffordState, CliffordTableau
 from ._clifford_gates import CXSWAP, CZSWAP, CliffordGate, SingleQubitCliffordGate
 from ._control_values import AbstractControlValues, ProductOfSums, SumOfProducts
@@ -439,6 +440,7 @@ __all__ = [
 	"CZTargetGateset",
 	"Circuit",
 	"CircuitOperation",
+	"ClassicallyControlledOperation",
 	"CleanQubit",
 	"CliffordGate",
 	"CliffordSimulationResult",
@@ -446,6 +448,7 @@ __all__ = [
 	"CliffordState",
 	"CliffordTableau",
 	"Concat",
+	"Condition",
 	"ControlledGate",
 	"ControlledOperation",
 	"DensePauliString",
@@ -476,10 +479,12 @@ __all__ = [
 	"ISWAPGate",
 	"ISwapPowGate",
 	"IdentityGate",
+	"If",
 	"InsertStrategy",
 	"InterchangeableQubitsGate",
 	"IonDevice",
 	"KakDecomposition",
+	"KeyCondition",
 	"KrausChannel",
 	"LineDevice",
 	"LineQid",
@@ -548,6 +553,7 @@ __all__ = [
 	"S",
 	"SWAPGate",
 	"Sampler",
+	"SetVariable",
 	"SimpleQubitManager",
 	"SimulationResult",
 	"Simulator",

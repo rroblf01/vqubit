@@ -19,7 +19,7 @@ Eso es todo. Para comprobar que funciona:
 
 ```console
 $ python -c "import vqubit; print(vqubit.__version__)"
-0.1.0
+{{ vqubit_version }}
 ```
 
 !!! note "Sin dependencias"

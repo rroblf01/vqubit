@@ -37,6 +37,9 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
+hooks:
+  - hooks/version.py
+
 plugins:
   - search
   - i18n:

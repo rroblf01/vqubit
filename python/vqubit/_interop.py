@@ -88,3 +88,74 @@ def quirk_url(circuit: Circuit) -> str:
 
 
 __all__ = ["quirk_url"]
+
+
+_QUIRK_SINGLE = {
+	"H": "H",
+	"X": "X",
+	"Y": "Y",
+	"Z": "Z",
+	"S": "S",
+	"T": "T",
+	"Z^½": "S",
+	"Z^¼": "T",
+}
+
+
+def quirk_json_to_circuit(json_data: Any) -> Circuit:
+	"""Build a circuit from a Quirk circuit JSON document."""
+	data = json.loads(json_data) if isinstance(json_data, str) else json_data
+	cols = data["cols"]
+	names = data.get("qubits") or [f"q{i}" for i in range(len(cols[0]))]
+	from ._gates import CNOT, CZ, SWAP, H, S, T, X, Y, Z
+	from ._qubits import NamedQubit
+
+	qubits = [NamedQubit(name) for name in names]
+	gate_map = {"H": H, "X": X, "Y": Y, "Z": Z, "S": S, "T": T}
+	operations: list[Any] = []
+	for column in cols:
+		for index, entry in enumerate(column):
+			if entry in (1, "-"):
+				continue
+			if isinstance(entry, str) and entry in gate_map:
+				operations.append(gate_map[entry](qubits[index]))
+				continue
+			if entry == "•":
+				# A control: find the target in the same column.
+				target = None
+				for other_index, other in enumerate(column):
+					if other_index != index and other in ("X", "•", "Swap"):
+						target = other_index
+						break
+				if target is None:
+					raise ValueError("Quirk control has no target")
+				target_entry = column[target]
+				if target_entry == "X":
+					operations.append(CNOT(qubits[index], qubits[target]))
+				elif target_entry == "•":
+					operations.append(CZ(qubits[index], qubits[target]))
+				else:
+					raise ValueError(f"unsupported Quirk control target {target_entry!r}")
+				column[target] = 1
+				continue
+			if entry == "Swap":
+				# Find the other Swap in the column.
+				for other_index, other in enumerate(column):
+					if other_index != index and other == "Swap":
+						operations.append(SWAP(qubits[index], qubits[other_index]))
+						column[other_index] = 1
+						break
+				continue
+			raise ValueError(f"unsupported Quirk gate {entry!r}")
+	return Circuit(operations)
+
+
+def quirk_url_to_circuit(url: str) -> Circuit:
+	"""Build a circuit from a Quirk URL."""
+	payload = url.split("circuit=", 1)[1]
+	payload += "=" * (-len(payload) % 4)
+	decoded = base64.urlsafe_b64decode(payload).decode()
+	return quirk_json_to_circuit(decoded)
+
+
+__all__ = ["quirk_json_to_circuit", "quirk_url", "quirk_url_to_circuit"]

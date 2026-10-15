@@ -200,6 +200,26 @@ framework for Python, with the numerical core written in V.
   (`ClassicalDataStore`, `ClassicalDataDictionaryStore`,
   `ClassicalDataStoreReader`), the `KET_*`/`PAULI_STATES` constants and
   `ProductState`.
+- **Protocols and interop, completed**: the apply arguments
+  (`ApplyUnitaryArgs`, `ApplyChannelArgs`, `ApplyMixtureArgs`), `act_on`,
+  `apply_channel`, `apply_mixture`, `apply_unitaries`, the diagram helpers
+  (`circuit_diagram_info`, `CircuitDiagramInfo`, `CircuitDiagramInfoArgs`),
+  `DecompositionContext`/`decompose_once_with_qubits`, `DEFAULT_RESOLVERS`,
+  `has_mixture`/`mixture`/`validate_mixture`, `has_stabilizer_effect`, the JSON
+  helpers (`HasJSONNamespace`, `JsonResolver`, `json_namespace`,
+  `dataclass_json_dict`, `obj_to_dict_helper`, `SerializableByKey`),
+  `LabelEntity`, `measurement_key_name`, `mul`, `parameter_names`/
+  `parameter_symbols`/`resolve_parameters_once`, `trace_distance_from_angle_list`,
+  the key-path helpers (`with_key_path`, `with_key_path_prefix`,
+  `with_rescoped_keys`) and the `Supports*` protocol classes; the Quirk import
+  (`quirk_json_to_circuit`, `quirk_url_to_circuit`); `is_native_neutral_atom_gate`/
+  `is_native_neutral_atom_op`; and more `vqubit.testing` helpers
+  (`assert_implements_consistent_protocols`,
+  `assert_has_consistent_apply_unitary`,
+  `assert_decompose_is_consistent_with_unitary`,
+  `assert_pauli_expansion_is_consistent_with_unitary`,
+  `assert_qasm_is_consistent_with_unitary`, `assert_has_consistent_qid_shape`,
+  `equals_tester`).
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

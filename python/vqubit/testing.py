@@ -7,6 +7,7 @@ circuits.
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Iterable, Sequence
 from typing import Any
@@ -118,10 +119,131 @@ def random_circuit(
 	return circuit
 
 
+def assert_has_consistent_apply_unitary(value: Any, *, atol: float = 1e-8) -> None:
+	"""Assert that ``apply_unitary`` matches the value's unitary."""
+	from ._protocols import apply_unitary, has_unitary
+
+	if not has_unitary(value):
+		return
+	matrix = unitary(value)
+	dim = len(matrix)
+	rng = random.Random(0)
+	state = [complex(rng.gauss(0, 1), rng.gauss(0, 1)) for _ in range(dim)]
+	norm = math.sqrt(sum(abs(z) ** 2 for z in state))
+	state = [z / norm for z in state]
+	applied = apply_unitary(value, state)
+	expected = [sum(matrix[i][j] * state[j] for j in range(dim)) for i in range(dim)]
+	for a, e in zip(applied, expected, strict=True):
+		assert abs(a - e) <= atol, "apply_unitary disagrees with unitary"
+
+
+def assert_decompose_is_consistent_with_unitary(value: Any, *, atol: float = 1e-8) -> None:
+	"""Assert that decomposing ``value`` preserves its unitary."""
+	from ._protocols import decompose, has_unitary
+
+	subject = getattr(value, "gate", value)
+	if not hasattr(subject, "_decompose_") or not has_unitary(value):
+		return
+	decomposed = decompose(value)
+	if not decomposed:
+		return
+	matrix = unitary(value)
+	from ._gates import Gate
+	from ._ops import Operation
+	from ._qubits import LineQubit
+
+	operations: list[Any] = []
+	for item in decomposed:
+		if isinstance(item, Operation):
+			operations.append(item)
+		elif isinstance(item, Gate):
+			operations.append(item.on(*LineQubit.range(item.num_qubits)))
+		else:
+			operations.append(item)
+	rebuilt = unitary(Circuit(operations))
+	assert len(matrix) == len(rebuilt), "decomposition changed the dimension"
+	phase = None
+	for i in range(len(matrix)):
+		for j in range(len(matrix)):
+			if abs(matrix[i][j]) > 1e-9:
+				phase = rebuilt[i][j] / matrix[i][j]
+				break
+		if phase is not None:
+			break
+	assert phase is not None
+	for i in range(len(matrix)):
+		for j in range(len(matrix)):
+			assert abs(rebuilt[i][j] - phase * matrix[i][j]) <= atol, "decomposition is inconsistent"
+
+
+def assert_pauli_expansion_is_consistent_with_unitary(value: Any, *, atol: float = 1e-8) -> None:
+	"""Assert that the Pauli expansion of ``value`` matches its unitary."""
+	from ._protocols import has_unitary, pauli_expansion
+
+	subject = getattr(value, "gate", value)
+	if not hasattr(subject, "_pauli_expansion_") or not has_unitary(value):
+		return
+	expansion = pauli_expansion(subject)
+	matrix = unitary(subject)
+	rebuilt = [[0j] * len(matrix) for _ in range(len(matrix))]
+
+	for pauli_string, coefficient in expansion.items():
+		piece = pauli_string.matrix()
+		for i in range(len(matrix)):
+			for j in range(len(matrix)):
+				rebuilt[i][j] += coefficient * piece[i][j]
+	for i in range(len(matrix)):
+		for j in range(len(matrix)):
+			assert abs(rebuilt[i][j] - matrix[i][j]) <= atol, "Pauli expansion is inconsistent"
+
+
+def assert_qasm_is_consistent_with_unitary(value: Any, *, atol: float = 1e-8) -> None:
+	"""Assert that ``value`` can be written as OpenQASM."""
+	del atol
+	from ._qasm import qasm
+
+	text = qasm(value)
+	assert isinstance(text, str) and text.strip(), "qasm did not produce a string"
+
+
+def assert_has_consistent_qid_shape(value: Any) -> None:
+	"""Assert that the qid shape of ``value`` matches its qubit count."""
+	from ._protocols import qid_shape
+
+	shape = qid_shape(value)
+	assert len(shape) == len(getattr(value, "qubits", shape)), "qid_shape length mismatch"
+
+
+def assert_implements_consistent_protocols(value: Any, *, atol: float = 1e-8) -> None:
+	"""Run the common consistency checks on ``value``."""
+	assert_equivalent_repr(value)
+	assert_has_consistent_apply_unitary(value, atol=atol)
+	assert_decompose_is_consistent_with_unitary(value, atol=atol)
+
+
+def equals_tester() -> Any:
+	"""Return a function that checks the ``==``/``!=``/``hash`` contract."""
+
+	def tester(a: Any, b: Any) -> None:
+		assert (a == b) == (b == a), "equality is not symmetric"
+		assert (a != b) == (b != a), "inequality is not symmetric"
+		if a == b:
+			assert hash(a) == hash(b), "equal values must hash equally"
+
+	return tester
+
+
 __all__ = [
 	"assert_allclose_up_to_global_phase",
 	"assert_circuits_with_terminal_measurements_are_equivalent",
+	"assert_decompose_is_consistent_with_unitary",
 	"assert_equivalent_repr",
+	"assert_has_consistent_apply_unitary",
+	"assert_has_consistent_qid_shape",
+	"assert_implements_consistent_protocols",
+	"assert_pauli_expansion_is_consistent_with_unitary",
+	"assert_qasm_is_consistent_with_unitary",
 	"assert_same_circuits",
+	"equals_tester",
 	"random_circuit",
 ]

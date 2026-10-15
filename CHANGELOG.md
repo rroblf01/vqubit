@@ -166,6 +166,26 @@ framework for Python, with the numerical core written in V.
   helpers `measure_state_vector`, `measure_density_matrix`,
   `final_state_vector`, `final_density_matrix`, `sample_state_vector`,
   `sample_density_matrix` and `sample_sweep`.
+- **Transformers, completed**: the transformer decorator and
+  `TransformerContext`/`TransformerLogger`, `merge_operations`/`merge_moments`
+  (and their circuit-op variants), `unroll_circuit_op` (and greedy variants),
+  `map_operations_and_unroll`, `remove_tags`/`index_tags`,
+  `drop_terminal_measurements`, `drop_diagonal_before_measurement`,
+  `dephase_measurements`, `eject_z`/`eject_phased_paulis`, `is_negligible_turn`,
+  `defer_measurements`, the single-qubit merge-to-phased-x-and-z variants,
+  `add_dynamical_decoupling`, `map_clean_and_borrowable_qubits`; the analytical
+  decompositions (`single_qubit_matrix_to_pauli_rotations`,
+  `single_qubit_op_to_framed_phase_form`, `decompose_multi_controlled_x`/
+  `_rotation`, `two_qubit_matrix_to_sqrt_iswap_operations`/`_ion_operations`/
+  `_cz_isometry`/`_diagonal_and_cz_operations`, `parameterized_2q_op_to_sqrt_iswap_operations`,
+  `quantum_shannon_decomposition`, `three_qubit_matrix_to_operations`,
+  `prepare_two_qubit_state_using_*`, `decompose_cphase_into_two_fsim`,
+  `decompose_two_qubit_interaction_into_four_fsim_gates`,
+  `TwoQubitGateTabulation`/`TwoQubitGateTabulationResult`); the compilation
+  gatesets (`CompilationTargetGateset`, `TwoQubitCompilationTargetGateset`,
+  `SqrtIswapTargetGateset`); and routing (`AbstractInitialMapper`,
+  `HardCodedInitialMapper`, `LineInitialMapper`, `MappingManager`, `RouteCQC`,
+  `routed_circuit_with_mapping`).
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

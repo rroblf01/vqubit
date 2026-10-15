@@ -27,10 +27,12 @@ jobs:
           python-version: "3.15"
 
       - name: install the documentation toolchain
-        run: uv pip install --system --group docs
+        run: |
+          uv venv
+          uv pip install --group docs
 
       - name: build
-        run: mkdocs build --strict
+        run: .venv/bin/mkdocs build --strict
 
       - name: upload the site
         uses: actions/upload-pages-artifact@v3

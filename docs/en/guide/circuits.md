@@ -28,12 +28,10 @@ print(circuit)
 It is drawn as text, one line per qubit:
 
 ```
-          ┌───┐
-0: ───H───@───────
+0: ───H───@───
           │
-1: ───────X───────
-
-2: ───X───────────
+1: ───────X───
+2: ───X───────
 ```
 
 Read the diagram left to right: each column is a moment.

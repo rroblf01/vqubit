@@ -10,6 +10,7 @@ En vqubit, las puertas se llaman con los qubits sobre los que actúan:
 import vqubit as vq
 
 q0 = vq.LineQubit(0)
+q1 = vq.LineQubit(1)
 
 vq.H(q0)      # Hadamard
 vq.X(q0)      # NOT cuántico (invierte 0 <-> 1)
@@ -35,9 +36,9 @@ En lugar de puertas fijas, puedes girar un qubit un ángulo que elijas:
 ```python
 import math
 
-vq.Rx(q0, radians=math.pi / 2)   # media vuelta alrededor del eje X
-vq.Ry(q0, radians=math.pi / 2)   # alrededor del eje Y
-vq.Rz(q0, radians=math.pi / 4)   # alrededor del eje Z
+vq.Rx(math.pi / 2)(q0)   # media vuelta alrededor del eje X
+vq.Ry(math.pi / 2)(q0)   # alrededor del eje Y
+vq.Rz(math.pi / 4)(q0)   # alrededor del eje Z
 ```
 
 Estas son las puertas que necesitarás para algoritmos reales, donde los ángulos

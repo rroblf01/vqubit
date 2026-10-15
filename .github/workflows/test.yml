@@ -141,14 +141,15 @@ jobs:
 
       - name: install the wheel and the tools
         run: |
-          uv pip install --system dist/*.whl
-          uv pip install --system --group dev
+          uv venv
+          uv pip install dist/*.whl
+          uv pip install --group dev
 
       - name: ruff check
-        run: ruff check .
+        run: .venv/bin/ruff check .
 
       - name: ruff format --check
-        run: ruff format --check .
+        run: .venv/bin/ruff format --check .
 
       - name: ty check
-        run: ty check
+        run: .venv/bin/ty check

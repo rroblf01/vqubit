@@ -13,7 +13,7 @@ import vqubit as vq
 linea = vq.LineDevice(3)                 # qubits 0, 1, 2 en línea
 rejilla = vq.GridDevice.rect(2, 3)       # rejilla de 2x3
 
-print(sorted(device.qubits) for device in (linea, rejilla))
+print([sorted(device.qubits) for device in (linea, rejilla)])
 print(rejilla.is_adjacent(vq.GridQubit(0, 0), vq.GridQubit(0, 1)))  # True
 ```
 

@@ -59,7 +59,7 @@ Measuring a qubit forces it to "decide" between `0` and `1`. The outcome is
 random, with probabilities that depend on the state. In vqubit:
 
 ```python
-result = vq.Simulator().run(vq.Circuit(H(q0), vq.measure(q0)), repetitions=1000)
+result = vq.Simulator().run(vq.Circuit(vq.H(q0), vq.measure(q0, key="result")), repetitions=1000)
 print(result.histogram(key="result"))
 ```
 

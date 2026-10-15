@@ -10,6 +10,7 @@ In vqubit, gates are called on the qubits they act on:
 import vqubit as vq
 
 q0 = vq.LineQubit(0)
+q1 = vq.LineQubit(1)
 
 vq.H(q0)      # Hadamard
 vq.X(q0)      # quantum NOT (flips 0 <-> 1)
@@ -35,9 +36,9 @@ Instead of fixed gates, you can rotate a qubit by an angle you choose:
 ```python
 import math
 
-vq.Rx(q0, radians=math.pi / 2)   # half turn around the X axis
-vq.Ry(q0, radians=math.pi / 2)   # around the Y axis
-vq.Rz(q0, radians=math.pi / 4)   # around the Z axis
+vq.Rx(math.pi / 2)(q0)   # half turn around the X axis
+vq.Ry(math.pi / 2)(q0)   # around the Y axis
+vq.Rz(math.pi / 4)(q0)   # around the Z axis
 ```
 
 These are the gates you will need for real algorithms, where the angles are

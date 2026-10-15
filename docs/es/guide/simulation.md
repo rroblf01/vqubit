@@ -58,7 +58,7 @@ q0, q1, q2 = vq.LineQubit.range(3)
 circuito = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1), vq.CNOT(q1, q2))
 
 estado = vq.CliffordSimulator().simulate(circuito).final_state
-print(estado.stabilizers())
+print([str(s) for s in estado.stabilizers()])
 # ['X(0)*X(1)*X(2)', 'Z(0)*Z(1)', 'Z(1)*Z(2)']
 ```
 

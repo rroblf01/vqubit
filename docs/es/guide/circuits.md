@@ -29,12 +29,10 @@ print(circuito)
 Se dibuja como texto, con una línea por qubit:
 
 ```
-          ┌───┐
-0: ───H───@───────
+0: ───H───@───
           │
-1: ───────X───────
-
-2: ───X───────────
+1: ───────X───
+2: ───X───────
 ```
 
 Lee el diagrama de izquierda a derecha: cada columna es un momento.

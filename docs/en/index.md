@@ -14,7 +14,7 @@ Cirq you already know vqubit.
 import vqubit as vq
 
 q0, q1 = vq.LineQubit.range(2)
-circuit = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1), vq.measure(q0, q1))
+circuit = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1), vq.measure(q0, q1, key="result"))
 print(circuit)
 
 result = vq.Simulator().run(circuit, repetitions=100)

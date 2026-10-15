@@ -26,7 +26,6 @@ print(circuito)
 Salida:
 
 ```
-          ┌───┐
 0: ───H───@───
           │
 1: ───────X───
@@ -76,5 +75,5 @@ obtienes `0`, sabes con certeza que `q1` también dará `0`, sin mirarlo.
 
 - Cambia `CNOT` por `CZ` y observa que el resultado es el mismo conjunto.
 - Añade una puerta `X(q1)` antes de la medida y mira cómo cambian los resultados.
-- Sustituye `H` por `vq.Ry(q0, radians=math.pi / 8)` y observa cómo se
+- Sustituye `H` por `vq.Ry(math.pi / 8)(q0)` y observa cómo se
   desequilibran las probabilidades.

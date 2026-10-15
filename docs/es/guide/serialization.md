@@ -30,7 +30,7 @@ Puedes consultar el tipo de un valor y buscar la clase por su nombre:
 
 ```python
 print(vq.json_cirq_type(vq.X))             # 'XPowGate'
-print(vq.cirq_type_from_json('LineQubit')) # <class 'vqubit.LineQubit'>
+print(vq.cirq_type_from_json('LineQubit')) # <class 'vqubit._qubits.LineQubit'>
 ```
 
 ## OpenQASM 2.0

@@ -26,7 +26,6 @@ print(circuit)
 Output:
 
 ```
-          ┌───┐
 0: ───H───@───
           │
 1: ───────X───
@@ -76,5 +75,5 @@ get `0`, you know for certain that `q1` will also give `0`, without looking.
 
 - Replace `CNOT` with `CZ` and note that the outcome set is the same.
 - Add an `X(q1)` gate before the measurement and watch the results change.
-- Replace `H` with `vq.Ry(q0, radians=math.pi / 8)` and watch the probabilities
+- Replace `H` with `vq.Ry(math.pi / 8)(q0)` and watch the probabilities
   become uneven.

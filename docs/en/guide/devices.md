@@ -12,7 +12,7 @@ import vqubit as vq
 line = vq.LineDevice(3)                  # qubits 0, 1, 2 on a line
 grid = vq.GridDevice.rect(2, 3)          # a 2x3 grid
 
-print(sorted(device.qubits) for device in (line, grid))
+print([sorted(device.qubits) for device in (line, grid)])
 print(grid.is_adjacent(vq.GridQubit(0, 0), vq.GridQubit(0, 1)))  # True
 ```
 

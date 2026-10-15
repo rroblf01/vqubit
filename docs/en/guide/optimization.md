@@ -58,7 +58,7 @@ import vqubit as vq
 from vqubit import two_qubit_matrix_to_cz_operations
 
 q0, q1 = vq.LineQubit.range(2)
-ops = two_qubit_matrix_to_cz_operations(vq.unitary(vq.ISWAP), qubits=(q0, q1))
+ops = two_qubit_matrix_to_cz_operations(q0, q1, vq.unitary(vq.ISWAP))
 ```
 
 ## Next steps

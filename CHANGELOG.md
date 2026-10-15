@@ -10,8 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The first release: a dependency-free, Cirq-compatible quantum computing
 framework for Python, with the numerical core written in V.
 
+### Changed
+
+- **Simulator state now lives in V.** The state-vector and density-matrix
+  simulators and the Clifford simulator keep their state in `@[vc_buffer]`-backed
+  native classes (`NativeState`, `NativeDensity`, `NativeTableau`) for the
+  simulation's lifetime, so gates are applied to native memory without a Python
+  round trip between calls. `memoryview` of a state is a zero-copy view.
+- **Development tooling moved into `pyproject.toml`.** The dev and docs
+  dependencies are `[dependency-groups]` and the ruff, pytest and ty settings are
+  `[tool.*]` tables, installed with `uv pip install --group` (vcraft 1.2.0 merges
+  the file instead of overwriting it). The standalone requirements and config
+  files are gone.
+
 ### Added
 
+- **Metadata**: authors and maintainers reach the wheel's `METADATA`, and the
+  `LICENSE` file travels with the wheel.
 - **Qubits**: `Qid`, `Qubit`, `LineQubit`, `GridQubit`, `NamedQubit`.
 - **Gates**: `I`, `X`, `Y`, `Z`, `H`, `S`, `T`; the rotation gates `Rx`, `Ry`,
   `Rz`; the power gates `XPowGate`, `YPowGate`, `ZPowGate`, `HPowGate`; the

@@ -340,7 +340,7 @@ def two_qubit_matrix_to_ion_operations(
 	operations: list[Operation] = []
 	operations.extend(gate.on(q0) for gate in single_qubit_matrix_to_gates(b0, atol=atol))
 	operations.extend(gate.on(q1) for gate in single_qubit_matrix_to_gates(b1, atol=atol))
-	operations.append(MSGate(2, -2 * x).on(q0, q1))
+	operations.append(MSGate(rads=-x).on(q0, q1))
 	operations.extend(_yy_interaction_ms(y, q0, q1))
 	operations.extend(_zz_interaction_ms(z, q0, q1))
 	operations.extend(gate.on(q0) for gate in single_qubit_matrix_to_gates(a0, atol=atol))
@@ -351,13 +351,13 @@ def two_qubit_matrix_to_ion_operations(
 def _yy_interaction_ms(theta: float, q0: Qid, q1: Qid) -> list[Operation]:
 	from ._gates import MSGate
 
-	return [S(q0), S(q1), MSGate(2, -2 * theta).on(q0, q1), (S**-1)(q0), (S**-1)(q1)]
+	return [S(q0), S(q1), MSGate(rads=-theta).on(q0, q1), (S**-1)(q0), (S**-1)(q1)]
 
 
 def _zz_interaction_ms(theta: float, q0: Qid, q1: Qid) -> list[Operation]:
 	from ._gates import MSGate
 
-	return [H(q0), H(q1), MSGate(2, -2 * theta).on(q0, q1), H(q0), H(q1)]
+	return [H(q0), H(q1), MSGate(rads=-theta).on(q0, q1), H(q0), H(q1)]
 
 
 def two_qubit_matrix_to_diagonal_and_cz_operations(
@@ -370,7 +370,7 @@ def two_qubit_matrix_to_diagonal_and_cz_operations(
 	decomposition = kak_decomposition(matrix, atol=atol)
 	ops = two_qubit_matrix_to_cz_operations(matrix, qubits=qubits, atol=atol)
 	dim = len(to_nested_list(matrix))
-	diagonal = DiagonalGate([1] * dim)
+	diagonal = DiagonalGate([0] * dim)
 	_ = decomposition
 	return diagonal, ops
 

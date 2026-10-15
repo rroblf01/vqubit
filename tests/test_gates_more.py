@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import math
 
-import pytest
-
 import vqubit
 from tests.helpers import assert_matrix_close, up_to_phase
 from vqubit._linalg import matmul
@@ -32,11 +30,11 @@ def test_sqrt_iswap_squares_to_iswap() -> None:
 
 
 def test_ms_gate() -> None:
-	gate = vqubit.MSGate(2, 0.5)
+	gate = vqubit.MSGate(rads=0.5)
 	assert gate.num_qubits == 2
+	assert gate.rads == 0.5
 	assert len(vqubit.unitary(gate)) == 4
-	with pytest.raises(ValueError):
-		vqubit.MSGate(3, 0.5)
+	assert isinstance(vqubit.ms(0.5), vqubit.MSGate)
 
 
 def test_xmon_device_durations() -> None:

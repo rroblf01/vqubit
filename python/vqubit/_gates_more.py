@@ -254,8 +254,8 @@ class PhasedISwapPowGate(_PowGate):
 		phase = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
 		return [
 			[phase, 0j, 0j, 0j],
-			[0j, phase * c, phase * 1j * s * f.conjugate(), 0j],
-			[0j, phase * 1j * s * f, phase * c, 0j],
+			[0j, phase * c, phase * 1j * s * f, 0j],
+			[0j, phase * 1j * s * f.conjugate(), phase * c, 0j],
 			[0j, 0j, 0j, phase],
 		]
 
@@ -279,81 +279,125 @@ def givens(angle_rads: Any) -> PhasedISwapPowGate:
 
 @value_equality
 class DiagonalGate(Gate):
-	"""A gate whose unitary is a given diagonal of phases."""
+	"""An n-qubit gate that applies phases on the computational basis states.
 
-	def __init__(self, diag: Sequence[complex]) -> None:
-		entries = [complex(z) for z in diag]
-		dim = len(entries)
+	``DiagonalGate(angles)`` has unitary ``diag(exp(1j * a) for a in angles)``,
+	matching :class:`cirq.DiagonalGate`.
+	"""
+
+	def __init__(self, diag_angles_radians: Sequence[Any]) -> None:
+		angles = tuple(diag_angles_radians)
+		dim = len(angles)
 		if dim == 0 or dim & (dim - 1):
-			raise ValueError("DiagonalGate needs a power-of-two number of entries")
-		self._diag = entries
+			raise ValueError("DiagonalGate needs a power-of-two number of angles")
+		self._diag_angles_radians = angles
+
+	@property
+	def diag_angles_radians(self) -> tuple[Any, ...]:
+		return self._diag_angles_radians
 
 	def _num_qubits_(self) -> int:
-		return len(self._diag).bit_length() - 1
+		return len(self._diag_angles_radians).bit_length() - 1
 
-	def _unitary_(self) -> Matrix:
-		n = len(self._diag)
-		return [[self._diag[i] if i == j else 0j for j in range(n)] for i in range(n)]
+	def _is_parameterized_(self) -> bool:
+		return any(is_symbolic(angle) for angle in self._diag_angles_radians)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> DiagonalGate:
+		if not self._is_parameterized_():
+			return self
+		return type(self)([resolve_value(angle, resolver) for angle in self._diag_angles_radians])
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		angles = self._diag_angles_radians
+		n = len(angles)
+		return [[cmath.exp(1j * angles[i]) if i == j else 0j for j in range(n)] for i in range(n)]
 
 	def _value_equality_values_(self) -> Any:
-		return (tuple(self._diag),)
+		return (self._diag_angles_radians,)
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return ("diag",) * self.num_qubits
 
 	def __str__(self) -> str:
-		return f"DiagonalGate({self._diag})"
+		return f"DiagonalGate({list(self._diag_angles_radians)})"
 
 	def __repr__(self) -> str:
-		return f"vqubit.{type(self).__name__}({self._diag!r})"
+		return f"vqubit.{type(self).__name__}({list(self._diag_angles_radians)!r})"
 
 
 class TwoQubitDiagonalGate(DiagonalGate):
 	"""A two-qubit diagonal gate."""
 
-	def __init__(self, diag: Sequence[complex]) -> None:
-		super().__init__(diag)
-		if len(diag) != 4:
-			raise ValueError("TwoQubitDiagonalGate needs four entries")
+	def __init__(self, diag_angles_radians: Sequence[Any]) -> None:
+		super().__init__(diag_angles_radians)
+		if len(self._diag_angles_radians) != 4:
+			raise ValueError("TwoQubitDiagonalGate needs four angles")
 
 
 class ThreeQubitDiagonalGate(DiagonalGate):
 	"""A three-qubit diagonal gate."""
 
-	def __init__(self, diag: Sequence[complex]) -> None:
-		super().__init__(diag)
-		if len(diag) != 8:
-			raise ValueError("ThreeQubitDiagonalGate needs eight entries")
+	def __init__(self, diag_angles_radians: Sequence[Any]) -> None:
+		super().__init__(diag_angles_radians)
+		if len(self._diag_angles_radians) != 8:
+			raise ValueError("ThreeQubitDiagonalGate needs eight angles")
 
 
 @value_equality
 class QubitPermutationGate(Gate):
-	"""A gate that permutes the basis states of its qubits."""
+	"""A gate that permutes its qubits.
+
+	``permutation[i]`` is the position the ``i``-th qubit moves to, matching
+	:class:`cirq.QubitPermutationGate`.
+	"""
 
 	def __init__(self, permutation: Sequence[int]) -> None:
-		self._permutation = tuple(int(p) for p in permutation)
-		dim = len(self._permutation)
-		if dim == 0 or dim & (dim - 1) or sorted(self._permutation) != list(range(dim)):
-			raise ValueError("QubitPermutationGate needs a permutation of a power-of-two range")
+		perm = tuple(int(p) for p in permutation)
+		n = len(perm)
+		if n == 0 or sorted(perm) != list(range(n)):
+			raise ValueError("QubitPermutationGate needs a permutation of 0..n-1")
+		self._permutation = perm
+
+	@property
+	def permutation(self) -> tuple[int, ...]:
+		return self._permutation
 
 	def _num_qubits_(self) -> int:
-		return len(self._permutation).bit_length() - 1
+		return len(self._permutation)
 
 	def _unitary_(self) -> Matrix:
-		dim = len(self._permutation)
-		return [[1 + 0j if self._permutation[j] == i else 0j for j in range(dim)] for i in range(dim)]
+		n = len(self._permutation)
+		dim = 1 << n
+		matrix = [[0j] * dim for _ in range(dim)]
+		for inp in range(dim):
+			out = 0
+			for i in range(n):
+				if (inp >> (n - 1 - i)) & 1:
+					out |= 1 << (n - 1 - self._permutation[i])
+			matrix[out][inp] = 1 + 0j
+		return matrix
 
 	def _value_equality_values_(self) -> Any:
 		return (self._permutation,)
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("perm",) * self.num_qubits
+		return tuple(f"[{i}>{self._permutation[i]}]" for i in range(len(self._permutation)))
 
 	def __str__(self) -> str:
 		return f"QubitPermutationGate({self._permutation})"
 
 	def __repr__(self) -> str:
 		return f"vqubit.QubitPermutationGate({self._permutation!r})"
+
+
+def _bit_reverse(value: int, num_bits: int) -> int:
+	result = 0
+	for _ in range(num_bits):
+		result = (result << 1) | (value & 1)
+		value >>= 1
+	return result
 
 
 @value_equality
@@ -371,8 +415,8 @@ class QuantumFourierTransformGate(Gate):
 		dim = 1 << self._num_qubits
 		root = cmath.exp(2j * math.pi / dim)
 		matrix = [[root ** (i * j) / math.sqrt(dim) for j in range(dim)] for i in range(dim)]
-		if not self._without_reverse:
-			matrix = [matrix[dim - 1 - i] for i in range(dim)]
+		if self._without_reverse:
+			matrix = [matrix[_bit_reverse(i, self._num_qubits)] for i in range(dim)]
 		return matrix
 
 	def _value_equality_values_(self) -> Any:
@@ -424,9 +468,9 @@ def cphase(radians: Any) -> CZPowGate:
 	return CZPowGate(exponent=radians / math.pi)
 
 
-def ms(theta: Any) -> MSGate:
-	"""Return a Mølmer-Sørensen gate of angle ``theta``."""
-	return MSGate(2, theta)
+def ms(rads: Any) -> MSGate:
+	"""Return a Mølmer-Sørensen gate rotating by ``rads`` radians."""
+	return MSGate(rads=rads)
 
 
 def wait(duration_nanos: float, num_qubits: int = 1) -> WaitGate:
@@ -453,14 +497,14 @@ def identity_each(*qubits: Qid) -> tuple[Any, ...]:
 	return tuple(I.on(qubit) for qubit in qubits)
 
 
-def qft(*qubits: Qid, without_reverse: bool = False, inverse: bool = False) -> list[Any]:
-	"""Return operations implementing the quantum Fourier transform on ``qubits``."""
+def qft(*qubits: Qid, without_reverse: bool = False, inverse: bool = False) -> Any:
+	"""Return the operation implementing the quantum Fourier transform on ``qubits``."""
 	gate: Gate = QuantumFourierTransformGate(len(qubits), without_reverse=without_reverse)
 	if inverse:
 		from ._linalg import dagger
 
 		gate = MatrixGate(dagger(gate._unitary_()))
-	return [gate.on(*qubits)]
+	return gate.on(*qubits)
 
 
 def q(index: int) -> Qid:

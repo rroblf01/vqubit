@@ -57,29 +57,33 @@ def test_fixed_aliases_match() -> None:
 
 
 def test_diagonal_gates() -> None:
-	assert_matrix_close(_unitary(vqubit.DiagonalGate([1, 1, 1, -1])), _unitary(vqubit.CZ))
+	# Angles, not entries: DiagonalGate([0, 0, 0, pi]) is diag(1, 1, 1, -1) = CZ.
+	assert_matrix_close(_unitary(vqubit.DiagonalGate([0, 0, 0, math.pi])), _unitary(vqubit.CZ))
+	assert vqubit.DiagonalGate([0, 0, 0, math.pi]).diag_angles_radians == (0, 0, 0, math.pi)
 	assert_matrix_close(
-		_unitary(vqubit.TwoQubitDiagonalGate([1, 1j, 1, -1j])), _unitary(vqubit.DiagonalGate([1, 1j, 1, -1j]))
+		_unitary(vqubit.TwoQubitDiagonalGate([0.5, 1.0, 1.5, 2.0])),
+		_unitary(vqubit.DiagonalGate([0.5, 1.0, 1.5, 2.0])),
 	)
-	assert vqubit.ThreeQubitDiagonalGate([1] * 8).num_qubits == 3
+	assert vqubit.ThreeQubitDiagonalGate([0] * 8).num_qubits == 3
 	with pytest.raises(ValueError):
 		vqubit.DiagonalGate([1, 1, 1])
 
 
 def test_qubit_permutation_gate() -> None:
-	gate = vqubit.QubitPermutationGate([0, 2, 1, 3])
+	gate = vqubit.QubitPermutationGate([1, 0])
+	assert gate.num_qubits == 2
 	assert vqubit.is_unitary(_unitary(gate))
-	# The permutation swaps |01> and |10>, like SWAP.
+	# Swapping the two qubits is the SWAP gate.
 	assert_matrix_close(_unitary(gate), _unitary(vqubit.SWAP))
+	assert vqubit.QubitPermutationGate([1, 2, 0]).num_qubits == 3
 
 
 def test_fourier_transform_gate() -> None:
 	for n in (1, 2, 3):
 		assert vqubit.is_unitary(_unitary(vqubit.QuantumFourierTransformGate(n)))
 	q0, q1 = vqubit.LineQubit.range(2)
-	operations = vqubit.qft(q0, q1)
-	assert len(operations) == 1
-	assert operations[0].gate.num_qubits == 2
+	operation = vqubit.qft(q0, q1)
+	assert operation.gate.num_qubits == 2
 
 
 def test_lowercase_factories() -> None:

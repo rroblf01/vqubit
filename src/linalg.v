@@ -622,7 +622,10 @@ fn channel_subspace_into(mut rho []f64, ops []f64, num_ops int, op_dim int, targ
 				if re * re + im * im > 1e-18 {
 					count++
 					col = c
-					if math.abs(im) > 1e-15 {
+					// The fast path only permutes basis states; signed or complex
+					// entries (e.g. the -1 of a CZ) must go through the block
+					// arithmetic so the sign is preserved.
+					if math.abs(im) > 1e-15 || math.abs(re - 1.0) > 1e-15 {
 						is_perm = false
 					}
 				}

@@ -21,6 +21,25 @@ def test_pure_state_matches_state_vector() -> None:
 			assert abs(density[i][j] - vector[i] * vector[j].conjugate()) < 1e-9
 
 
+def test_diagonal_gate_preserves_sign_on_superposed_state() -> None:
+	# Regression: CZ/CCZ are diagonal with a -1 entry, which used to be
+	# misdetected as an (unsigned) permutation and lost its sign.
+	q0, q1, q2, q3 = vqubit.LineQubit.range(4)
+	circuit = vqubit.Circuit(
+		vqubit.H(q0),
+		vqubit.H(q1),
+		vqubit.H(q2),
+		vqubit.H(q3),
+		vqubit.CZ(q0, q1),
+		vqubit.CCZ(q0, q1, q2),
+	)
+	vector = vqubit.Simulator().simulate(circuit).state_vector()
+	density = vqubit.DensityMatrixSimulator().simulate(circuit).density_matrix()
+	for i in range(len(vector)):
+		for j in range(len(vector)):
+			assert abs(density[i][j] - vector[i] * vector[j].conjugate()) < 1e-9
+
+
 def test_bell_state_density_matrix() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
 	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.CNOT(q0, q1))

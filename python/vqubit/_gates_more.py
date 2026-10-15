@@ -204,6 +204,82 @@ class ISwapPowGate(_PowGate):
 
 
 @value_equality
+class PhasedISwapPowGate(_PowGate):
+	"""A fractional iSWAP conjugated by ``Z`` rotations.
+
+	With phase exponent ``p`` and exponent ``t`` it is
+	``(Z^-p ⊗ Z^p) iSWAP^t (Z^p ⊗ Z^-p)``.
+	"""
+
+	def __init__(self, *, phase_exponent: Any = 0.25, exponent: Any = 1.0, global_shift: Any = 0.0) -> None:
+		super().__init__(exponent=exponent, global_shift=global_shift)
+		self._phase_exponent = phase_exponent if is_symbolic(phase_exponent) else float(phase_exponent)
+
+	@property
+	def phase_exponent(self) -> Any:
+		return self._phase_exponent
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _is_parameterized_(self) -> bool:
+		return super()._is_parameterized_() or is_symbolic(self._phase_exponent)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._phase_exponent, self._exponent, self._global_shift)
+
+	def __pow__(self, power: float) -> PhasedISwapPowGate:
+		return PhasedISwapPowGate(
+			phase_exponent=self._phase_exponent,
+			exponent=self._exponent * power,
+			global_shift=self._global_shift,
+		)
+
+	def _inverse_(self) -> PhasedISwapPowGate:
+		return self.__pow__(-1)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> PhasedISwapPowGate:
+		if not self._is_parameterized_():
+			return self
+		return PhasedISwapPowGate(
+			phase_exponent=resolve_value(self._phase_exponent, resolver),
+			exponent=resolve_value(self._exponent, resolver),
+			global_shift=resolve_value(self._global_shift, resolver),
+		)
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		c = math.cos(math.pi * self._exponent / 2)
+		s = math.sin(math.pi * self._exponent / 2)
+		f = cmath.exp(2j * math.pi * self._phase_exponent)
+		phase = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
+		return [
+			[phase, 0j, 0j, 0j],
+			[0j, phase * c, phase * 1j * s * f.conjugate(), 0j],
+			[0j, phase * 1j * s * f, phase * c, 0j],
+			[0j, 0j, 0j, phase],
+		]
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("PhISwap", "PhISwap")
+
+	def __str__(self) -> str:
+		return f"PhasedISwapPowGate(phase_exponent={self._phase_exponent}, exponent={self._exponent})"
+
+	def __repr__(self) -> str:
+		return (
+			f"vqubit.PhasedISwapPowGate(phase_exponent={self._phase_exponent!r}, "
+			f"exponent={self._exponent!r}, global_shift={self._global_shift!r})"
+		)
+
+
+def givens(angle_rads: Any) -> PhasedISwapPowGate:
+	"""Return ``exp(-i angle (Y⊗X - X⊗Y) / 2)``."""
+	return PhasedISwapPowGate(exponent=2 * angle_rads / math.pi)
+
+
+@value_equality
 class DiagonalGate(Gate):
 	"""A gate whose unitary is a given diagonal of phases."""
 
@@ -414,12 +490,14 @@ __all__ = [
 	"CZPowGate",
 	"DiagonalGate",
 	"ISwapPowGate",
+	"PhasedISwapPowGate",
 	"QuantumFourierTransformGate",
 	"QubitPermutationGate",
 	"SwapPowGate",
 	"ThreeQubitDiagonalGate",
 	"TwoQubitDiagonalGate",
 	"cphase",
+	"givens",
 	"global_phase_operation",
 	"identity_each",
 	"ms",

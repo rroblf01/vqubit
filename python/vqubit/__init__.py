@@ -129,12 +129,14 @@ from ._gates_more import (
 	CZPowGate,
 	DiagonalGate,
 	ISwapPowGate,
+	PhasedISwapPowGate,
 	QuantumFourierTransformGate,
 	QubitPermutationGate,
 	SwapPowGate,
 	ThreeQubitDiagonalGate,
 	TwoQubitDiagonalGate,
 	cphase,
+	givens,
 	global_phase_operation,
 	identity_each,
 	ms,
@@ -264,7 +266,7 @@ from ._qis import (
 	von_neumann_entropy,
 )
 from ._qubit_order import QubitOrder
-from ._qubits import GridQubit, LineQubit, NamedQubit, Qid, Qubit
+from ._qubits import GridQid, GridQubit, LineQid, LineQubit, NamedQid, NamedQubit, Qid, Qubit
 from ._sim import (
 	DensityMatrix,
 	DensityMatrixSimulator,
@@ -384,6 +386,7 @@ __all__ = [
 	"Gateset",
 	"GlobalPhaseGate",
 	"GridDevice",
+	"GridQid",
 	"GridQubit",
 	"H",
 	"HPowGate",
@@ -395,6 +398,7 @@ __all__ = [
 	"IonDevice",
 	"KakDecomposition",
 	"LineDevice",
+	"LineQid",
 	"LineQubit",
 	"Linspace",
 	"MSGate",
@@ -402,6 +406,7 @@ __all__ = [
 	"MeasurementGate",
 	"MeasurementKey",
 	"Moment",
+	"NamedQid",
 	"NamedQubit",
 	"NeutralAtomDevice",
 	"Operation",
@@ -412,6 +417,7 @@ __all__ = [
 	"PauliSum",
 	"PhaseDampingChannel",
 	"PhaseFlipChannel",
+	"PhasedISwapPowGate",
 	"PhasedXPowGate",
 	"PhasedXZGate",
 	"Points",
@@ -502,6 +508,7 @@ __all__ = [
 	"flatten_to_ops_or_moments",
 	"freeze_op_tree",
 	"get_engine",
+	"givens",
 	"global_phase",
 	"global_phase_operation",
 	"has_kraus",

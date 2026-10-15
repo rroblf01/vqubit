@@ -107,6 +107,34 @@ def test_global_phase_operation() -> None:
 	assert abs(vqubit.unitary(operation)[0][0] - 1j) < 1e-9
 
 
+def test_phased_iswap_pow_gate() -> None:
+	# With phase exponent 0 it reduces to the iSWAP power gate.
+	assert up_to_phase(
+		_unitary(vqubit.PhasedISwapPowGate(phase_exponent=0.0, exponent=0.5)),
+		_unitary(vqubit.ISwapPowGate(exponent=0.5)),
+	)
+	assert vqubit.is_unitary(_unitary(vqubit.PhasedISwapPowGate()))
+	from vqubit import testing
+
+	testing.assert_equivalent_repr(vqubit.PhasedISwapPowGate(phase_exponent=0.25, exponent=0.5))
+
+
+def test_givens_factory() -> None:
+	gate = vqubit.givens(0.7)
+	assert isinstance(gate, vqubit.PhasedISwapPowGate)
+	assert vqubit.is_unitary(_unitary(gate))
+	assert up_to_phase(_unitary(gate), vqubit.unitary(vqubit.PhasedISwapPowGate(exponent=2 * 0.7 / math.pi)))
+
+
+def test_qid_variants() -> None:
+	assert vqubit.NamedQid("a").name == "a"
+	assert vqubit.LineQid(3).x == 3
+	assert vqubit.GridQid(1, 2).row == 1
+	assert vqubit.GridQid(1, 2).col == 2
+	assert vqubit.LineQid.range(3) == (vqubit.LineQid(0), vqubit.LineQid(1), vqubit.LineQid(2))
+	assert isinstance(vqubit.NamedQid("a"), vqubit.Qid)
+
+
 def test_extra_gate_reprs_round_trip() -> None:
 	from vqubit import testing
 

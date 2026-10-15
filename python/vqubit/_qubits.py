@@ -159,3 +159,81 @@ class NamedQubit(Qubit):
 
 	def __repr__(self) -> str:
 		return f"vqubit.NamedQubit({self._name!r})"
+
+
+class LineQid(Qid):
+	"""A qid on a line, identified by a non-negative integer position."""
+
+	def __init__(self, x: int) -> None:
+		if not isinstance(x, int) or isinstance(x, bool):
+			raise TypeError(f"LineQid position must be an int, got {type(x).__name__}")
+		if x < 0:
+			raise ValueError(f"LineQid position must be non-negative, got {x}")
+		self._x = x
+
+	@property
+	def x(self) -> int:
+		return self._x
+
+	def _comparison_key(self) -> int:
+		return self._x
+
+	def __str__(self) -> str:
+		return str(self._x)
+
+	def __repr__(self) -> str:
+		return f"vqubit.LineQid({self._x})"
+
+	@classmethod
+	def range(cls, n: int) -> tuple[LineQid, ...]:
+		"""Return ``n`` qids numbered ``0`` through ``n - 1``."""
+		return tuple(cls(i) for i in range(n))
+
+
+class GridQid(Qid):
+	"""A qid on a two-dimensional grid, identified by ``(row, col)``."""
+
+	def __init__(self, row: int, col: int) -> None:
+		if not isinstance(row, int) or not isinstance(col, int) or isinstance(row, bool) or isinstance(col, bool):
+			raise TypeError("GridQid row and col must be ints")
+		self._row = row
+		self._col = col
+
+	@property
+	def row(self) -> int:
+		return self._row
+
+	@property
+	def col(self) -> int:
+		return self._col
+
+	def _comparison_key(self) -> tuple[int, int]:
+		return (self._row, self._col)
+
+	def __str__(self) -> str:
+		return f"({self._row}, {self._col})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.GridQid({self._row}, {self._col})"
+
+
+class NamedQid(Qid):
+	"""A qid identified by a name."""
+
+	def __init__(self, name: str) -> None:
+		if not isinstance(name, str):
+			raise TypeError(f"NamedQid name must be a str, got {type(name).__name__}")
+		self._name = name
+
+	@property
+	def name(self) -> str:
+		return self._name
+
+	def _comparison_key(self) -> str:
+		return self._name
+
+	def __str__(self) -> str:
+		return self._name
+
+	def __repr__(self) -> str:
+		return f"vqubit.NamedQid({self._name!r})"

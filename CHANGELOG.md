@@ -90,6 +90,31 @@ framework for Python, with the numerical core written in V.
   `repr`s.
 - **Interop**: `QasmArgs` and `quirk_url`, which renders a circuit as a Quirk
   link.
+- **Linear algebra**: the `cirq.linalg` helpers, also available as
+  `vqubit.linalg`: predicates (`is_unitary`, `is_hermitian`, `is_normal`,
+  `is_cptp`, `matrix_commutes`, ...), combinators (`dot`, `kron`, `block_diag`,
+  `kron_with_controls`), operator spaces (`PAULI_BASIS`, `kron_bases`,
+  `pow_pauli_combination`, `expand_matrix_in_orthogonal_basis`),
+  transformations (`match_global_phase`, `targeted_left_multiply`,
+  `sub_state_vector`, `to_special`), diagonalization, and the KAK family
+  (`KakDecomposition`, `kak_vector`, `kak_canonicalize_vector`,
+  `num_cnots_required`, `unitary_eig`, `map_eigenvalues`). `kak_decomposition`
+  now returns a `KakDecomposition`.
+- **Optional numpy/sympy interop**: when numpy is installed the public API
+  returns `numpy.ndarray` results and accepts numpy inputs; the core stays
+  dependency-free otherwise.
+- **More gates**: the controlled power gates (`CXPowGate`, `CYPowGate`,
+  `CZPowGate`, `CCXPowGate`, `CCYPowGate`, `CCZPowGate`, plus the
+  `CNotPowGate`/`CCNotPowGate` aliases), `SwapPowGate`, `ISwapPowGate`,
+  `DiagonalGate`/`TwoQubitDiagonalGate`/`ThreeQubitDiagonalGate`,
+  `QubitPermutationGate`, `QuantumFourierTransformGate`, `PhasedISwapPowGate`,
+  and the instances `CY`, `CCZ`, `CCY`, `CCNOT`, `ISWAP_INV`, `SQRT_ISWAP_INV`.
+- **More factories**: `q`, `rx`/`ry`/`rz`, `ms`, `cphase`, `givens`, `wait`,
+  `qft`, `reset_each`, `identity_each` and `global_phase_operation`.
+- **Qids**: `LineQid`, `GridQid` and `NamedQid`.
+- **Op trees and gatesets**: `OP_TREE`, `flatten_to_ops`, `flatten_op_tree`,
+  `flatten_to_ops_or_moments`, `freeze_op_tree`, `transform_op_tree`,
+  `Gateset` and `GateFamily`.
 - **Packaging and tooling**: an MIT license, abi3 packaging covering CPython
   3.11-3.15 in a single wheel per platform, development tooling (`ruff`, `ty`,
   `pytest`), CI for build/test/docs/release, and bilingual documentation

@@ -451,12 +451,55 @@ class LinearCombinationOfOperations:
 		return f"vqubit.LinearCombinationOfOperations({self._terms!r})"
 
 
+@value_equality
+class PauliInteractionGate(Gate):
+	"""Applies a pair of Paulis to two qubits, optionally inverted."""
+
+	def __init__(self, pauli0: Pauli, invert0: bool, pauli1: Pauli, invert1: bool) -> None:
+		self._pauli0 = pauli0
+		self._invert0 = bool(invert0)
+		self._pauli1 = pauli1
+		self._invert1 = bool(invert1)
+
+	@property
+	def pauli0(self) -> Pauli:
+		return self._pauli0
+
+	@property
+	def pauli1(self) -> Pauli:
+		return self._pauli1
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _unitary_(self) -> Matrix:
+		from ._linalg import kron
+
+		m0 = self._pauli0.matrix()
+		m1 = self._pauli1.matrix()
+		if self._invert0:
+			m0 = [[-z for z in row] for row in m0]
+		if self._invert1:
+			m1 = [[-z for z in row] for row in m1]
+		return kron(m0, m1)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._pauli0, self._invert0, self._pauli1, self._invert1)
+
+	def __str__(self) -> str:
+		return f"PauliInteractionGate({self._pauli0}{'^-1' if self._invert0 else ''}, {self._pauli1}{'^-1' if self._invert1 else ''})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.PauliInteractionGate({self._pauli0!r}, {self._invert0!r}, {self._pauli1!r}, {self._invert1!r})"
+
+
 __all__ = [
 	"BaseDensePauliString",
 	"LinearCombinationOfGates",
 	"LinearCombinationOfOperations",
 	"MutableDensePauliString",
 	"MutablePauliString",
+	"PauliInteractionGate",
 	"PauliMeasurementGate",
 	"PauliStringGateOperation",
 	"PauliStringPhasor",

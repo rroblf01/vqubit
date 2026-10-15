@@ -52,6 +52,8 @@ from ._channels_extra import (
 )
 from ._circuits import Circuit, CircuitOperation, FrozenCircuit, InsertStrategy
 from ._clifford import CliffordSimulationResult, CliffordSimulator, CliffordState, CliffordTableau
+from ._control_values import AbstractControlValues, ProductOfSums, SumOfProducts
+from ._controlled import ControlledOperation
 from ._devices import (
 	AQTDevice,
 	Device,
@@ -256,6 +258,7 @@ from ._pauli_ops import (
 	LinearCombinationOfOperations,
 	MutableDensePauliString,
 	MutablePauliString,
+	PauliInteractionGate,
 	PauliMeasurementGate,
 	PauliStringGateOperation,
 	PauliStringPhasor,
@@ -390,6 +393,7 @@ __all__ = [
 	"YY",
 	"ZZ",
 	"AQTDevice",
+	"AbstractControlValues",
 	"AmplitudeDampingChannel",
 	"AnyIntegerPowerGateFamily",
 	"AnyUnitaryGateFamily",
@@ -421,6 +425,7 @@ __all__ = [
 	"CliffordTableau",
 	"Concat",
 	"ControlledGate",
+	"ControlledOperation",
 	"DensePauliString",
 	"DensityMatrix",
 	"DensityMatrixSimulator",
@@ -477,6 +482,7 @@ __all__ = [
 	"ParamResolver",
 	"Parameter",
 	"Pauli",
+	"PauliInteractionGate",
 	"PauliMeasurementGate",
 	"PauliString",
 	"PauliStringGateOperation",
@@ -494,6 +500,7 @@ __all__ = [
 	"PhasedXZGate",
 	"Points",
 	"Product",
+	"ProductOfSums",
 	"ProjectorString",
 	"ProjectorSum",
 	"QasmArgs",
@@ -524,6 +531,7 @@ __all__ = [
 	"SqrtISwapGate",
 	"StatePreparationChannel",
 	"StateVector",
+	"SumOfProducts",
 	"SwapPowGate",
 	"Sweep",
 	"Sycamore",

@@ -37,6 +37,10 @@ class Operation:
 	def _measurement_key_name_(self) -> str | None:
 		return self.gate._measurement_key_name_()
 
+	def with_qubits(self, *new_qubits: Qid) -> Operation:
+		"""Return a copy of this operation on ``new_qubits``."""
+		raise NotImplementedError
+
 
 @value_equality
 class GateOperation(Operation):
@@ -64,6 +68,9 @@ class GateOperation(Operation):
 
 	def _circuit_diagram_info_(self) -> tuple[str, ...]:
 		return self._gate._circuit_diagram_info_(self._qubits)
+
+	def with_qubits(self, *new_qubits: Qid) -> GateOperation:
+		return GateOperation(self._gate, new_qubits)
 
 	def __str__(self) -> str:
 		return f"{self._gate}{self._qubits if len(self._qubits) != 1 else ''}"

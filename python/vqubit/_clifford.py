@@ -19,6 +19,7 @@ from typing import Any
 import vqubit_native as _native
 
 from ._circuits import Circuit
+from ._compat import HAS_NUMPY, _np
 from ._gates import (
 	CNOTGate,
 	CZGate,
@@ -101,40 +102,558 @@ def _build_instructions(
 	return instructions, measure_meta, key_sizes
 
 
-class CliffordTableau:
-	"""The binary tableau of a stabilizer state."""
+def _bool_matrix(rows: Sequence[Sequence[Any]]) -> Any:
+	if HAS_NUMPY:
+		return _np.array(rows, dtype=bool)
+	return [[bool(value) for value in row] for row in rows]
 
-	def __init__(self, num_qubits: int, flat: Sequence[int] | None = None) -> None:
-		self.num_qubits = num_qubits
-		self.rows = 2 * num_qubits + 1
-		self._side = 2 * num_qubits + 1
-		self._flat = list(flat) if flat is not None else []
+
+def _bool_vector(values: Sequence[Any]) -> Any:
+	if HAS_NUMPY:
+		return _np.array(values, dtype=bool)
+	return [bool(value) for value in values]
+
+
+def _to_int_matrix(value: Any) -> list[list[int]]:
+	if HAS_NUMPY and isinstance(value, _np.ndarray):
+		return [[int(bool(v)) for v in row] for row in value.tolist()]
+	return [[int(bool(v)) for v in row] for row in value]
+
+
+def _to_int_vector(value: Any) -> list[int]:
+	if HAS_NUMPY and isinstance(value, _np.ndarray):
+		return [int(bool(v)) for v in value.tolist()]
+	return [int(bool(v)) for v in value]
+
+
+def _matmul(a: Sequence[Sequence[int]], b: Sequence[Sequence[int]]) -> list[list[int]]:
+	rows = len(a)
+	inner = len(b)
+	cols = len(b[0]) if inner else 0
+	return [[sum(a[i][k] * b[k][j] for k in range(inner)) for j in range(cols)] for i in range(rows)]
+
+
+def _matvec(a: Sequence[Sequence[int]], v: Sequence[int]) -> list[int]:
+	return [sum(a[i][j] * v[j] for j in range(len(v))) for i in range(len(a))]
+
+
+def _transpose(a: Sequence[Sequence[int]]) -> list[list[int]]:
+	return [list(col) for col in zip(*a, strict=False)]
+
+
+def _mod2(matrix: Sequence[Sequence[int]]) -> list[list[int]]:
+	return [[value % 2 for value in row] for row in matrix]
+
+
+def _mod2_vector(values: Sequence[int]) -> list[int]:
+	return [value % 2 for value in values]
+
+
+def _vec_add(a: Sequence[int], b: Sequence[int]) -> list[int]:
+	return [a[i] + b[i] for i in range(len(a))]
+
+
+def _tril_add(a: Sequence[Sequence[int]], b: Sequence[Sequence[int]]) -> list[list[int]]:
+	size = len(a)
+	return [[0 if i <= j else a[i][j] + b[i][j] for j in range(size)] for i in range(size)]
+
+
+def _resolve_random(seed: Any) -> Any:
+	if seed is None or isinstance(seed, int):
+		return random.Random(seed)
+	return seed
+
+
+def _draw_bit(prng: Any) -> int:
+	try:
+		return int(prng.randint(2))
+	except TypeError:
+		return int(prng.randint(0, 1))
+
+
+class CliffordTableau:
+	"""Tableau representation of a stabilizer state.
+
+	The tableau stores the stabilizer generators of the state using three binary
+	arrays: ``xs``, ``zs`` and ``rs``. Each row is a Pauli string ``P`` that is an
+	eigenoperator of the state vector with eigenvalue one: ``P|psi> = |psi>``.
+
+	References:
+		Aaronson and Gottesman, https://arxiv.org/abs/quant-ph/0406196
+	"""
+
+	def __init__(
+		self,
+		num_qubits: int,
+		initial_state: int = 0,
+		rs: Any | None = None,
+		xs: Any | None = None,
+		zs: Any | None = None,
+	) -> None:
+		self.n = num_qubits
+		self.initial_state = initial_state
+		self._rs = self._reconstruct_rs(rs)
+		self._xs = self._reconstruct_xs(xs)
+		self._zs = self._reconstruct_zs(zs)
+
+	def _reconstruct_rs(self, rs: Any | None) -> list[int]:
+		size = 2 * self.n
+		if rs is None:
+			new_rs = [0] * (size + 1)
+			for i in range(self.n):
+				new_rs[self.n + i] = (self.initial_state >> (self.n - 1 - i)) & 1
+			return new_rs
+		values = _to_int_vector(rs)
+		if len(values) == size:
+			return [*values, 0]
+		raise ValueError("The value you passed for rs is not the correct shape.")
+
+	def _reconstruct_xs(self, xs: Any | None) -> list[list[int]]:
+		if xs is None:
+			new_xs = [[0] * self.n for _ in range(2 * self.n + 1)]
+			for i in range(self.n):
+				new_xs[i][i] = 1
+			return new_xs
+		rows = _to_int_matrix(xs)
+		if len(rows) == 2 * self.n and all(len(row) == self.n for row in rows):
+			return [*rows, [0] * self.n]
+		raise ValueError("The value you passed for xs is not the correct shape.")
+
+	def _reconstruct_zs(self, zs: Any | None) -> list[list[int]]:
+		if zs is None:
+			new_zs = [[0] * self.n for _ in range(2 * self.n + 1)]
+			for i in range(self.n):
+				new_zs[self.n + i][i] = 1
+			return new_zs
+		rows = _to_int_matrix(zs)
+		if len(rows) == 2 * self.n and all(len(row) == self.n for row in rows):
+			return [*rows, [0] * self.n]
+		raise ValueError("The value you passed for zs is not the correct shape.")
 
 	@classmethod
 	def from_flat(cls, flat: Sequence[int], num_qubits: int) -> CliffordTableau:
 		"""Rebuild a tableau from the flattened native form."""
-		return cls(num_qubits, flat)
+		n = num_qubits
+		side = 2 * n + 1
+		xs = [[int(flat[i * side + j]) for j in range(n)] for i in range(2 * n)]
+		zs = [[int(flat[i * side + n + j]) for j in range(n)] for i in range(2 * n)]
+		rs = [int(flat[i * side + 2 * n]) for i in range(2 * n)]
+		return cls(n, rs=rs, xs=xs, zs=zs)
 
-	def _bit(self, row: int, col: int) -> int:
-		return self._flat[row * self._side + col]
+	@property
+	def xs(self) -> Any:
+		return _bool_matrix(self._xs[:-1])
+
+	@xs.setter
+	def xs(self, new_xs: Any) -> None:
+		rows = _to_int_matrix(new_xs)
+		assert len(rows) == 2 * self.n and all(len(row) == self.n for row in rows)
+		self._xs[:-1] = rows
+
+	@property
+	def zs(self) -> Any:
+		return _bool_matrix(self._zs[:-1])
+
+	@zs.setter
+	def zs(self, new_zs: Any) -> None:
+		rows = _to_int_matrix(new_zs)
+		assert len(rows) == 2 * self.n and all(len(row) == self.n for row in rows)
+		self._zs[:-1] = rows
+
+	@property
+	def rs(self) -> Any:
+		return _bool_vector(self._rs[:-1])
+
+	@rs.setter
+	def rs(self, new_rs: Any) -> None:
+		values = _to_int_vector(new_rs)
+		assert len(values) == 2 * self.n
+		self._rs[:-1] = values
+
+	def matrix(self) -> Any:
+		"""Return the ``2n`` by ``2n`` matrix representation of the tableau."""
+		rows = [self._xs[i] + self._zs[i] for i in range(2 * self.n)]
+		return _bool_matrix(rows)
+
+	def _validate(self) -> bool:
+		"""Check whether the tableau satisfies the symplectic property."""
+		size = 2 * self.n
+		table = [self._xs[i] + self._zs[i] for i in range(size)]
+		perm = list(range(self.n, size)) + list(range(self.n))
+		skew_eye = [[1 if j == perm[i] else 0 for j in range(size)] for i in range(size)]
+		product = _mod2(_matmul(_matmul(_transpose(table), skew_eye), table))
+		return product == skew_eye
+
+	def __eq__(self, other: Any) -> bool:
+		if not isinstance(other, type(self)):
+			return NotImplemented
+		return self.n == other.n and self._rs == other._rs and self._xs == other._xs and self._zs == other._zs
+
+	def __hash__(self) -> int:
+		return hash(
+			(
+				self.n,
+				tuple(tuple(row) for row in self._xs),
+				tuple(tuple(row) for row in self._zs),
+				tuple(self._rs),
+			)
+		)
+
+	def __copy__(self) -> CliffordTableau:
+		return self.copy()
+
+	def copy(self, deep_copy_buffers: bool = True) -> CliffordTableau:
+		"""Return a deep copy of this tableau."""
+		state = CliffordTableau(self.n)
+		state._xs = [list(row) for row in self._xs]
+		state._zs = [list(row) for row in self._zs]
+		state._rs = list(self._rs)
+		return state
+
+	def __repr__(self) -> str:
+		return (
+			f"vqubit.CliffordTableau({self.n}, "
+			f"rs={self._rs[:-1]!r}, xs={self._xs[:-1]!r}, zs={self._zs[:-1]!r}, "
+			f"initial_state={self.initial_state})"
+		)
+
+	def __str__(self) -> str:
+		words = []
+		for i in range(self.n, 2 * self.n):
+			words.append("- " if self._rs[i] else "+ ")
+			for k in range(self.n):
+				if self._xs[i][k] and not self._zs[i][k]:
+					words.append("X ")
+				elif not self._xs[i][k] and self._zs[i][k]:
+					words.append("Z ")
+				elif self._xs[i][k] and self._zs[i][k]:
+					words.append("Y ")
+				else:
+					words.append("I ")
+			words.append("\n")
+		return "".join(words[:-1])
+
+	def then(self, second: CliffordTableau) -> CliffordTableau:
+		"""Return the composed tableau ``this then second``, up to global phase."""
+		if not isinstance(second, CliffordTableau):
+			raise TypeError("The type for second tableau must be the CliffordTableau type")
+		if self.n != second.n:
+			raise ValueError(f"Mismatched number of qubits of two tableaux: {self.n} vs {second.n}.")
+
+		n = self.n
+		size = 2 * n
+		m1 = [self._xs[i] + self._zs[i] for i in range(size)]
+		m2 = [second._xs[i] + second._zs[i] for i in range(size)]
+
+		num_ys1 = [sum(m1[i][j] * m1[i][n + j] for j in range(n)) for i in range(size)]
+		num_ys2 = [sum(m2[i][j] * m2[i][n + j] for j in range(n)) for i in range(size)]
+		p1 = [value % 2 for value in num_ys1]
+		p2 = [value % 2 for value in num_ys2]
+
+		s1 = [self._rs[i] + (num_ys1[i] % 4) // 2 for i in range(size)]
+		s2 = [second._rs[i] + (num_ys2[i] % 4) // 2 for i in range(size)]
+
+		lmbda = [[0] * size for _ in range(size)]
+		for i in range(n):
+			lmbda[i][n + i] = 1
+
+		m_12 = _mod2(_matmul(m1, m2))
+		p_12 = _mod2_vector(_vec_add(p1, _matvec(m1, p2)))
+
+		outer = [[p2[i] * p2[j] for j in range(size)] for i in range(size)]
+		m2_lam_m2t = _matmul(_matmul(m2, lmbda), _transpose(m2))
+		inner = _tril_add(outer, m2_lam_m2t)
+		m1_inner = _matmul(_matmul(m1, inner), _transpose(m1))
+		diagonal = [m1_inner[i][i] for i in range(size)]
+
+		m1_s2 = _matvec(m1, s2)
+		m1_p2 = _matvec(m1, p2)
+		s_12 = [s1[i] + m1_s2[i] + p1[i] * m1_p2[i] + diagonal[i] for i in range(size)]
+
+		num_ys12 = [sum(m_12[i][j] * m_12[i][n + j] for j in range(n)) for i in range(size)]
+		merged_sign = [((p_12[i] + 2 * s_12[i] - num_ys12[i]) % 4) // 2 for i in range(size)]
+
+		merged = CliffordTableau(n)
+		merged.xs = [row[:n] for row in m_12]
+		merged.zs = [row[n:] for row in m_12]
+		merged.rs = merged_sign
+		return merged
+
+	def inverse(self) -> CliffordTableau:
+		"""Return the inverse tableau of this tableau."""
+		n = self.n
+		size = 2 * n
+		xs = self._xs[:size]
+		zs = self._zs[:size]
+		ret = CliffordTableau(n)
+		new_xs = [None] * size
+		new_zs = [None] * size
+		top_zs = _transpose(zs[n:])
+		bottom_zs = _transpose(zs[:n])
+		bottom_xs = _transpose(xs[n:])
+		top_xs = _transpose(xs[:n])
+		for i in range(n):
+			new_xs[i] = top_zs[i]
+			new_zs[i] = bottom_zs[i]
+			new_xs[n + i] = bottom_xs[i]
+			new_zs[n + i] = top_xs[i]
+		ret.xs = new_xs
+		ret.zs = new_zs
+		ret.rs = ret.then(self).rs
+		return ret
+
+	def __matmul__(self, second: CliffordTableau) -> CliffordTableau:
+		if not isinstance(second, CliffordTableau):
+			return NotImplemented
+		return second.then(self)
+
+	def _rowsum(self, q1: int, q2: int) -> None:
+		"""Multiply the stabilizer in row ``q1`` by the one in row ``q2``."""
+
+		def g(x1: int, z1: int, x2: int, z2: int) -> int:
+			if not x1 and not z1:
+				return 0
+			if x1 and z1:
+				return int(z2) - int(x2)
+			if x1 and not z1:
+				return int(z2) * (2 * int(x2) - 1)
+			return int(x2) * (1 - 2 * int(z2))
+
+		total = 2 * int(self._rs[q1]) + 2 * int(self._rs[q2])
+		for j in range(self.n):
+			total += g(self._xs[q2][j], self._zs[q2][j], self._xs[q1][j], self._zs[q1][j])
+		self._rs[q1] = bool(total % 4)
+		for j in range(self.n):
+			self._xs[q1][j] ^= self._xs[q2][j]
+			self._zs[q1][j] ^= self._zs[q2][j]
+
+	def _row_to_dense_pauli(self, i: int) -> Any:
+		from ._pauli import DensePauliString
+
+		coefficient = -1 if self._rs[i] else 1
+		mask = []
+		for k in range(self.n):
+			if self._xs[i][k] and not self._zs[i][k]:
+				mask.append("X")
+			elif not self._xs[i][k] and self._zs[i][k]:
+				mask.append("Z")
+			elif self._xs[i][k] and self._zs[i][k]:
+				mask.append("Y")
+			else:
+				mask.append("I")
+		return DensePauliString("".join(mask), coefficient=coefficient)
+
+	def stabilizers(self) -> list[Any]:
+		"""Return the stabilizer generators ``{S_i}`` with ``S_i|psi> = |psi>``."""
+		return [self._row_to_dense_pauli(i) for i in range(self.n, 2 * self.n)]
+
+	def destabilizers(self) -> list[Any]:
+		"""Return the destabilizer generators, which complete the Pauli group."""
+		return [self._row_to_dense_pauli(i) for i in range(self.n)]
 
 	def stabilizer_pauli_strings(self) -> list[Any]:
-		"""Return the stabilizer generators as Pauli strings."""
+		"""Return the stabilizer generators as sparse Pauli strings."""
 		from ._pauli import PauliString
 
 		result: list[Any] = []
-		for k in range(self.num_qubits):
-			row = self.num_qubits + k
+		for k in range(self.n):
+			row = self.n + k
 			qubit_pauli_map: dict[Qid, Pauli] = {}
-			for j in range(self.num_qubits):
-				xbit = self._bit(row, j)
-				zbit = self._bit(row, self.num_qubits + j)
-				pauli = _PAULI_BITS[(xbit, zbit)]
+			for j in range(self.n):
+				pauli = _PAULI_BITS[(self._xs[row][j], self._zs[row][j])]
 				if pauli is not Pauli.I:
 					qubit_pauli_map[LineQubit(j)] = pauli
-			sign = -1 if self._bit(row, 2 * self.num_qubits) else 1
+			sign = -1 if self._rs[row] else 1
 			result.append(PauliString(qubit_pauli_map, coefficient=sign))
 		return result
+
+	def _measure(self, q: int, prng: Any) -> int:
+		"""Measure the ``q``-th qubit in the Z basis, updating the tableau."""
+		is_commuting = True
+		p = -1
+		for i in range(self.n, 2 * self.n):
+			if self._xs[i][q]:
+				p = i
+				is_commuting = False
+				break
+
+		if is_commuting:
+			scratch = 2 * self.n
+			for j in range(self.n):
+				self._xs[scratch][j] = 0
+				self._zs[scratch][j] = 0
+			self._rs[scratch] = False
+			for i in range(self.n):
+				if self._xs[i][q]:
+					self._rowsum(scratch, self.n + i)
+			return int(self._rs[scratch])
+
+		for i in range(2 * self.n):
+			if i != p and self._xs[i][q]:
+				self._rowsum(i, p)
+
+		for j in range(self.n):
+			self._xs[p - self.n][j] = self._xs[p][j]
+			self._zs[p - self.n][j] = self._zs[p][j]
+		self._rs[p - self.n] = self._rs[p]
+
+		for j in range(self.n):
+			self._xs[p][j] = 0
+			self._zs[p][j] = 0
+
+		self._zs[p][q] = 1
+		self._rs[p] = bool(_draw_bit(prng))
+		return int(self._rs[p])
+
+	def apply_x(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		if exponent % 2 == 0:
+			return
+		if exponent % 0.5 != 0.0:
+			raise ValueError("X exponent must be half integer")
+		effective_exponent = exponent % 2
+		if effective_exponent == 0.5:
+			for i in range(2 * self.n):
+				self._xs[i][axis] ^= self._zs[i][axis]
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._xs[i][axis] & self._zs[i][axis]
+		elif effective_exponent == 1:
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._zs[i][axis]
+		elif effective_exponent == 1.5:
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._xs[i][axis] & self._zs[i][axis]
+			for i in range(2 * self.n):
+				self._xs[i][axis] ^= self._zs[i][axis]
+
+	def apply_y(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		if exponent % 2 == 0:
+			return
+		if exponent % 0.5 != 0.0:
+			raise ValueError("Y exponent must be half integer")
+		effective_exponent = exponent % 2
+		if effective_exponent == 0.5:
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._xs[i][axis] & (1 - self._zs[i][axis])
+			for i in range(2 * self.n):
+				self._xs[i][axis], self._zs[i][axis] = self._zs[i][axis], self._xs[i][axis]
+		elif effective_exponent == 1:
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._xs[i][axis] ^ self._zs[i][axis]
+		elif effective_exponent == 1.5:
+			for i in range(2 * self.n):
+				self._rs[i] ^= (1 - self._xs[i][axis]) & self._zs[i][axis]
+			for i in range(2 * self.n):
+				self._xs[i][axis], self._zs[i][axis] = self._zs[i][axis], self._xs[i][axis]
+
+	def apply_z(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		if exponent % 2 == 0:
+			return
+		if exponent % 0.5 != 0.0:
+			raise ValueError("Z exponent must be half integer")
+		effective_exponent = exponent % 2
+		if effective_exponent == 0.5:
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._xs[i][axis] & self._zs[i][axis]
+			for i in range(2 * self.n):
+				self._zs[i][axis] ^= self._xs[i][axis]
+		elif effective_exponent == 1:
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._xs[i][axis]
+		elif effective_exponent == 1.5:
+			for i in range(2 * self.n):
+				self._rs[i] ^= self._xs[i][axis] & (1 - self._zs[i][axis])
+			for i in range(2 * self.n):
+				self._zs[i][axis] ^= self._xs[i][axis]
+
+	def apply_h(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		if exponent % 2 == 0:
+			return
+		if exponent % 1 != 0:
+			raise ValueError("H exponent must be integer")
+		self.apply_y(axis, 0.5)
+		self.apply_x(axis)
+
+	def apply_cz(self, control_axis: int, target_axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		if exponent % 2 == 0:
+			return
+		if exponent % 1 != 0:
+			raise ValueError("CZ exponent must be integer")
+		for i in range(2 * self.n):
+			self._xs[i][target_axis], self._zs[i][target_axis] = (
+				self._zs[i][target_axis],
+				self._xs[i][target_axis],
+			)
+		for i in range(2 * self.n):
+			self._rs[i] ^= self._xs[i][target_axis] & self._zs[i][target_axis]
+		for i in range(2 * self.n):
+			self._rs[i] ^= (
+				self._xs[i][control_axis]
+				& self._zs[i][target_axis]
+				& (1 - (self._xs[i][target_axis] ^ self._zs[i][control_axis]))
+			)
+		for i in range(2 * self.n):
+			self._xs[i][target_axis] ^= self._xs[i][control_axis]
+		for i in range(2 * self.n):
+			self._zs[i][control_axis] ^= self._zs[i][target_axis]
+		for i in range(2 * self.n):
+			self._xs[i][target_axis], self._zs[i][target_axis] = (
+				self._zs[i][target_axis],
+				self._xs[i][target_axis],
+			)
+		for i in range(2 * self.n):
+			self._rs[i] ^= self._xs[i][target_axis] & self._zs[i][target_axis]
+
+	def apply_cx(self, control_axis: int, target_axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		if exponent % 2 == 0:
+			return
+		if exponent % 1 != 0:
+			raise ValueError("CX exponent must be integer")
+		for i in range(2 * self.n):
+			self._rs[i] ^= (
+				self._xs[i][control_axis]
+				& self._zs[i][target_axis]
+				& (1 - (self._xs[i][target_axis] ^ self._zs[i][control_axis]))
+			)
+		for i in range(2 * self.n):
+			self._xs[i][target_axis] ^= self._xs[i][control_axis]
+		for i in range(2 * self.n):
+			self._zs[i][control_axis] ^= self._zs[i][target_axis]
+
+	def apply_global_phase(self, coefficient: Any) -> None:
+		pass
+
+	def measure(self, axes: Sequence[int], seed: Any = None) -> list[int]:
+		"""Measure each axis in ``axes``, returning the outcome in order."""
+		prng = _resolve_random(seed)
+		return [self._measure(axis, prng) for axis in axes]
+
+	def sample(self, axes: Sequence[int], repetitions: int = 1, seed: Any = None) -> Any:
+		"""Sample ``axes`` ``repetitions`` times, without mutating this tableau."""
+		prng = _resolve_random(seed)
+		measurements = []
+		for _ in range(repetitions):
+			state = self.copy()
+			measurements.append(state.measure(axes, prng))
+		if HAS_NUMPY:
+			return _np.array(measurements, dtype=_np.uint8)
+		return measurements
+
+	def kron(self, other: Any) -> CliffordTableau:
+		raise NotImplementedError()
+
+	def factor(self, axes: Sequence[int], *, validate: bool = True, atol: float = 1e-7) -> Any:
+		raise NotImplementedError()
+
+	def reindex(self, axes: Sequence[int]) -> CliffordTableau:
+		raise NotImplementedError()
+
+	@property
+	def supports_factor(self) -> bool:
+		return False
+
+	@property
+	def can_represent_mixed_states(self) -> bool:
+		return False
 
 
 _PAULI_BITS = {

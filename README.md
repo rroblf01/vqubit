@@ -2,6 +2,11 @@
 
 **A dependency-free quantum computing framework for Python, written in [V](https://vlang.io).**
 
+[![PyPI](https://img.shields.io/pypi/v/vqubit.svg)](https://pypi.org/project/vqubit/)
+[![Python versions](https://img.shields.io/pypi/pyversions/vqubit.svg)](https://pypi.org/project/vqubit/)
+[![CI](https://github.com/rroblf01/vqubit/actions/workflows/test.yml/badge.svg)](https://github.com/rroblf01/vqubit/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rroblf01/vqubit/blob/main/LICENSE)
+
 vqubit lets you build quantum circuits and run them on local simulators with
 **zero third-party dependencies**. The numerically heavy work — linear algebra,
 gate matrices and simulation — is written in V and compiled into a native

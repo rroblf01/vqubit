@@ -190,6 +190,9 @@ class EigenGate(Gate):
 	def __str__(self) -> str:
 		return f"{type(self).__name__}(exponent={_describe(self._exponent)})"
 
+	def __repr__(self) -> str:
+		return f"vqubit.{type(self).__name__}(exponent={self._exponent!r}, global_shift={self._global_shift!r})"
+
 
 def _clean(value: float) -> float | int:
 	"""Return ``value`` as an int when it is a whole number, else as a float."""
@@ -352,6 +355,9 @@ class PhasedXPowGate(Gate):
 	def __str__(self) -> str:
 		return f"PhasedXPowGate(phase_exponent={_describe(self._phase_exponent)}, exponent={_describe(self._exponent)})"
 
+	def __repr__(self) -> str:
+		return f"vqubit.PhasedXPowGate(phase_exponent={self._phase_exponent!r}, exponent={self._exponent!r}, global_shift={self._global_shift!r})"
+
 
 @value_equality
 class PhasedXZGate(Gate):
@@ -428,6 +434,9 @@ class PhasedXZGate(Gate):
 			f"axis_phase_exponent={_describe(self._axis_phase_exponent)})"
 		)
 
+	def __repr__(self) -> str:
+		return f"vqubit.PhasedXZGate(x_exponent={self._x_exponent!r}, z_exponent={self._z_exponent!r}, axis_phase_exponent={self._axis_phase_exponent!r})"
+
 
 @value_equality
 class _RotationGate(Gate):
@@ -472,6 +481,9 @@ class _RotationGate(Gate):
 
 	def __str__(self) -> str:
 		return f"{self._axis_symbol}({_describe(self._radians)})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.{type(self).__name__}({self._radians!r})"
 
 
 class RxGate(_RotationGate):
@@ -527,6 +539,9 @@ class IdentityGate(Gate):
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return ("I",) * self._num_qubits
 
+	def __repr__(self) -> str:
+		return f"vqubit.IdentityGate({self._num_qubits})"
+
 
 @value_equality
 class MeasurementGate(Gate):
@@ -577,6 +592,11 @@ class MeasurementGate(Gate):
 	def __str__(self) -> str:
 		return f"measure({self._key!r})"
 
+	def __repr__(self) -> str:
+		return (
+			f"vqubit.MeasurementGate({self._key!r}, num_qubits={self._num_qubits}, invert_mask={self._invert_mask!r})"
+		)
+
 
 @value_equality
 class _FixedGate(Gate):
@@ -616,6 +636,9 @@ class _FixedGate(Gate):
 
 	def __str__(self) -> str:
 		return type(self).__name__
+
+	def __repr__(self) -> str:
+		return f"vqubit.{type(self).__name__}()"
 
 
 class CNOTGate(_FixedGate):
@@ -875,6 +898,9 @@ class MatrixGate(Gate):
 	def __str__(self) -> str:
 		return f"MatrixGate({self.num_qubits}q)"
 
+	def __repr__(self) -> str:
+		return f"vqubit.MatrixGate({self._matrix!r})"
+
 
 @value_equality
 class ControlledGate(Gate):
@@ -946,6 +972,9 @@ class ControlledGate(Gate):
 
 	def __str__(self) -> str:
 		return f"ControlledGate({self._sub_gate})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.ControlledGate({self._sub_gate!r}, num_controls={self._num_controls}, control_values={self._control_values!r})"
 
 
 # Instances, as in Cirq.
@@ -1043,6 +1072,9 @@ class GlobalPhaseGate(Gate):
 	def __str__(self) -> str:
 		return f"GlobalPhaseGate(exponent={_describe(self._exponent)})"
 
+	def __repr__(self) -> str:
+		return f"vqubit.GlobalPhaseGate({self._exponent!r})"
+
 
 @value_equality
 class WaitGate(Gate):
@@ -1072,6 +1104,9 @@ class WaitGate(Gate):
 
 	def __str__(self) -> str:
 		return f"WaitGate({self._duration}, num_qubits={self._num_qubits})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.WaitGate({self._duration!r}, num_qubits={self._num_qubits})"
 
 
 def global_phase(exponent: Any) -> GlobalPhaseGate:
@@ -1130,6 +1165,9 @@ class FSimGate(Gate):
 
 	def __str__(self) -> str:
 		return f"FSimGate({_describe(self._theta)}, {_describe(self._phi)})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.FSimGate({self._theta!r}, {self._phi!r})"
 
 
 class SqrtISwapGate(_FixedGate):
@@ -1192,6 +1230,9 @@ class MSGate(Gate):
 
 	def __str__(self) -> str:
 		return f"MSGate(2, {_describe(self._theta)})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.MSGate({self._num_qubits}, {self._theta!r})"
 
 
 SQRT_ISWAP: SqrtISwapGate = SqrtISwapGate()

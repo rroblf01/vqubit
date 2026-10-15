@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from vqubit_native import version as _native_version
 
+from . import testing
 from ._channels import (
 	AmplitudeDampingChannel,
 	BitFlipChannel,
@@ -405,6 +406,7 @@ __all__ = [
 	"state_vector",
 	"stratified_circuit",
 	"synchronize_terminal_measurements",
+	"testing",
 	"to_json",
 	"to_json_gzip",
 	"to_resolvers",

@@ -146,6 +146,7 @@ from ._gates_more import (
 	rz,
 	wait,
 )
+from ._gateset import GateFamily, Gateset
 from ._interop import quirk_url
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._kak import two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
@@ -201,6 +202,14 @@ from ._linalg_public import (
 	unitary_eig,
 )
 from ._measurement_key import MeasurementKey
+from ._op_tree import (
+	OP_TREE,
+	flatten_op_tree,
+	flatten_to_ops,
+	flatten_to_ops_or_moments,
+	freeze_op_tree,
+	transform_op_tree,
+)
 from ._ops import GateOperation, Moment, Operation, TaggedOperation
 from ._optimizers import (
 	deconstruct_single_qubit_matrix_into_angles,
@@ -320,6 +329,7 @@ __all__ = [
 	"FREDKIN",
 	"ISWAP",
 	"ISWAP_INV",
+	"OP_TREE",
 	"PAULI_BASIS",
 	"SQRT_ISWAP",
 	"SQRT_ISWAP_INV",
@@ -369,7 +379,9 @@ __all__ = [
 	"FSimGate",
 	"FrozenCircuit",
 	"Gate",
+	"GateFamily",
 	"GateOperation",
+	"Gateset",
 	"GlobalPhaseGate",
 	"GridDevice",
 	"GridQubit",
@@ -485,6 +497,10 @@ __all__ = [
 	"expand_composite",
 	"expand_matrix_in_orthogonal_basis",
 	"fidelity",
+	"flatten_op_tree",
+	"flatten_to_ops",
+	"flatten_to_ops_or_moments",
+	"freeze_op_tree",
 	"get_engine",
 	"global_phase",
 	"global_phase_operation",
@@ -584,6 +600,7 @@ __all__ = [
 	"to_valid_state_vector",
 	"toggle_tags",
 	"trace_distance_bound",
+	"transform_op_tree",
 	"two_qubit_matrix_to_cz_operations",
 	"two_qubit_matrix_to_operations",
 	"unitary",

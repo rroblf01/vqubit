@@ -18,38 +18,44 @@ jobs:
         include:
           - target: "cp311-abi3-manylinux-x86_64"
             os: "ubuntu-latest"
-            container: "ghcr.io/rroblf01/vcraft-manylinux:1.3.0"
+            container: "ghcr.io/rroblf01/vcraft-manylinux:1.4.0"
             args: "build --release --abi3 3.11 --target linux-x86_64-gnu --manylinux 2_28 --interpreter /opt/python/cp311-cp311/bin/python"
           - target: "cp311-abi3-manylinux-aarch64"
             os: "ubuntu-24.04-arm"
-            container: "ghcr.io/rroblf01/vcraft-manylinux:1.3.0"
+            container: "ghcr.io/rroblf01/vcraft-manylinux:1.4.0"
             args: "build --release --abi3 3.11 --target linux-aarch64-gnu --manylinux 2_28 --interpreter /opt/python/cp311-cp311/bin/python"
           - target: "cp311-abi3-musllinux-x86_64"
             os: "ubuntu-latest"
-            container: "ghcr.io/rroblf01/vcraft-musllinux:1.3.0"
+            container: "ghcr.io/rroblf01/vcraft-musllinux:1.4.0"
             args: "build --release --abi3 3.11 --target linux-x86_64-musl --musllinux 1_2 --interpreter /usr/bin/python3"
           - target: "cp311-abi3-musllinux-aarch64"
             os: "ubuntu-24.04-arm"
-            container: "ghcr.io/rroblf01/vcraft-musllinux:1.3.0"
+            container: "ghcr.io/rroblf01/vcraft-musllinux:1.4.0"
             args: "build --release --abi3 3.11 --target linux-aarch64-musl --musllinux 1_2 --interpreter /usr/bin/python3"
           - target: "cp311-abi3-macosx-arm64"
             os: "macos-26"
-            python: "3.11"
+            args: "build --release --abi3 3.11"
+          - target: "cp311-abi3-win_amd64"
+            os: "windows-latest"
             args: "build --release --abi3 3.11"
     steps:
       - uses: actions/checkout@v5
 
       - name: set up Python
-        if: ${{ matrix.container == '' }}
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.11"
 
-      - name: build
+      - name: build the wheel
         uses: rroblf01/vcraft/actions/vcraft-action@v1
         with:
           container: ${{ matrix.container }}
           args: ${{ matrix.args }}
+
+      # `vcraft build --strip` is a no-op in vcraft 1.4.0, so the wheel is
+      # stripped here instead; the script skips itself where `strip` is absent.
+      - name: strip the wheel
+        run: python scripts/strip_wheels.py dist/*.whl
 
       - name: upload the wheel
         uses: actions/upload-artifact@v6
@@ -57,9 +63,37 @@ jobs:
           name: ${{ matrix.target }}
           path: dist/*.whl
 
+  sdist:
+    name: source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: install vcraft
+        run: python -m pip install "vcraft==1.4.0"
+
+      - name: build the sdist
+        run: vcraft sdist
+
+      # `vcraft sdist` misses the module's sibling `.v` files in 1.4.0, so they
+      # are added back before the archive is published.
+      - name: repair the sdist
+        run: python scripts/fix_sdist.py dist/*.tar.gz
+
+      - name: upload the sdist
+        uses: actions/upload-artifact@v6
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
   publish:
     name: publish to PyPI
-    needs: build
+    needs: [build, sdist]
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -67,7 +101,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: collect the wheels
+      - name: collect the distributions
         uses: actions/download-artifact@v6
         with:
           path: dist

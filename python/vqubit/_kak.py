@@ -67,17 +67,19 @@ def _simultaneous_real_diag(
 	are the eigenvectors, so ``(real + i imag) = O diag(values) O^T``.
 	"""
 	result = _native.simultaneous_diag(list(real_flat), list(imag_flat), n)
-	values = [complex(result[2 * j], result[2 * j + 1]) for j in range(n)]
-	vectors = [[result[2 * n + r * n + c] for c in range(n)] for r in range(n)]
+	raw_values = result["values"]
+	raw_vectors = result["vectors"]
+	values = [complex(raw_values[2 * j], raw_values[2 * j + 1]) for j in range(n)]
+	vectors = [[raw_vectors[r * n + c] for c in range(n)] for r in range(n)]
 	return values, vectors
 
 
 def _kron_factor(matrix: Matrix) -> tuple[complex, Matrix, Matrix]:
 	"""Factor a 4x4 matrix that is ``g * kron(a, b)`` into ``g``, ``a`` and ``b``."""
 	result = _native.kron_factor(to_flat(matrix))
-	global_phase = complex(result[0], result[1])
-	f1 = from_flat(result[2:10], 2)
-	f2 = from_flat(result[10:18], 2)
+	global_phase = complex(result["g_re"], result["g_im"])
+	f1 = from_flat(result["a"], 2)
+	f2 = from_flat(result["b"], 2)
 	return global_phase, f1, f2
 
 

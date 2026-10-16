@@ -609,8 +609,8 @@ def _hermitian_eig(matrix: Sequence[Sequence[complex]]) -> tuple[list[float], li
 			embed[n + i][n + j] = re
 	flat = [embed[i][j] for i in range(size) for j in range(size)]
 	result = _native.jacobi_eig(flat, size)
-	values = [result[k] for k in range(size)]
-	columns = result[size:]
+	values = list(result["values"])
+	columns = list(result["vectors"])
 	order = sorted(range(size), key=lambda index: values[index])
 	eigenvalues: list[float] = []
 	vectors: list[Vector] = []
@@ -645,8 +645,9 @@ def _eigh_real(matrix: Sequence[Sequence[complex]]) -> tuple[list[float], list[l
 	n = len(matrix)
 	flat = [float(matrix[i][j].real) for i in range(n) for j in range(n)]
 	result = _native.jacobi_eig(flat, n)
-	values = [result[i] for i in range(n)]
-	vectors = [[result[n + i * n + j] for i in range(n)] for j in range(n)]
+	values = list(result["values"])
+	raw = result["vectors"]
+	vectors = [[raw[i * n + j] for i in range(n)] for j in range(n)]
 	return values, vectors
 
 
@@ -887,9 +888,9 @@ def kron_factor_4x4_to_2x2s(
 ) -> tuple[complex, Matrix, Matrix]:
 	"""Split a 4x4 matrix ``U = g * kron(A, B)`` into ``g``, ``A`` and ``B``."""
 	result = _native.kron_factor(_la.to_flat(matrix))
-	global_phase = complex(result[0], result[1])
-	f1 = _la.from_flat(result[2:10], 2)
-	f2 = _la.from_flat(result[10:18], 2)
+	global_phase = complex(result["g_re"], result["g_im"])
+	f1 = _la.from_flat(result["a"], 2)
+	f2 = _la.from_flat(result["b"], 2)
 	del rtol, atol
 	return global_phase, f1, f2
 

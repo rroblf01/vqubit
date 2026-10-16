@@ -9,11 +9,35 @@ module vqubit_native
 
 import math
 
+// EigResult is the outcome of `jacobi_eig`: the eigenvalues and the eigenvector
+// matrix (row-major; its columns are the eigenvectors).
+pub struct EigResult {
+	values  []f64
+	vectors []f64
+}
+
+// DiagResult is the outcome of `simultaneous_diag`: the complex eigenvalues
+// (interleaved as `re, im`) and the eigenvector matrix (row-major).
+pub struct DiagResult {
+	values  []f64
+	vectors []f64
+}
+
+// KronFactor is the outcome of `kron_factor`: the global phase `g` (as `g_re`
+// and `g_im`) and the two `2x2` factors (interleaved complex, 8 entries each).
+pub struct KronFactor {
+	g_re f64
+	g_im f64
+	a    []f64
+	b    []f64
+}
+
 // jacobi_eig diagonalizes a real symmetric `n`-by-`n` matrix (row-major) with
-// the cyclic Jacobi method. It returns the `n` eigenvalues followed by the
-// `n`-by-`n` eigenvector matrix (row-major, columns are eigenvectors).
+// the cyclic Jacobi method. It returns an `EigResult` holding the `n`
+// eigenvalues and the `n`-by-`n` eigenvector matrix (row-major, columns are
+// eigenvectors).
 @[vc_fn]
-pub fn jacobi_eig(matrix []f64, n int) []f64 {
+pub fn jacobi_eig(matrix []f64, n int) EigResult {
 	mut a := matrix.clone()
 	mut v := []f64{len: n * n, init: 0.0}
 	for i in 0 .. n {
@@ -66,30 +90,28 @@ pub fn jacobi_eig(matrix []f64, n int) []f64 {
 			}
 		}
 	}
-	mut out := []f64{len: n + n*n, init: 0.0}
+	mut values := []f64{len: n, init: 0.0}
 	for i in 0 .. n {
-		out[i] = a[i*n + i]
+		values[i] = a[i*n + i]
 	}
-	for k in 0 .. n*n {
-		out[n + k] = v[k]
+	return EigResult{
+		values:  values
+		vectors: v
 	}
-	return out
 }
 
 // simultaneous_diag jointly diagonalizes two commuting real symmetric
-// matrices by a real orthogonal matrix. It returns the `n` complex eigenvalues
-// (interleaved) followed by the eigenvector matrix (row-major, columns).
+// matrices by a real orthogonal matrix. It returns a `DiagResult` holding the
+// `n` complex eigenvalues (interleaved) and the eigenvector matrix (row-major,
+// columns).
 @[vc_fn]
-pub fn simultaneous_diag(real []f64, imag []f64, n int) []f64 {
+pub fn simultaneous_diag(real []f64, imag []f64, n int) DiagResult {
 	first := jacobi_eig(real, n)
 	mut values_a := []f64{len: n, init: 0.0}
-	mut vectors := []f64{len: n*n, init: 0.0}
 	for i in 0 .. n {
-		values_a[i] = first[i]
+		values_a[i] = first.values[i]
 	}
-	for k in 0 .. n*n {
-		vectors[k] = first[n + k]
-	}
+	mut vectors := first.vectors.clone()
 	mut order := []int{len: n, init: 0}
 	for i in 0 .. n {
 		order[i] = i
@@ -138,7 +160,7 @@ pub fn simultaneous_diag(real []f64, imag []f64, n int) []f64 {
 			for j in 0 .. m {
 				mut acc := 0.0
 				for k in 0 .. m {
-					acc += vectors[r*n + group[k]] * sub_eig[m + k*m + j]
+					acc += vectors[r*n + group[k]] * sub_eig.vectors[k*m + j]
 				}
 				rotated[r*m + j] = acc
 			}
@@ -149,7 +171,7 @@ pub fn simultaneous_diag(real []f64, imag []f64, n int) []f64 {
 			}
 		}
 	}
-	mut out := []f64{len: 2*n + n*n, init: 0.0}
+	mut values := []f64{len: 2*n, init: 0.0}
 	for j in 0 .. n {
 		mut re := 0.0
 		mut im := 0.0
@@ -159,13 +181,13 @@ pub fn simultaneous_diag(real []f64, imag []f64, n int) []f64 {
 				im += vectors[r*n + j] * imag[r*n + s] * vectors[s*n + j]
 			}
 		}
-		out[2*j] = re
-		out[2*j + 1] = im
+		values[2*j] = re
+		values[2*j + 1] = im
 	}
-	for k in 0 .. n*n {
-		out[2*n + k] = vectors[k]
+	return DiagResult{
+		values:  values
+		vectors: vectors
 	}
-	return out
 }
 
 // matrix_det returns the determinant of a complex `n`-by-`n` matrix
@@ -358,9 +380,9 @@ pub fn solve3(matrix []f64, rhs []f64) []f64 {
 }
 
 // kron_factor splits a 4x4 matrix that is `g * kron(a, b)` into `g`, `a` and
-// `b`. It returns `[g_re, g_im, a (8), b (8)]`.
+// `b`. It returns a `KronFactor` holding the global phase and the two factors.
 @[vc_fn]
-pub fn kron_factor(matrix []f64) []f64 {
+pub fn kron_factor(matrix []f64) KronFactor {
 	mut best := 0
 	mut best_mag := -1.0
 	for i in 0 .. 4 {
@@ -409,14 +431,12 @@ pub fn kron_factor(matrix []f64) []f64 {
 		g_re = -g_re
 		g_im = -g_im
 	}
-	mut out := []f64{len: 18, init: 0.0}
-	out[0] = g_re
-	out[1] = g_im
-	for k in 0 .. 8 {
-		out[2 + k] = f1[k]
-		out[10 + k] = f2[k]
+	return KronFactor{
+		g_re: g_re
+		g_im: g_im
+		a:    f1
+		b:    f2
 	}
-	return out
 }
 
 fn normalize_det2(factor []f64) []f64 {

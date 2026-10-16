@@ -207,8 +207,8 @@ def _hermitian_eig(matrix: Matrix) -> tuple[list[float], Matrix]:
 			big[(n + i) * size + j] = im
 			big[(n + i) * size + n + j] = re
 	result = _native.jacobi_eig(big, size)
-	values = [result[k] for k in range(size)]
-	vectors = result[size:]
+	values = list(result["values"])
+	vectors = list(result["vectors"])
 	# Each eigenvalue of the embedding appears twice; sort so the pair is
 	# adjacent, then take one of each pair.
 	order = sorted(range(size), key=lambda index: values[index])

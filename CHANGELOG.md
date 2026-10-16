@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-10-16
+
+Platforms and packaging: Windows wheels, a source distribution and smaller
+(stripped) wheels, built with vcraft 1.4.0. The public API is unchanged.
+
+### Added
+
+- **Windows support.** `win_amd64` wheels (CPython 3.11 and newer through the
+  stable ABI) are now built and published, so `pip install vqubit` works on
+  Windows without a compiler. The `Operating System :: Microsoft :: Windows`
+  classifier is now accurate.
+- **Source distribution.** A `vqubit-0.2.0.tar.gz` sdist is published alongside
+  the wheels.
+
+### Changed
+
+- **Smaller wheels.** The native extension is stripped, cutting about a fifth
+  off the wheel size.
+- **Native records.** The internal `jacobi_eig`, `simultaneous_diag` and
+  `kron_factor` helpers now return named records instead of a concatenated flat
+  buffer; this is an implementation detail of `vqubit_native`.
+- Built with **vcraft 1.4.0**.
+
 ## [0.1.0] - 2026-10-15
 
 The first release: a dependency-free, Cirq-compatible quantum computing
@@ -306,4 +329,5 @@ framework for Python, with the numerical core written in V.
   isometry/diagonal variants, and for `merge_operations`/`merge_moments` (whose
   `merge_func` now takes two operations/moments).
 
+[0.2.0]: https://github.com/rroblf01/vqubit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/rroblf01/vqubit/releases/tag/v0.1.0

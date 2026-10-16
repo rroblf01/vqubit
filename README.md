@@ -34,7 +34,7 @@ print(result.histogram(key="result"))
   from V, not interpreted.
 - **One wheel, every Python.** A single abi3 wheel covers CPython 3.11–3.15 per
   platform.
-- **Cross-platform.** Linux and macOS (x86-64 and ARM).
+- **Cross-platform.** Linux (x86-64 and ARM), macOS (ARM) and Windows (x86-64).
 - **Cirq-compatible API.** Build, transform and simulate circuits the way Cirq
   documents them.
 
@@ -55,13 +55,14 @@ qubit?" and builds up to circuits and simulation.
 
 ## Status
 
-vqubit is **alpha** (0.1.0). It exports every one of cirq-core's top-level
+vqubit is **alpha** (0.2.0). It exports every one of cirq-core's top-level
 names, and the simulators, optimizers, transformers and devices are in place;
 see [CHANGELOG.md](CHANGELOG.md) for the full list. The API may still change
-before 1.0.
+before 1.0; [ROADMAP.md](ROADMAP.md) tracks the path to it.
 
-Windows support is currently blocked by the build tool [vcraft](https://github.com/rroblf01/vcraft),
-which does not yet produce Windows wheels.
+It ships wheels for Linux (x86-64 and ARM), macOS (ARM) and Windows (x86-64),
+plus a source distribution, and is built with
+[vcraft](https://github.com/rroblf01/vcraft).
 
 ## Development
 

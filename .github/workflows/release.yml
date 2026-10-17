@@ -18,19 +18,19 @@ jobs:
         include:
           - target: "cp311-abi3-manylinux-x86_64"
             os: "ubuntu-latest"
-            container: "ghcr.io/rroblf01/vcraft-manylinux:1.4.0"
+            container: "ghcr.io/rroblf01/vcraft-manylinux:1.4.1"
             args: "build --release --abi3 3.11 --target linux-x86_64-gnu --manylinux 2_28 --interpreter /opt/python/cp311-cp311/bin/python"
           - target: "cp311-abi3-manylinux-aarch64"
             os: "ubuntu-24.04-arm"
-            container: "ghcr.io/rroblf01/vcraft-manylinux:1.4.0"
+            container: "ghcr.io/rroblf01/vcraft-manylinux:1.4.1"
             args: "build --release --abi3 3.11 --target linux-aarch64-gnu --manylinux 2_28 --interpreter /opt/python/cp311-cp311/bin/python"
           - target: "cp311-abi3-musllinux-x86_64"
             os: "ubuntu-latest"
-            container: "ghcr.io/rroblf01/vcraft-musllinux:1.4.0"
+            container: "ghcr.io/rroblf01/vcraft-musllinux:1.4.1"
             args: "build --release --abi3 3.11 --target linux-x86_64-musl --musllinux 1_2 --interpreter /usr/bin/python3"
           - target: "cp311-abi3-musllinux-aarch64"
             os: "ubuntu-24.04-arm"
-            container: "ghcr.io/rroblf01/vcraft-musllinux:1.4.0"
+            container: "ghcr.io/rroblf01/vcraft-musllinux:1.4.1"
             args: "build --release --abi3 3.11 --target linux-aarch64-musl --musllinux 1_2 --interpreter /usr/bin/python3"
           - target: "cp311-abi3-macosx-arm64"
             os: "macos-26"
@@ -52,11 +52,6 @@ jobs:
           container: ${{ matrix.container }}
           args: ${{ matrix.args }}
 
-      # `vcraft build --strip` is a no-op in vcraft 1.4.0, so the wheel is
-      # stripped here instead; the script skips itself where `strip` is absent.
-      - name: strip the wheel
-        run: python scripts/strip_wheels.py dist/*.whl
-
       - name: upload the wheel
         uses: actions/upload-artifact@v6
         with:
@@ -75,15 +70,10 @@ jobs:
           python-version: "3.11"
 
       - name: install vcraft
-        run: python -m pip install "vcraft==1.4.0"
+        run: python -m pip install "vcraft==1.4.1"
 
       - name: build the sdist
         run: vcraft sdist
-
-      # `vcraft sdist` misses the module's sibling `.v` files in 1.4.0, so they
-      # are added back before the archive is published.
-      - name: repair the sdist
-        run: python scripts/fix_sdist.py dist/*.tar.gz
 
       - name: upload the sdist
         uses: actions/upload-artifact@v6

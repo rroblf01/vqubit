@@ -17,6 +17,7 @@ from ._gates import CNOT, CZ, SWAP, H, S, T, X, Y, Z
 from ._linalg import Matrix
 from ._ops import Moment
 from ._protocols import unitary
+from ._qis import random_density_matrix
 from ._qubits import Qid
 
 
@@ -246,4 +247,5 @@ __all__ = [
 	"assert_same_circuits",
 	"equals_tester",
 	"random_circuit",
+	"random_density_matrix",
 ]

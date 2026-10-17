@@ -624,3 +624,34 @@ def test_matches_the_installed_cirq() -> None:
 	}
 	missing = sorted(expected - set(vqubit.__all__))
 	assert missing == [], f"names present in the installed cirq but missing from vqubit: {missing}"
+
+
+def test_cirq_submodules_are_mirrored() -> None:
+	"""`vqubit.<name>` mirrors cirq's submodules, for deep imports."""
+	import importlib
+	import types
+
+	import pytest
+
+	cirq = pytest.importorskip("cirq")
+	submodules = sorted(
+		name for name in dir(cirq) if isinstance(getattr(cirq, name), types.ModuleType) and not name.startswith("_")
+	)
+	assert submodules, "the installed cirq exposes no submodules"
+
+	for name in submodules:
+		if name == "contrib":  # vqubit has no cirq.contrib surface yet
+			continue
+		# The top-level package imports them, so the attribute is set too.
+		assert hasattr(vqubit, name), f"vqubit.{name} is not an attribute of the package"
+		module = importlib.import_module(f"vqubit.{name}")
+		cirq_module = getattr(cirq, name)
+		expected = {
+			member
+			for member in dir(cirq_module)
+			if not member.startswith("_")
+			and not isinstance(getattr(cirq_module, member), types.ModuleType)
+			and hasattr(vqubit, member)
+		}
+		missing = sorted(expected - set(dir(module)))
+		assert missing == [], f"vqubit.{name} is missing {missing}"

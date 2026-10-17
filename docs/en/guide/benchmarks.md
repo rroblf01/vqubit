@@ -47,40 +47,42 @@ peak resident memory during the task, which includes importing the package
 
 | Task | vqubit | Cirq | Speedup | vqubit RAM | Cirq RAM |
 |---|---:|---:|---:|---:|---:|
-| Import the package | — | — | — | 77 MB | 208 MB |
-| Build a 5-qubit, 300-moment circuit | 10 ms | 19 ms | 1.9× | 78 MB | 209 MB |
-| Unitary of a 6-qubit circuit | 0.4 ms | 0.8 ms | 2.1× | 77 MB | 208 MB |
-| State-vector simulate 12 qubits | 0.2 ms | 2.5 ms | 12.2× | 77 MB | 209 MB |
-| Sample 1000 shots of 12 qubits | 3.6 ms | 6.6 ms | 1.8× | 82 MB | 209 MB |
-| Density-matrix simulate 7 qubits | 2.1 ms | 7.3 ms | 3.5× | 78 MB | 209 MB |
-| State-vector simulate 20 qubits | ≈40 ms | ≈42 ms | ≈1× | 93 MB | 247 MB |
-| Density-matrix simulate 10 qubits | 162 ms | 360 ms | 2.2× | 125 MB | 257 MB |
-| Simulate a 250-layer, 12-qubit circuit | 31 ms | 193 ms | 6.3× | 82 MB | 212 MB |
-| KAK decomposition of a 4×4 unitary | 0.25 ms | 0.45 ms | 1.8× | 77 MB | 209 MB |
-| Single-qubit matrix to PhasedXZ | <0.1 ms | <0.1 ms | 5.0× | 77 MB | 208 MB |
-| Multiply Pauli strings 1000× | 3.6 ms | 8.7 ms | 2.4× | 77 MB | 208 MB |
-| OpenQASM export of a 50-gate circuit | 0.4 ms | 1.6 ms | 4.3× | 77 MB | 208 MB |
-| Bloch vector of 12 qubits | 0.2 ms | 1.8 ms | 9.6× | 77 MB | 208 MB |
+| Import the package | — | — | — | 79 MB | 205 MB |
+| Build a 5-qubit, 300-moment circuit | 10 ms | 22 ms | 2.3× | 80 MB | 206 MB |
+| Unitary of a 6-qubit circuit | 0.4 ms | 0.7 ms | 1.9× | 79 MB | 205 MB |
+| State-vector simulate 12 qubits | 0.2 ms | 2.2 ms | 12.4× | 79 MB | 206 MB |
+| Sample 1000 shots of 12 qubits | 2.9 ms | 6.0 ms | 2.1× | 84 MB | 206 MB |
+| Density-matrix simulate 7 qubits | 2.1 ms | 7.8 ms | 3.7× | 80 MB | 206 MB |
+| State-vector simulate 20 qubits | 36 ms | 28 ms | 0.79× | 95 MB | 244 MB |
+| Density-matrix simulate 10 qubits | 154 ms | 301 ms | 2.0× | 128 MB | 255 MB |
+| Simulate a 250-layer, 12-qubit circuit | 34 ms | 176 ms | 5.2× | 84 MB | 209 MB |
+| KAK decomposition of a 4×4 unitary | 0.2 ms | 0.5 ms | 1.9× | 79 MB | 206 MB |
+| Single-qubit matrix to PhasedXZ | <0.1 ms | <0.1 ms | 4.8× | 79 MB | 205 MB |
+| Multiply Pauli strings 1000× | 3.2 ms | 8.9 ms | 2.8× | 79 MB | 205 MB |
+| OpenQASM export of a 50-gate circuit | 0.4 ms | 1.2 ms | 3.3× | 79 MB | 206 MB |
+| Bloch vector of 12 qubits | 0.2 ms | 1.7 ms | 8.0× | 79 MB | 206 MB |
 
 A **speedup above 1×** means vqubit is faster; below 1× means Cirq is faster.
 
 ## How to read this
 
-- **vqubit wins every task**, and does so while importing about **2.7× less
-  memory** (77 MB vs 208 MB) and using less peak memory on the large
+- **vqubit wins 13 of the 14 tasks**, and does so while importing about **2.6×
+  less memory** (79 MB vs 205 MB) and using less peak memory on the large
   simulations. Its wheel has no runtime dependencies, so importing it is far
-  cheaper than pulling in NumPy, SciPy, SymPy, pandas and matplotlib.
+  cheaper than pulling in NumPy, SciPy, SymPy, pandas and matplotlib. The one
+  task it loses (20 qubits) is measured below.
 - **Gate-heavy circuits are where the gap is widest.** A 250-layer, 12-qubit
-  circuit runs ~6× faster than Cirq: vqubit builds each single-qubit gate matrix
+  circuit runs ~5× faster than Cirq: vqubit builds each single-qubit gate matrix
   in closed form and keeps it (and its native flat form) memoised, so the
   per-gate Python cost that usually dominates small-gate workloads largely
   disappears.
-- **Simulating 20 qubits is memory-bandwidth bound.** It moves tens of megabytes
-  per gate; once the arithmetic is vectorised (it is, on both sides) the wall
-  time is set by how fast the amplitudes stream through memory, so the two
-  implementations converge to the same ~40 ms. vqubit reaches that with the
-  native V kernels and zero-copy NumPy views of its state buffer; Cirq reaches it
-  with NumPy arrays.
+- **Simulating 20 qubits is memory-bandwidth bound, and it is the one task Cirq
+  wins (~0.8×).** Each gate streams the whole 16 MB state through memory, so wall
+  time is set by bandwidth, not arithmetic; the two sides are close (36 ms vs
+  28 ms). Cirq's NumPy kernels spend that bandwidth on vectorised (SIMD) moves,
+  while the V kernels rely on the compiler's auto-vectorisation, which is not as
+  tight for the interleaved complex layout. Closing the last ~20% would need
+  explicit SIMD, which the portable, dependency-free build does not require.
 - **Density-matrix simulation is ~2× faster.** The channel kernels scale the
   diagonal (CZ/CCZ) directly and factor the general block product into two
   matrix products.

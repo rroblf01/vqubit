@@ -37,7 +37,7 @@ a medida que avanzan los hitos.
 - 548 tests y CI verde; cobertura de nombres verificada contra Cirq.
 - 0.1.0: Linux y macOS (x86-64 y ARM), sin dependencias, solo wheels.
 - 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
-  sobre **vcraft 1.4.0**.
+  sobre **vcraft 1.4.1**.
 
 ### Objetivo de la 1.0.0
 
@@ -75,8 +75,8 @@ versionado y deprecación explícita, y gobernanza abierta.
       `optimize_for_target_gateset`.
 - [x] (0.2.0) Modernizar la API nativa: `jacobi_eig`, `simultaneous_diag` y
       `kron_factor` devuelven *structs* con nombre. Un `enum` para
-      `NativeTableau.apply` sigue pendiente: el glue de vcraft pasa un `int` a
-      un parámetro enum, así que hoy no compila.
+      `NativeTableau.apply` sigue pendiente (comprobado también en vcraft 1.4.1):
+      el glue pasa un `int` a un parámetro enum, así que no compila.
 
 #### 3. Empaquetado y distribución
 
@@ -184,7 +184,7 @@ guarantees. It is a living document, updated as milestones land.
 - 548 tests and green CI; name coverage verified against Cirq.
 - 0.1.0: Linux and macOS (x86-64 and ARM), no dependencies, wheels only.
 - 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
-  on **vcraft 1.4.0**.
+  on **vcraft 1.4.1**.
 
 ### Goal for 1.0.0
 
@@ -219,8 +219,8 @@ deprecation policy, and open governance.
       `optimize_for_target_gateset`.
 - [x] (0.2.0) Modernise the native API: `jacobi_eig`, `simultaneous_diag` and
       `kron_factor` return named *structs*. An `enum` for `NativeTableau.apply`
-      is still pending: vcraft's glue passes an `int` to an `enum` parameter, so
-      it does not compile today.
+      is still pending (checked in vcraft 1.4.1 too): the glue passes an `int` to
+      an `enum` parameter, so it does not compile.
 
 #### 3. Packaging and distribution
 

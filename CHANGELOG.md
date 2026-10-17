@@ -26,7 +26,7 @@ Platforms and packaging: Windows wheels, a source distribution and smaller
 - **Native records.** The internal `jacobi_eig`, `simultaneous_diag` and
   `kron_factor` helpers now return named records instead of a concatenated flat
   buffer; this is an implementation detail of `vqubit_native`.
-- Built with **vcraft 1.4.0**.
+- Built with **vcraft 1.4.1**.
 
 ## [0.1.0] - 2026-10-15
 

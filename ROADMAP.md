@@ -37,7 +37,7 @@ a medida que avanzan los hitos.
 - 548 tests y CI verde; cobertura de nombres verificada contra Cirq.
 - 0.1.0: Linux y macOS (x86-64 y ARM), sin dependencias, solo wheels.
 - 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
-  sobre **vcraft 1.4.1**.
+  sobre **vcraft 1.4.2**.
 
 ### Objetivo de la 1.0.0
 
@@ -74,15 +74,15 @@ versionado y deprecación explícita, y gobernanza abierta.
 - [ ] Cobertura de casos límite en síntesis de dos qubits y
       `optimize_for_target_gateset`.
 - [x] (0.2.0) Modernizar la API nativa: `jacobi_eig`, `simultaneous_diag` y
-      `kron_factor` devuelven *structs* con nombre. Un `enum` para
-      `NativeTableau.apply` sigue pendiente (comprobado también en vcraft 1.4.1):
-      el glue pasa un `int` a un parámetro enum, así que no compila.
+      `kron_factor` devuelven *structs* con nombre, y `NativeTableau.apply` toma
+      un `CliffordOp`. (Estuvo bloqueado por vcraft hasta la 1.4.2, que resuelve
+      los métodos por receptor y tipa los enums en el `.pyi`.)
 
 #### 3. Empaquetado y distribución
 
 - [x] Publicar **sdist** junto a los wheels (`vcraft sdist`) — 0.2.0.
-- [x] Wheels de **Windows** (`win_amd64`) — 0.2.0, ya soportado por vcraft 1.4.0.
-- [x] Wheels *stripped* en release (workaround: `--strip` es no-op en vcraft 1.4.0) — 0.2.0.
+- [x] Wheels de **Windows** (`win_amd64`) — 0.2.0, ya soportado por vcraft 1.4.2.
+- [x] Wheels *stripped* en release (`[build] strip`, arreglado en vcraft 1.4.1) — 0.2.0.
 - [ ] Corregir classifiers si algún día cambia el soporte (hoy `Microsoft ::
       Windows` ya es correcto).
 - [ ] Extras publicados y documentados: `vqubit[vis]`, `vqubit[interop]`.
@@ -134,7 +134,7 @@ versionado y deprecación explícita, y gobernanza abierta.
 
 | Versión | Tema | Contenido clave |
 | ------- | ---- | --------------- |
-| 0.2 | Plataformas | vcraft 1.4.0, Windows `win_amd64`, sdist, `--strip`, API nativa moderna |
+| 0.2 | Plataformas | vcraft 1.4.2, Windows `win_amd64`, sdist, `--strip`, API nativa moderna |
 | 0.3 | Interop | import QASM, puente `cirq` |
 | 0.4 | Calidad | cobertura, Hypothesis, `stubtest`, fuzzers |
 | 0.5 | Rendimiento | 20 qubits, benchmarks en CI, SIMD/OpenMP |
@@ -184,7 +184,7 @@ guarantees. It is a living document, updated as milestones land.
 - 548 tests and green CI; name coverage verified against Cirq.
 - 0.1.0: Linux and macOS (x86-64 and ARM), no dependencies, wheels only.
 - 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
-  on **vcraft 1.4.1**.
+  on **vcraft 1.4.2**.
 
 ### Goal for 1.0.0
 
@@ -218,15 +218,15 @@ deprecation policy, and open governance.
 - [ ] Edge-case coverage in two-qubit synthesis and
       `optimize_for_target_gateset`.
 - [x] (0.2.0) Modernise the native API: `jacobi_eig`, `simultaneous_diag` and
-      `kron_factor` return named *structs*. An `enum` for `NativeTableau.apply`
-      is still pending (checked in vcraft 1.4.1 too): the glue passes an `int` to
-      an `enum` parameter, so it does not compile.
+      `kron_factor` return named *structs*, and `NativeTableau.apply` takes a
+      `CliffordOp`. (Blocked by vcraft until 1.4.2, which resolves methods by
+      receiver and types enums in the `.pyi`.)
 
 #### 3. Packaging and distribution
 
 - [x] Publish an **sdist** alongside the wheels (`vcraft sdist`) — 0.2.0.
-- [x] **Windows** (`win_amd64`) wheels — 0.2.0, now supported by vcraft 1.4.0.
-- [x] Stripped release wheels (workaround: `--strip` is a no-op in vcraft 1.4.0) — 0.2.0.
+- [x] **Windows** (`win_amd64`) wheels — 0.2.0, now supported by vcraft 1.4.2.
+- [x] Stripped release wheels (`[build] strip`, fixed in vcraft 1.4.1) — 0.2.0.
 - [ ] Keep classifiers accurate (`Microsoft :: Windows` is correct now).
 - [ ] Publish and document extras: `vqubit[vis]`, `vqubit[interop]`.
 - [ ] Reproducible builds, `RECORD` hash verification and provenance
@@ -275,7 +275,7 @@ deprecation policy, and open governance.
 
 | Version | Theme | Key content |
 | ------- | ----- | ----------- |
-| 0.2 | Platforms | vcraft 1.4.0, Windows `win_amd64`, sdist, `--strip`, modern native API |
+| 0.2 | Platforms | vcraft 1.4.2, Windows `win_amd64`, sdist, `--strip`, modern native API |
 | 0.3 | Interop | QASM import, `cirq` bridge |
 | 0.4 | Quality | coverage, Hypothesis, `stubtest`, fuzzers |
 | 0.5 | Performance | 20 qubits, benchmarks in CI, SIMD/OpenMP |

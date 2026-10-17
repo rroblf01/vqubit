@@ -126,9 +126,17 @@ versionado y deprecación explícita, y gobernanza abierta.
 
 #### 8. Rendimiento (apoyo)
 
-- [ ] Cerrar la brecha de simulación a 20 qubits (actualmente a la par).
+- [ ] Cerrar la brecha de simulación a 20 qubits: es **DRAM/TLB-bound**, no
+      aritmética (los kernels van a ~25 GB/s, el ancho de banda de la máquina), y
+      `-march` no la mueve. Pedir a vcraft **páginas gigantes**
+      (`mmap` + `madvise(MADV_HUGEPAGE)` en `buffer_new_*`) y, a más largo plazo,
+      **dispatch en runtime** (*function multiversioning*) para los kernels
+      calientes, que daría SIMD con una rueda portable.
+- [ ] `-march=…` queda como **opt-in documentado** para un build propio; no se
+      hornea en la rueda publicada (portabilidad y no divergir del artefacto
+      testeado).
 - [ ] Benchmarks en CI con umbrales de regresión.
-- [ ] Evaluar SIMD/OpenMP en los kernels V; densidad a mayor anchura.
+- [ ] Evaluar más SIMD/OpenMP en los kernels V; densidad a mayor anchura.
 
 ### Hitos
 
@@ -267,9 +275,17 @@ deprecation policy, and open governance.
 
 #### 8. Performance (supporting)
 
-- [ ] Close the 20-qubit simulation gap (currently at parity).
+- [ ] Close the 20-qubit simulation gap: it is **DRAM/TLB-bound**, not
+      arithmetic (the kernels run at ~25 GB/s, the machine's bandwidth), and
+      `-march` does not move it. Ask vcraft for **huge pages**
+      (`mmap` + `madvise(MADV_HUGEPAGE)` in `buffer_new_*`) and, longer term,
+      **runtime dispatch** (*function multiversioning*) for the hot kernels,
+      which would give SIMD from a portable wheel.
+- [ ] `-march=…` stays a **documented opt-in** for a local build; it is not
+      baked into the published wheel (portability, and not diverging from the
+      tested artifact).
 - [ ] Benchmarks in CI with regression thresholds.
-- [ ] Evaluate SIMD/OpenMP in the V kernels; density matrices at larger widths.
+- [ ] Evaluate more SIMD/OpenMP in the V kernels; density matrices at larger widths.
 
 ### Milestones
 

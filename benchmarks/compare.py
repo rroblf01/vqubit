@@ -5,6 +5,10 @@ wall time and peak memory for each task, for both packages. The script measures
 each task in a fresh subprocess so that peak RSS (``VmHWM``) is not polluted by
 earlier tasks; time is the best of several runs inside that subprocess.
 
+Build the extension with ``vcraft build --release`` first: ``vcraft develop``
+installs a **debug** extension, which runs several times slower and makes the
+comparison meaningless.
+
 Only the standard library is used. If Cirq is not installed the vqubit column
 is still produced and the Cirq column is left blank.
 """

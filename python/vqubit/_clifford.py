@@ -35,20 +35,20 @@ from ._linalg import vector_from_flat
 from ._pauli import Pauli
 from ._qubits import LineQubit, Qid
 
-_INSTR_H = 0
-_INSTR_S = 1
-_INSTR_SDG = 2
-_INSTR_X = 3
-_INSTR_Y = 4
-_INSTR_Z = 5
-_INSTR_CNOT = 6
-_INSTR_CZ = 7
-_INSTR_SWAP = 8
-_INSTR_MEASURE = 9
+_INSTR_H = _native.CliffordOp.h
+_INSTR_S = _native.CliffordOp.s
+_INSTR_SDG = _native.CliffordOp.sdg
+_INSTR_X = _native.CliffordOp.x
+_INSTR_Y = _native.CliffordOp.y
+_INSTR_Z = _native.CliffordOp.z
+_INSTR_CNOT = _native.CliffordOp.cnot
+_INSTR_CZ = _native.CliffordOp.cz
+_INSTR_SWAP = _native.CliffordOp.swap
+_INSTR_MEASURE = _native.CliffordOp.measure
 
 
-def _instruction_code(gate: Any) -> int | None:
-	"""Return the instruction code for a Clifford gate, or ``None`` for identity."""
+def _instruction_code(gate: Any) -> _native.CliffordOp | None:
+	"""Return the instruction for a Clifford gate, or ``None`` for identity."""
 	if isinstance(gate, IdentityGate):
 		return None
 	if isinstance(gate, HPowGate) and gate.exponent == 1:
@@ -89,7 +89,7 @@ def _build_instructions(
 				raise ValueError("simulate() cannot run a circuit with measurements; use run()")
 			invert_mask = gate.full_invert_mask
 			for position, qubit in enumerate(operation.qubits):
-				instructions.extend((_INSTR_MEASURE, index[qubit], 0))
+				instructions.extend((int(_INSTR_MEASURE), index[qubit], 0))
 				measure_meta.append((gate.key, position, int(invert_mask[position])))
 				key_sizes[gate.key] = max(key_sizes.get(gate.key, 0), position + 1)
 			continue
@@ -98,7 +98,7 @@ def _build_instructions(
 			continue
 		targets = [index[q] for q in operation.qubits]
 		second = targets[1] if len(targets) > 1 else 0
-		instructions.extend((code, targets[0], second))
+		instructions.extend((int(code), targets[0], second))
 	return instructions, measure_meta, key_sizes
 
 

@@ -62,8 +62,8 @@ def test_native_density_measure() -> None:
 
 def test_native_tableau_bell_state() -> None:
 	tableau = native.NativeTableau(2)
-	tableau.apply(0, 0, 0)  # H on qubit 0
-	tableau.apply(6, 0, 1)  # CNOT(0, 1)
+	tableau.apply(native.CliffordOp.h, 0, 0)  # H on qubit 0
+	tableau.apply(native.CliffordOp.cnot, 0, 1)  # CNOT(0, 1)
 	vector = tableau.state_vector()
 	assert abs(vector[0] - 2**-0.5) < 1e-9
 	assert abs(vector[6] - 2**-0.5) < 1e-9
@@ -72,8 +72,8 @@ def test_native_tableau_bell_state() -> None:
 
 def test_native_tableau_measurement_is_correlated() -> None:
 	tableau = native.NativeTableau(2)
-	tableau.apply(0, 0, 0)
-	tableau.apply(6, 0, 1)
+	tableau.apply(native.CliffordOp.h, 0, 0)
+	tableau.apply(native.CliffordOp.cnot, 0, 1)
 	first = tableau.measure(0, 0.9)
 	second = tableau.measure(1, 0.1)
 	assert first == second
@@ -81,7 +81,7 @@ def test_native_tableau_measurement_is_correlated() -> None:
 
 def test_native_tableau_reset() -> None:
 	tableau = native.NativeTableau(2)
-	tableau.apply(0, 0, 0)
+	tableau.apply(native.CliffordOp.h, 0, 0)
 	tableau.reset()
 	vector = tableau.state_vector()
 	assert abs(vector[0]) == 1.0

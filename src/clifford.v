@@ -26,6 +26,22 @@ const instr_cz = 7
 const instr_swap = 8
 const instr_measure = 9
 
+// CliffordOp names the instructions the stabilizer simulator applies. The
+// members are declared in the order of the `instr_*` constants above, so the
+// integer wire format used by `clifford_run` and the enum stay in step.
+pub enum CliffordOp {
+	h
+	s
+	sdg
+	x
+	y
+	z
+	cnot
+	cz
+	swap
+	measure
+}
+
 struct Tableau {
 mut:
 	n int
@@ -379,11 +395,11 @@ pub fn (mut t NativeTableau) reset() {
 	}
 }
 
-// apply runs one instruction (see the `instr_*` codes) in place.
+// apply runs one instruction (a `CliffordOp`) in place.
 @[vc_method]
-pub fn (mut t NativeTableau) apply(code int, a int, b int) {
+pub fn (mut t NativeTableau) apply(op CliffordOp, a int, b int) {
 	mut tableau := t.view()
-	tableau.apply(code, a, b)
+	tableau.apply(int(op), a, b)
 }
 
 // measure measures qubit `a` with a random outcome drawn from `u` in [0, 1).

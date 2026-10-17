@@ -5,10 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-10-16
+## [0.2.0] - 2026-10-17
 
-Platforms and packaging: Windows wheels, a source distribution and smaller
-(stripped) wheels, built with vcraft 1.4.3. The public API is unchanged.
+Platforms, packaging and Cirq's submodule layout: Windows wheels, a source
+distribution, smaller (stripped) wheels and deep imports, built with vcraft
+1.4.3. No existing name changed.
 
 ### Added
 
@@ -18,6 +19,11 @@ Platforms and packaging: Windows wheels, a source distribution and smaller
   classifier is now accurate.
 - **Source distribution.** A `vqubit-0.2.0.tar.gz` sdist is published alongside
   the wheels.
+- **Cirq's submodules.** `vqubit.ops`, `vqubit.sim`, `vqubit.work`,
+  `vqubit.vis`, `vqubit.protocols`, `vqubit.transformers` and the rest now
+  mirror `cirq`'s submodules, so deep imports such as `from cirq.sim import
+  Simulator` keep working when `vqubit` is used as a drop-in. `vqubit.linalg`
+  and `vqubit.testing` gained the few names they were missing.
 
 ### Changed
 

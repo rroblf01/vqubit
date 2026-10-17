@@ -36,7 +36,7 @@ a medida que avanzan los hitos.
 - Tipado completo (`py.typed`, todas las funciones anotadas) y stub nativo.
 - 548 tests y CI verde; cobertura de nombres verificada contra Cirq.
 - 0.1.0: Linux y macOS (x86-64 y ARM), sin dependencias, solo wheels.
-- 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
+- 0.2.0 (2026-10-17): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
   sobre **vcraft 1.4.3**.
 
 ### Objetivo de la 1.0.0
@@ -191,7 +191,7 @@ guarantees. It is a living document, updated as milestones land.
 - Complete typing (`py.typed`, every function annotated) and a native stub.
 - 548 tests and green CI; name coverage verified against Cirq.
 - 0.1.0: Linux and macOS (x86-64 and ARM), no dependencies, wheels only.
-- 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
+- 0.2.0 (2026-10-17): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
   on **vcraft 1.4.3**.
 
 ### Goal for 1.0.0

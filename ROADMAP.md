@@ -37,7 +37,7 @@ a medida que avanzan los hitos.
 - 548 tests y CI verde; cobertura de nombres verificada contra Cirq.
 - 0.1.0: Linux y macOS (x86-64 y ARM), sin dependencias, solo wheels.
 - 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
-  sobre **vcraft 1.4.2**.
+  sobre **vcraft 1.4.3**.
 
 ### Objetivo de la 1.0.0
 
@@ -81,7 +81,7 @@ versionado y deprecación explícita, y gobernanza abierta.
 #### 3. Empaquetado y distribución
 
 - [x] Publicar **sdist** junto a los wheels (`vcraft sdist`) — 0.2.0.
-- [x] Wheels de **Windows** (`win_amd64`) — 0.2.0, ya soportado por vcraft 1.4.2.
+- [x] Wheels de **Windows** (`win_amd64`) — 0.2.0, ya soportado por vcraft 1.4.0.
 - [x] Wheels *stripped* en release (`[build] strip`, arreglado en vcraft 1.4.1) — 0.2.0.
 - [ ] Corregir classifiers si algún día cambia el soporte (hoy `Microsoft ::
       Windows` ya es correcto).
@@ -134,7 +134,7 @@ versionado y deprecación explícita, y gobernanza abierta.
 
 | Versión | Tema | Contenido clave |
 | ------- | ---- | --------------- |
-| 0.2 | Plataformas | vcraft 1.4.2, Windows `win_amd64`, sdist, `--strip`, API nativa moderna |
+| 0.2 | Plataformas | vcraft 1.4.3, Windows `win_amd64`, sdist, `--strip`, API nativa moderna |
 | 0.3 | Interop | import QASM, puente `cirq` |
 | 0.4 | Calidad | cobertura, Hypothesis, `stubtest`, fuzzers |
 | 0.5 | Rendimiento | 20 qubits, benchmarks en CI, SIMD/OpenMP |
@@ -184,7 +184,7 @@ guarantees. It is a living document, updated as milestones land.
 - 548 tests and green CI; name coverage verified against Cirq.
 - 0.1.0: Linux and macOS (x86-64 and ARM), no dependencies, wheels only.
 - 0.2.0 (2026-10-16): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
-  on **vcraft 1.4.2**.
+  on **vcraft 1.4.3**.
 
 ### Goal for 1.0.0
 
@@ -225,7 +225,7 @@ deprecation policy, and open governance.
 #### 3. Packaging and distribution
 
 - [x] Publish an **sdist** alongside the wheels (`vcraft sdist`) — 0.2.0.
-- [x] **Windows** (`win_amd64`) wheels — 0.2.0, now supported by vcraft 1.4.2.
+- [x] **Windows** (`win_amd64`) wheels — 0.2.0, now supported by vcraft 1.4.0.
 - [x] Stripped release wheels (`[build] strip`, fixed in vcraft 1.4.1) — 0.2.0.
 - [ ] Keep classifiers accurate (`Microsoft :: Windows` is correct now).
 - [ ] Publish and document extras: `vqubit[vis]`, `vqubit[interop]`.
@@ -275,7 +275,7 @@ deprecation policy, and open governance.
 
 | Version | Theme | Key content |
 | ------- | ----- | ----------- |
-| 0.2 | Platforms | vcraft 1.4.2, Windows `win_amd64`, sdist, `--strip`, modern native API |
+| 0.2 | Platforms | vcraft 1.4.3, Windows `win_amd64`, sdist, `--strip`, modern native API |
 | 0.3 | Interop | QASM import, `cirq` bridge |
 | 0.4 | Quality | coverage, Hypothesis, `stubtest`, fuzzers |
 | 0.5 | Performance | 20 qubits, benchmarks in CI, SIMD/OpenMP |

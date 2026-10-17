@@ -54,11 +54,26 @@ virtual environment.
 | ---------------- | -------------- | ------------- |
 | Linux            | x86-64         | Supported     |
 | Linux            | ARM64 (aarch64) | Supported    |
-| macOS            | Intel (x86-64) | Supported     |
+| macOS            | Intel (x86-64) | From source   |
 | macOS            | Apple Silicon (ARM64) | Supported |
-| Windows          | x86-64         | Pending (blocked by vcraft) |
+| Windows          | x86-64         | Supported     |
 
-!!! warning "Windows"
-    Windows is not supported yet because the build tool
-    [vcraft](https://github.com/rroblf01/vcraft) does not produce Windows wheels
-    at this time. It is on its roadmap.
+macOS on Intel (x86-64) is not built; any platform without a wheel can build
+vqubit from source as above.
+
+## Faster builds
+
+The published wheels target a generic x86-64 so they run on any machine. To
+squeeze more speed out of a build you make yourself, add compiler flags to
+`vcraft.toml`:
+
+```toml
+[build]
+cflags = "-march=native"
+```
+
+`-march=native` (or a fixed baseline such as `-march=x86-64-v3`) lets the
+compiler vectorise with the CPU's SIMD instructions, which makes the native
+kernels faster whenever the state fits in cache. The resulting wheel is tied to
+that CPU level, so this is for a local or self-hosted build, not for a wheel you
+publish.

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2026-10-16
 
 Platforms and packaging: Windows wheels, a source distribution and smaller
-(stripped) wheels, built with vcraft 1.4.2. The public API is unchanged.
+(stripped) wheels, built with vcraft 1.4.3. The public API is unchanged.
 
 ### Added
 
@@ -27,7 +27,7 @@ Platforms and packaging: Windows wheels, a source distribution and smaller
   and `kron_factor` helpers now return named records, and `NativeTableau.apply`
   takes a `CliffordOp` enum, instead of concatenated buffers and bare integers.
   Both are implementation details of `vqubit_native`.
-- Built with **vcraft 1.4.2**.
+- Built with **vcraft 1.4.3**.
 
 ## [0.1.0] - 2026-10-15
 

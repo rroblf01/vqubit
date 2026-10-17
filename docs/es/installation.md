@@ -55,11 +55,26 @@ virtual activo.
 | ----------------- | -------------- | --------------- |
 | Linux             | x86-64         | Soportado       |
 | Linux             | ARM64 (aarch64) | Soportado      |
-| macOS             | Intel (x86-64) | Soportado       |
+| macOS             | Intel (x86-64) | Desde fuente    |
 | macOS             | Apple Silicon (ARM64) | Soportado |
-| Windows           | x86-64         | Pendiente (bloqueado por vcraft) |
+| Windows           | x86-64         | Soportado       |
 
-!!! warning "Windows"
-    Windows aún no está soportado porque la herramienta de construcción
-    [vcraft](https://github.com/rroblf01/vcraft) todavía no genera ruedas para
-    Windows. Está en su hoja de ruta.
+macOS en Intel (x86-64) no se compila; cualquier plataforma sin rueda puede
+compilar vqubit desde el código fuente como arriba.
+
+## Builds más rápidos
+
+Las ruedas publicadas apuntan a un x86-64 genérico, para que corran en cualquier
+máquina. Para exprimir más velocidad en una compilación tuya, añade flags de
+compilador a `vcraft.toml`:
+
+```toml
+[build]
+cflags = "-march=native"
+```
+
+`-march=native` (o una base fija como `-march=x86-64-v3`) deja que el compilador
+vectorice con las instrucciones SIMD de tu CPU, lo que hace más rápidos los
+kernels nativos siempre que el estado quepa en caché. La rueda resultante queda
+atada a ese nivel de CPU, así que es para una compilación local o propia, no
+para publicar.

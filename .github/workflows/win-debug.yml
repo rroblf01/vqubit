@@ -35,15 +35,20 @@ jobs:
         run: |
           set +e
           set +o pipefail
-          echo "action outcome: ${{ steps.act.outcome }}"
+          outcome="${{ steps.act.outcome }}"
+          echo "action outcome: $outcome"
           echo "=== vcraft --version ==="
           vcraft --version 2>&1
-          echo "=== vcraft info ==="
-          vcraft info 2>&1
+          echo "=== vcraft toolchain (V it resolved) ==="
+          vcraft toolchain 2>&1
+          echo "=== git status after the action ==="
+          git status --porcelain 2>&1
+          echo "=== dist ==="
+          ls -la dist 2>&1
           echo "=== build (captured) ==="
           vcraft build --release --abi3 3.11 > out.txt 2>&1
           rc=$?
           echo "exit=$rc"
           cat out.txt
           msg=$(tr '\n' ' ' < out.txt)
-          echo "::error::DIAG[${{ matrix.os }}] exit=$rc out=[${msg:0:600}]"
+          echo "::error::DIAG[${{ matrix.os }}] action=$outcome exit=$rc out=[${msg:0:500}]"

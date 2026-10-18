@@ -19,7 +19,7 @@ jobs:
           python-version: "3.11"
 
       - name: install vcraft
-        run: python -m pip install vcraft==1.4.4
+        run: python -m pip install vcraft==1.4.5
 
       - name: launcher vs tool, and dry-run
         shell: pwsh

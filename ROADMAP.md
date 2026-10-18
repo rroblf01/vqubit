@@ -37,7 +37,7 @@ a medida que avanzan los hitos.
 - 548 tests y CI verde; cobertura de nombres verificada contra Cirq.
 - 0.1.0: Linux y macOS (x86-64 y ARM), sin dependencias, solo wheels.
 - 0.2.0 (2026-10-17): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
-  sobre **vcraft 1.4.4**.
+  sobre **vcraft 1.4.5**.
 
 ### Objetivo de la 1.0.0
 
@@ -142,7 +142,7 @@ versionado y deprecación explícita, y gobernanza abierta.
 
 | Versión | Tema | Contenido clave |
 | ------- | ---- | --------------- |
-| 0.2 | Plataformas | vcraft 1.4.4, Windows `win_amd64`, sdist, `--strip`, API nativa moderna |
+| 0.2 | Plataformas | vcraft 1.4.5, Windows `win_amd64`, sdist, `--strip`, API nativa moderna |
 | 0.3 | Interop | import QASM, puente `cirq` |
 | 0.4 | Calidad | cobertura, Hypothesis, `stubtest`, fuzzers |
 | 0.5 | Rendimiento | 20 qubits, benchmarks en CI, SIMD/OpenMP |
@@ -192,7 +192,7 @@ guarantees. It is a living document, updated as milestones land.
 - 548 tests and green CI; name coverage verified against Cirq.
 - 0.1.0: Linux and macOS (x86-64 and ARM), no dependencies, wheels only.
 - 0.2.0 (2026-10-17): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
-  on **vcraft 1.4.4**.
+  on **vcraft 1.4.5**.
 
 ### Goal for 1.0.0
 
@@ -291,7 +291,7 @@ deprecation policy, and open governance.
 
 | Version | Theme | Key content |
 | ------- | ----- | ----------- |
-| 0.2 | Platforms | vcraft 1.4.4, Windows `win_amd64`, sdist, `--strip`, modern native API |
+| 0.2 | Platforms | vcraft 1.4.5, Windows `win_amd64`, sdist, `--strip`, modern native API |
 | 0.3 | Interop | QASM import, `cirq` bridge |
 | 0.4 | Quality | coverage, Hypothesis, `stubtest`, fuzzers |
 | 0.5 | Performance | 20 qubits, benchmarks in CI, SIMD/OpenMP |

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Platforms, packaging and Cirq's submodule layout: Windows wheels, a source
 distribution, smaller (stripped) wheels and deep imports, built with vcraft
-1.4.4. No existing name changed.
+1.4.5. No existing name changed.
 
 ### Added
 
@@ -33,7 +33,7 @@ distribution, smaller (stripped) wheels and deep imports, built with vcraft
   and `kron_factor` helpers now return named records, and `NativeTableau.apply`
   takes a `CliffordOp` enum, instead of concatenated buffers and bare integers.
   Both are implementation details of `vqubit_native`.
-- Built with **vcraft 1.4.4**.
+- Built with **vcraft 1.4.5**.
 
 ## [0.1.0] - 2026-10-15
 

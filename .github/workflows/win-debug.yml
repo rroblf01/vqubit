@@ -1,0 +1,58 @@
+# Temporary diagnostic for the Windows build (vcraft 1.4.4). Delete once the
+# Windows path is fixed: it is not part of the build matrix.
+name: win-debug
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/win-debug.yml"
+
+jobs:
+  debug:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: install vcraft
+        run: python -m pip install vcraft==1.4.4
+
+      - name: launcher vs tool, and dry-run
+        shell: pwsh
+        run: |
+          $v = (& vcraft --version 2>&1 | Out-String).Trim()
+          "launcher --version: $v"
+          "::error::DIAG launcher --version => [$v]"
+
+          $d = (python -c "import vcraft_tool,os;print(os.path.dirname(vcraft_tool.__file__))").Trim()
+          $exe = Join-Path $d "bin\vcraft.exe"
+          $exists = Test-Path $exe
+          $tv = (& $exe --version 2>&1 | Out-String).Trim()
+          "tool exe: $exe exists=$exists  --version: $tv"
+          "::error::DIAG tool exe exists=$exists --version => [$tv]"
+
+          $dr = (& vcraft build --release --abi3 3.11 --dry-run 2>&1 | Out-String)
+          $line = ($dr -replace "`r?`n", " | ")
+          if ($line.Length -gt 700) { $line = $line.Substring(0, 700) }
+          "dry-run exit=$LASTEXITCODE"
+          "::error::DIAG dry-run exit=$LASTEXITCODE out=[$line]"
+
+      - name: install V
+        run: vcraft toolchain install
+
+      - name: real build
+        shell: pwsh
+        run: |
+          $b = (& vcraft build --release --abi3 3.11 2>&1 | Out-String)
+          $line = ($b -replace "`r?`n", " | ")
+          if ($line.Length -gt 700) { $line = $line.Substring(0, 700) }
+          "build exit=$LASTEXITCODE"
+          "::error::DIAG build exit=$LASTEXITCODE out=[$line]"
+
+          $whl = (Get-ChildItem dist -Filter *.whl -ErrorAction SilentlyContinue | ForEach-Object Name) -join ","
+          $bd = (Get-ChildItem dist/build -ErrorAction SilentlyContinue | ForEach-Object Name) -join ","
+          "::error::DIAG dist whl=[$whl] dist/build=[$bd]"

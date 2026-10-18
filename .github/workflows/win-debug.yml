@@ -33,14 +33,17 @@ jobs:
         if: always()
         shell: bash
         run: |
+          set +e
+          set +o pipefail
           echo "action outcome: ${{ steps.act.outcome }}"
           echo "=== vcraft --version ==="
-          vcraft --version 2>&1 || true
+          vcraft --version 2>&1
           echo "=== vcraft info ==="
-          vcraft info 2>&1 || true
+          vcraft info 2>&1
           echo "=== build (captured) ==="
           vcraft build --release --abi3 3.11 > out.txt 2>&1
           rc=$?
           echo "exit=$rc"
           cat out.txt
-          head -c 600 out.txt | tr '\n' ' ' | { read -r line; echo "::error::DIAG[${{ matrix.os }}] exit=$rc out=[$line]"; }
+          msg=$(tr '\n' ' ' < out.txt)
+          echo "::error::DIAG[${{ matrix.os }}] exit=$rc out=[${msg:0:600}]"

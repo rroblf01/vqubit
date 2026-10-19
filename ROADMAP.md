@@ -98,6 +98,12 @@ a medida que avanzan los hitos.
 - 0.2.1 (2026-10-19): correctitud del simulador de vector de estado (las medidas
   colapsan el estado), validación de las probabilidades de los canales y
   documentación (página *Diferencias con Cirq*).
+- 0.3.0 (2026-10-19): paridad de comportamiento con Cirq 1.7.0 —las puertas
+  planas pasan a ser puertas de potencia, la igualdad es periódica, los
+  simuladores aceptan las llamadas de Cirq (barridos, pasos, valores esperados,
+  lotes, `_async`) y los cuatro huecos declarados con `NotImplementedError` se
+  cierran—, con el arnés de contrato (1867 comprobaciones) y el de resultados
+  (616) en CI.
 
 ### Objetivo de la 1.0.0
 
@@ -512,6 +518,11 @@ guarantees. It is a living document, updated as milestones land.
 - 0.2.1 (2026-10-19): state-vector simulator correctness (measurements collapse
   the state), channel probability validation, and documentation (the
   *Differences from Cirq* page).
+- 0.3.0 (2026-10-19): behaviour parity with Cirq 1.7.0 -- the plain gates became
+  power gates, value equality is periodic, the simulators answer Cirq's calls
+  (sweeps, steps, expectation values, batches, `_async`) and the four declared
+  `NotImplementedError` gaps are closed -- with the contract harness (1867
+  checks) and the results harness (616) in CI.
 
 ### Goal for 1.0.0
 

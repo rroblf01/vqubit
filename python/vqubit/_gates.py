@@ -22,7 +22,7 @@ from ._linalg import Matrix, identity, kron, to_flat
 from ._ops import GateOperation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._qubits import Qid
-from ._value import value_equality
+from ._value import PeriodicValue, value_equality
 
 _EPS = 1e-12
 _MISSING = object()
@@ -145,6 +145,19 @@ class Gate:
 		return ControlledGate(self, num_controls=num_controls, control_values=values)
 
 	def __pow__(self, power: float) -> Gate:
+		"""Return the gate raised to ``power``.
+
+		Gates that are not power gates raise ``NotImplementedError``, except for
+		the two powers every gate has and Cirq grants too: ``gate ** 1`` is the
+		gate and ``gate ** -1`` is its inverse (``vq.CSWAP ** -1`` is ``CSWAP``
+		again, because ``CSWAP`` is its own inverse).
+		"""
+		if power == 1:
+			return self
+		if power == -1:
+			inverse = self._inverse_()
+			if inverse is not None:
+				return inverse
 		raise NotImplementedError(f"{type(self).__name__} does not support powers")
 
 	def __call__(self, *qubits: Qid | Iterable[Qid]) -> GateOperation:
@@ -185,12 +198,15 @@ class EigenGate(Gate):
 		if self._is_parameterized_():
 			return None
 		result: Matrix = [[0j, 0j], [0j, 0j]]
+		# ``global_shift`` is a global phase, the same for every eigenspace:
+		# ``exp(iπ global_shift exponent)``, as in Cirq.
+		phase = cmath.exp(1j * math.pi * self._global_shift * self._exponent)
 		for eigenvalue, projector in self._eigen_components():
 			if eigenvalue == 0:
 				coefficient = 1.0 if self._exponent == 0 else 0.0
 			else:
 				coefficient = complex(eigenvalue) ** self._exponent
-			coefficient *= cmath.exp(1j * math.pi * self._global_shift * eigenvalue)
+			coefficient *= phase
 			for i in range(2):
 				for j in range(2):
 					result[i][j] += coefficient * projector[i][j]
@@ -208,7 +224,7 @@ class EigenGate(Gate):
 		)
 
 	def _value_equality_values_(self) -> Any:
-		return (self._exponent, self._global_shift)
+		return _power_values(self._exponent, self._global_shift)
 
 	def __pow__(self, power: float) -> EigenGate:
 		return type(self)(exponent=self._exponent * power, global_shift=self._global_shift)
@@ -226,10 +242,15 @@ class EigenGate(Gate):
 def _pow_coefficients(exponent: float, global_shift: float) -> tuple[complex, complex]:
 	"""Return the ``A`` (eigenvalue ``+1``) and ``B`` (eigenvalue ``-1``) coefficients.
 
+	Cirq's model: the eigenspace with half turns ``θ`` carries
+	``exp(iπ (θ + global_shift) exponent)``, so the shift is a *global* phase
+	``exp(iπ global_shift exponent)`` scaled by the exponent (it hits both
+	eigenspaces equally), not an extra phase that depends on the eigenvalue.
 	``complex(-1.0) ** exponent`` gives exactly ``+-1`` for integer exponents, so
 	this matches the eigencomponent expansion bit for bit.
 	"""
-	return cmath.exp(1j * math.pi * global_shift), complex(-1.0) ** exponent * cmath.exp(-1j * math.pi * global_shift)
+	phase = cmath.exp(1j * math.pi * global_shift * exponent)
+	return phase, complex(-1.0) ** exponent * phase
 
 
 def _xpow_entries(exponent: float) -> tuple[complex, complex]:
@@ -260,6 +281,20 @@ def _exponent_suffix(exponent: Any) -> str:
 	if abs(float(exponent) - 1.0) < _EPS:
 		return ""
 	return f"^{_clean(exponent)}"
+
+
+def _power_values(exponent: Any, global_shift: Any, shifts: tuple[float, ...] = (0.0, 1.0)) -> tuple[Any, ...]:
+	"""The ``_value_equality_values_`` of a power gate, as Cirq computes them.
+
+	A power gate *is* its eigenphases, and they are only defined modulo their
+	period: Cirq compares ``PeriodicValue(exponent * (global_shift + θ), 2)`` for
+	every half turn ``θ`` of the gate, which is what makes ``cirq.X ** 3 ==
+	cirq.X`` and ``cirq.CNOT ** -1 == cirq.CNOT``. A parameterized gate is
+	compared as it is written, exactly as Cirq does.
+	"""
+	if is_symbolic(exponent) or is_symbolic(global_shift):
+		return (exponent, global_shift)
+	return tuple(PeriodicValue(exponent * (global_shift + shift), 2.0) for shift in shifts)
 
 
 def is_plain_gate(gate: Any) -> bool:
@@ -401,6 +436,9 @@ class HPowGate(EigenGate):
 class _PowGate(Gate):
 	"""Shared machinery for the multi-qubit power gates."""
 
+	#: The half turns (the ``θ`` in ``λ = exp(iπθ)``) of the gate's eigenspaces.
+	_eigen_shifts: tuple[float, ...] = (0.0, 1.0)
+
 	def __init__(self, *, exponent: Any = 1.0, global_shift: Any = 0.0) -> None:
 		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
 		self._global_shift = global_shift if is_symbolic(global_shift) else float(global_shift)
@@ -417,7 +455,7 @@ class _PowGate(Gate):
 		return is_symbolic(self._exponent) or is_symbolic(self._global_shift)
 
 	def _value_equality_values_(self) -> Any:
-		return (self._exponent, self._global_shift)
+		return _power_values(self._exponent, self._global_shift, self._eigen_shifts)
 
 	def __pow__(self, power: float) -> _PowGate:
 		return type(self)(exponent=self._exponent * power, global_shift=self._global_shift)
@@ -452,7 +490,7 @@ class _ControlledPowGate(_PowGate):
 		return self._NumControls + 1
 
 	def _unitary_(self) -> Matrix | None:
-		sub = self._SubGate(exponent=self._exponent, global_shift=self._global_shift)._unitary_()
+		sub = self._SubGate(exponent=self._exponent, global_shift=0.0)._unitary_()
 		if sub is None:
 			return None
 		block = len(sub)
@@ -462,6 +500,12 @@ class _ControlledPowGate(_PowGate):
 		for i in range(block):
 			for j in range(block):
 				matrix[offset + i][offset + j] = sub[i][j]
+		if self._global_shift:
+			# A global phase hits the *whole* gate, the control block included:
+			# ``cirq.CZPowGate(0.5, global_shift=0.25)`` is a global phase times
+			# ``CZ ** 0.5``, not a phase on the controlled block alone.
+			phase = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
+			matrix = [[entry * phase for entry in row] for row in matrix]
 		return matrix
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
@@ -569,6 +613,9 @@ class SwapPowGate(_PowGate):
 class ISwapPowGate(_PowGate):
 	"""A power of the ``iSWAP`` gate."""
 
+	#: ``iSWAP`` has a ``+1`` and two half-turn eigenspaces: ``(0, 0.5, -0.5)``.
+	_eigen_shifts = (0.0, 0.5, -0.5)
+
 	def _num_qubits_(self) -> int:
 		return 2
 
@@ -647,8 +694,18 @@ class PhasedXPowGate(Gate):
 			global_shift=resolve_value(self._global_shift, resolver),
 		)
 
+	@property
+	def _canonical_exponent(self) -> Any:
+		"""``exponent`` folded into ``[0, 2)``, all the gate actually depends on."""
+		if is_symbolic(self._exponent):
+			return self._exponent
+		return self._exponent % 2
+
 	def _value_equality_values_(self) -> Any:
-		return (self._phase_exponent, self._exponent, self._global_shift)
+		# Cirq compares the *canonical* exponent here, so
+		# ``PhasedXPowGate(phase_exponent=0, exponent=3)`` equals the exponent-1
+		# gate, just like ``X ** 3 == X``.
+		return (self._phase_exponent, self._canonical_exponent, self._global_shift)
 
 	def __pow__(self, power: float) -> PhasedXPowGate:
 		return PhasedXPowGate(
@@ -1040,12 +1097,17 @@ class _PauliProductPowGate(Gate):
 	_letter = "X"
 	_symbols: tuple[str, ...] = ()
 
-	def __init__(self, *, exponent: Any = 1.0) -> None:
+	def __init__(self, *, exponent: Any = 1.0, global_shift: Any = 0.0) -> None:
 		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
+		self._global_shift = global_shift if is_symbolic(global_shift) else float(global_shift)
 
 	@property
 	def exponent(self) -> Any:
 		return self._exponent
+
+	@property
+	def global_shift(self) -> Any:
+		return self._global_shift
 
 	def _num_qubits_(self) -> int:
 		return 2
@@ -1055,28 +1117,32 @@ class _PauliProductPowGate(Gate):
 			return None
 		pauli = kron(_PAULI_2X2[self._letter], _PAULI_2X2[self._letter])
 		# Eigenvalues +1 and -1, so the power is a projection combination with no
-		# global phase: at exponent 1 this is the Pauli product itself.
+		# global phase of its own; ``global_shift`` adds one, as in Cirq.
 		phase = cmath.exp(1j * math.pi * self._exponent)
 		a = (1 + phase) / 2
 		b = (1 - phase) / 2
-		return [[(a if i == j else 0j) + b * pauli[i][j] for j in range(4)] for i in range(4)]
+		shift = cmath.exp(1j * math.pi * self._exponent * self._global_shift) if self._global_shift else 1 + 0j
+		return [[shift * ((a if i == j else 0j) + b * pauli[i][j]) for j in range(4)] for i in range(4)]
 
 	def _is_parameterized_(self) -> bool:
-		return is_symbolic(self._exponent)
+		return is_symbolic(self._exponent) or is_symbolic(self._global_shift)
 
 	def _resolve_parameters_(self, resolver: ParamResolver) -> _PauliProductPowGate:
 		if not self._is_parameterized_():
 			return self
-		return type(self)(exponent=resolve_value(self._exponent, resolver))
+		return type(self)(
+			exponent=resolve_value(self._exponent, resolver),
+			global_shift=resolve_value(self._global_shift, resolver),
+		)
 
 	def _value_equality_values_(self) -> Any:
-		return (self._exponent,)
+		return _power_values(self._exponent, self._global_shift)
 
 	def __pow__(self, power: float) -> _PauliProductPowGate:
-		return type(self)(exponent=self._exponent * power)
+		return type(self)(exponent=self._exponent * power, global_shift=self._global_shift)
 
 	def _inverse_(self) -> _PauliProductPowGate:
-		return type(self)(exponent=-self._exponent)
+		return type(self)(exponent=-self._exponent, global_shift=self._global_shift)
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		# The exponent rides on the last symbol only, as in Cirq: ``XX**0.5``
@@ -1085,6 +1151,9 @@ class _PauliProductPowGate(Gate):
 
 	def __str__(self) -> str:
 		return f"{type(self).__name__}(exponent={_describe(self._exponent)})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.{type(self).__name__}(exponent={self._exponent!r}, global_shift={self._global_shift!r})"
 
 
 class XXPowGate(_PauliProductPowGate):

@@ -30,6 +30,16 @@ a medida que avanzan los hitos.
 > **diagramas** (1789 comprobaciones, 4 toleradas) y la auditoría destapa dos
 > huecos nuevos, anotados en el eje de paridad: la **igualdad periódica** de Cirq
 > y su *gateset* de **átomos neutros**.
+>
+> **Actualización (0.3, 2026-10-19, segunda).** Cerrados esos dos huecos: la
+> igualdad de valor es **periódica** como la de Cirq (con `PeriodicValue`; de paso
+> salieron la **fase global** que `global_shift` debía ser y `vq.CSWAP ** ±1`, que
+> no existían) y el *gateset* de **átomos neutros** es el de Cirq, con las
+> familias de puertas aceptando un **tipo**. El arnés gana la sección `equality`
+> (78 comprobaciones) y pasa a **1867** comprobaciones con **4** divergencias
+> toleradas; ese trabajo destapa a su vez la igualdad de las puertas de
+> **Clifford** (comparan matriz, no *tableau*) y el **exponente canónico** de
+> `PhasedXZGate`, los dos anotados en el eje de paridad con su criterio.
 
 ### Principios
 
@@ -75,8 +85,8 @@ La paridad no se declara: se comprueba. Tres artefactos, todos en CI:
 | Artefacto | Qué comprueba | Dónde corre |
 | --------- | ------------- | ----------- |
 | `tests/test_cirq_parity.py` | que los nombres públicos de `cirq-core` existen aquí y que los submódulos se reflejan (`vqubit.work`, `vqubit.vis`, …) | job `test` |
-| `benchmarks/verify.py` | que los **resultados** coinciden: unitarias, canales, simulación, muestreo, descomposiciones, KAK, Clifford | job `cirq-parity` |
-| `benchmarks/parity.py` | que el **contrato** coincide: `**` disponible justo cuando Cirq lo permite, misma unitaria resultante, misma retícula de `isinstance`, mismas clases y mismos diagramas de texto | job `cirq-parity` |
+| `benchmarks/verify.py` | que los **resultados** coinciden: unitarias, el desplazamiento global (`global_shift`), canales, simulación, muestreo, descomposiciones, KAK, Clifford | job `cirq-parity` |
+| `benchmarks/parity.py` | que el **contrato** coincide: `**` disponible justo cuando Cirq lo permite, misma unitaria resultante, misma retícula de `isinstance`, mismas clases, mismos diagramas de texto y misma igualdad de valor (`g ** k == g`) | job `cirq-parity` |
 
 `benchmarks/parity_tolerated.toml` es la lista de divergencias aceptadas. Cada
 entrada exige un `reason` (no vacío) y un `plan` (`permanent`, o el hito en el que
@@ -123,21 +133,48 @@ Las divergencias `permanent` están explicadas en
       `plan = "0.3"` de la lista de toleradas desaparecen; el arnés gana la
       sección `diagram` (56 comprobaciones) y pasa a **1789** comprobaciones con
       **4** divergencias toleradas.
-- [ ] **Igualdad de valor periódica**, como la de Cirq. Cirq compara las fases
-      propias módulo el periodo de la puerta (`PeriodicValue`), así que
-      `cirq.X ** 3 == cirq.X`, `cirq.CNOT ** -1 == cirq.CNOT` y
-      `cirq.H ** -1 == cirq.H` son `True`; vqubit compara el exponente en crudo y
-      las tres son `False` (las unitarias coinciden). **Criterio:** una sección
-      `equality` en `benchmarks/parity.py` que compare `g ** k == g` con Cirq
-      para `k ∈ {2, 3, -1}` y salga con 0 divergencias inesperadas. Mientras
-      tanto queda documentado en `docs/{es,en}/guide/cirq-differences.md`.
-- [ ] **`is_native_neutral_atom_gate` frente al *gateset* de Cirq.** Cirq acepta
-      cualquier potencia entera de `CNOT`/`CCX`/`CZ`/`CCZ`, las familias
-      paralelas de `Z`/`X`/`Y`/`PhasedX` y `MeasurementGate`, así que
-      `is_native_neutral_atom_gate(cirq.X)` es `True` y
-      `(cirq.CZ ** 0.5)` es `False`; vqubit acepta cualquier `CZPowGate`
-      (incluida la raíz cuadrada) y rechaza `X`. **Criterio:** un test unitario
-      que fije esas dos respuestas al *gateset* de Cirq.
+- [x] **Igualdad de valor periódica**, como la de Cirq. Las puertas de potencia
+      comparan ahora sus fases propias módulo el periodo de la puerta
+      (`PeriodicValue(exponente · (global_shift + θ), 2)`), así que `vq.X ** 3 ==
+      vq.X`, `vq.CNOT ** -1 == vq.CNOT` y `vq.Z ** 0.5 == vq.Z ** 2.5`, como en
+      Cirq, mientras que `vq.ISWAP ** -1 != vq.ISWAP` (su segundo espacio propio
+      está a media vuelta). La igualdad de `PhasedXPowGate` usa el exponente
+      canónico módulo 2, también como Cirq. Ese trabajo destapó y arregló dos
+      cosas de paso: `global_shift` era un desplazamiento por espacio propio en
+      vez de la **fase global** `exp(iπ·s·e)` que Cirq documenta (la unitaria
+      coincidía solo con `s=0`, que es el valor por defecto), y `vq.CSWAP ** 1`
+      / `** -1` no existían aunque toda puerta los tiene. **Medido:** la sección
+      `equality` del arnés (78 comprobaciones, `k ∈ {2, 3, -1}` sobre las 26
+      puertas compartidas) sale con 0 divergencias inesperadas, y la sección
+      `global shift` de `benchmarks/verify.py` compara exactamente las unitarias
+      de **17** familias de puertas contra Cirq para
+      `exponente ∈ {0.3, 0.5, 1, -1, 3}` × `global_shift ∈ {0, ±0.25, ±0.5, 1}`
+      (**510** comprobaciones).
+- [x] **`is_native_neutral_atom_gate` frente al *gateset* de Cirq.** Se replica
+      el *gateset* de `cirq.neutral_atom_devices`: potencias enteras de
+      `CNOT`/`CCX`/`CZ`/`CCZ`, las familias paralelas de `X`/`Y`/`Z`/`PhasedX`, y
+      medida e identidad. Así `is_native_neutral_atom_gate(vq.X)` es `True` y
+      `(vq.CZ ** 0.5)` es `False`, como en Cirq. Para escribirlo hizo falta que
+      las familias acepten un **tipo** de puerta (`ParallelGateFamily(ZPowGate)`
+      significa *cualquier* `ZPowGate`, como en Cirq) y que
+      `AnyIntegerPowerGateFamily` no reviente con un exponente simbólico.
+      **Medido:** 27 comprobaciones de puertas y 5 de operaciones coinciden con
+      Cirq una a una, fijadas en `tests/test_interop_protocols.py`.
+- [ ] **Igualdad de las puertas de Clifford.** `vq.CZSWAP` y `vq.CXSWAP`
+      comparan su **matriz** (`_value_equality_values_` es la matriz y el número
+      de qubits) mientras que Cirq compara el *tableau*, así que
+      `vq.CZSWAP ** 3 != vq.CZSWAP` por el ruido de coma flotante de la matriz.
+      Son las dos puertas que la sección `equality` del arnés exime
+      (`EQUALITY_EXEMPT`). **Criterio:** comparar el *tableau*, con un test que
+      fije `vq.CZSWAP ** 3 == vq.CZSWAP`, y quitarlas de `EQUALITY_EXEMPT` (el
+      test del arnés fija el conjunto, así que la exención no puede crecer en
+      silencio).
+- [ ] **Exponente canónico de `PhasedXZGate`.** Cirq canoniza
+      (`_canonical()`) y compara `PeriodicValue` sobre los tres exponentes, así
+      que `cirq.PhasedXZGate(x_exponent=3, z_exponent=1.5,
+      axis_phase_exponent=0.75) == cirq.PhasedXZGate(1, 0.5, 0.25)`; vqubit compara
+      los tres tal cual, así que son distintas. **Criterio:** la canonización de
+      Cirq, con las dos puertas de arriba comparadas en un test.
 - [ ] Implementar los stubs pendientes: `decompose_clifford_tableau_to_operations`,
       `ResetChannel` multiqubit, `CliffordTableau.kron/factor/reindex` y
       `StabilizerStateChForm.apply_operation` (hoy es una cáscara que no aplica
@@ -313,6 +350,16 @@ guarantees. It is a living document, updated as milestones land.
 > gains a **diagram** section (1789 checks, 4 tolerated) and the audit uncovers
 > two new gaps, noted on the parity axis: Cirq's **periodic equality** and its
 > **neutral-atom gateset**.
+>
+> **Update (0.3, 2026-10-19, second).** Both gaps are closed: value equality is
+> **periodic** as Cirq's is (through `PeriodicValue`; that work also turned up the
+> **global phase** that `global_shift` should have been and `vq.CSWAP ** ±1`,
+> which did not exist) and the **neutral-atom gateset** is Cirq's, with the gate
+> families accepting a **type**. The harness gains the `equality` section (78
+> checks) and stands at **1867** checks with **4** tolerated divergences; the work
+> in turn uncovers **Clifford** gate equality (they compare matrices, not the
+> tableau) and the **canonical exponent** of `PhasedXZGate`, both noted on the
+> parity axis with their criterion.
 
 ### Principles
 
@@ -357,8 +404,8 @@ Parity is not declared: it is checked. Three artifacts, all in CI:
 | Artifact | What it checks | Where it runs |
 | -------- | -------------- | ------------- |
 | `tests/test_cirq_parity.py` | that `cirq-core`'s public names exist here, and that submodules are mirrored (`vqubit.work`, `vqubit.vis`, …) | `test` job |
-| `benchmarks/verify.py` | that the **numbers** agree: unitaries, channels, simulation, sampling, decompositions, KAK, Clifford | `cirq-parity` job |
-| `benchmarks/parity.py` | that the **contract** agrees: `**` available exactly when Cirq allows it, same resulting unitary, same `isinstance` lattice, same classes and same text diagrams | `cirq-parity` job |
+| `benchmarks/verify.py` | that the **numbers** agree: unitaries, the global shift (`global_shift`), channels, simulation, sampling, decompositions, KAK, Clifford | `cirq-parity` job |
+| `benchmarks/parity.py` | that the **contract** agrees: `**` available exactly when Cirq allows it, same resulting unitary, same `isinstance` lattice, same classes, same text diagrams and the same value equality (`g ** k == g`) | `cirq-parity` job |
 
 `benchmarks/parity_tolerated.toml` is the list of accepted divergences. Every
 entry needs a non-empty `reason` and a `plan` (`permanent`, or the milestone that
@@ -404,21 +451,45 @@ blanket. The `permanent` divergences are explained in
       where Cirq requires it. **Measured:** the **12** `plan = "0.3"` entries in
       the tolerated list disappear; the harness gains the `diagram` section (56
       checks) and stands at **1789** checks with **4** tolerated divergences.
-- [ ] **Periodic value equality**, as Cirq has it. Cirq compares the eigenphases
-      modulo the gate's period (`PeriodicValue`), so `cirq.X ** 3 == cirq.X`,
-      `cirq.CNOT ** -1 == cirq.CNOT` and `cirq.H ** -1 == cirq.H` are all `True`;
-      vqubit compares the raw exponent and all three are `False` (the unitaries
-      agree). **Criterion:** an `equality` section in `benchmarks/parity.py` that
-      compares `g ** k == g` with Cirq for `k ∈ {2, 3, -1}` and reports 0
-      unexpected divergences. Until then it is documented in
-      `docs/{es,en}/guide/cirq-differences.md`.
-- [ ] **`is_native_neutral_atom_gate` against Cirq's gateset.** Cirq accepts any
-      integer power of `CNOT`/`CCX`/`CZ`/`CCZ`, the parallel families of
-      `Z`/`X`/`Y`/`PhasedX` and `MeasurementGate`, so
-      `is_native_neutral_atom_gate(cirq.X)` is `True` and `(cirq.CZ ** 0.5)` is
-      `False`; vqubit accepts any `CZPowGate` (the square root included) and
-      rejects `X`. **Criterion:** a unit test pinning those two answers to
-      Cirq's gateset.
+- [x] **Periodic value equality**, as Cirq has it. The power gates now compare
+      their eigenphases modulo the gate's period
+      (`PeriodicValue(exponent · (global_shift + θ), 2)`), so `vq.X ** 3 == vq.X`,
+      `vq.CNOT ** -1 == vq.CNOT` and `vq.Z ** 0.5 == vq.Z ** 2.5`, as in Cirq,
+      while `vq.ISWAP ** -1 != vq.ISWAP` (its second eigenspace sits at half a
+      turn). `PhasedXPowGate` equality compares the canonical exponent modulo 2,
+      also as Cirq. That work turned up and fixed two things on the way:
+      `global_shift` was a per-eigenspace shift instead of the **global phase**
+      `exp(iπ·s·e)` Cirq documents (the unitaries agreed only at `s=0`, the
+      default), and `vq.CSWAP ** 1` / `** -1` did not exist although every gate
+      has them. **Measured:** the harness's `equality` section (78 checks, `k ∈
+      {2, 3, -1}` over the 26 shared gates) reports 0 unexpected divergences, and
+      the `global shift` section of `benchmarks/verify.py` compares the unitaries
+      of **17** gate families against Cirq *exactly* for
+      `exponent ∈ {0.3, 0.5, 1, -1, 3}` × `global_shift ∈ {0, ±0.25, ±0.5, 1}`
+      (**510** checks).
+- [x] **`is_native_neutral_atom_gate` against Cirq's gateset.** Cirq's
+      `neutral_atom_devices` gateset is replicated: integer powers of
+      `CNOT`/`CCX`/`CZ`/`CCZ`, the parallel families of `X`/`Y`/`Z`/`PhasedX`, and
+      measurement and identity. So `is_native_neutral_atom_gate(vq.X)` is `True`
+      and `(vq.CZ ** 0.5)` is `False`, as in Cirq. Writing it needed the gate
+      families to accept a **type** (`ParallelGateFamily(ZPowGate)` means *any*
+      `ZPowGate`, as in Cirq) and `AnyIntegerPowerGateFamily` not to blow up on a
+      symbolic exponent. **Measured:** 27 gate cases and 5 operation cases agree
+      with Cirq one by one, pinned in `tests/test_interop_protocols.py`.
+- [ ] **Clifford gate equality.** `vq.CZSWAP` and `vq.CXSWAP` compare their
+      **matrix** (`_value_equality_values_` is the matrix and the qubit count)
+      where Cirq compares the tableau, so `vq.CZSWAP ** 3 != vq.CZSWAP` because of
+      the matrix's floating-point noise. They are the two gates the harness's
+      `equality` section exempts (`EQUALITY_EXEMPT`). **Criterion:** compare the
+      tableau, with a test pinning `vq.CZSWAP ** 3 == vq.CZSWAP`, and drop them
+      from `EQUALITY_EXEMPT` (the harness test pins the set, so the exemption
+      cannot grow unnoticed).
+- [ ] **`PhasedXZGate`'s canonical exponent.** Cirq canonicalises
+      (`_canonical()`) and compares `PeriodicValue` over the three exponents, so
+      `cirq.PhasedXZGate(x_exponent=3, z_exponent=1.5,
+      axis_phase_exponent=0.75) == cirq.PhasedXZGate(1, 0.5, 0.25)`; vqubit compares
+      the three as they are, so the two differ. **Criterion:** Cirq's
+      canonicalisation, with the two gates above compared in a test.
 - [ ] Implement the remaining stubs: `decompose_clifford_tableau_to_operations`,
       multi-qubit `ResetChannel`, `CliffordTableau.kron/factor/reindex` and
       `StabilizerStateChForm.apply_operation` (a shell that applies no gates

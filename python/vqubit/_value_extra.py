@@ -9,7 +9,7 @@ from abc import ABCMeta
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping, Sequence
 from typing import Any
 
-from ._value import value_equality
+from ._value import PeriodicValue, value_equality
 
 TParamKey = Any
 TParamVal = Any
@@ -218,21 +218,6 @@ class Timestamp:
 
 	def __repr__(self) -> str:
 		return f"vqubit.Timestamp(picos={self._picos})"
-
-
-@value_equality
-class PeriodicValue:
-	"""A value that is periodic with a given period."""
-
-	def __init__(self, value: float, period: float) -> None:
-		self.value = float(value)
-		self.period = float(period)
-
-	def _value_equality_values_(self) -> Any:
-		return (self.value % self.period, self.period)
-
-	def __repr__(self) -> str:
-		return f"vqubit.PeriodicValue({self.value!r}, {self.period!r})"
 
 
 import enum  # noqa: E402

@@ -218,6 +218,15 @@ def text_diagram(module: types.ModuleType, gate: Any) -> str | None:
 		return None
 
 
+def same_value(gate: Any, power: int) -> bool | None:
+	"""Whether ``gate ** power == gate``, or ``None`` when ``**`` is refused."""
+	try:
+		raised = gate**power
+	except Exception:
+		return None
+	return bool(raised == gate)
+
+
 # --- checks ------------------------------------------------------------------
 
 
@@ -350,6 +359,40 @@ def check_diagram(report: Report) -> None:
 			report.check("diagram", f"{name}**0.5", got is not None and got == want, f"cirq {want!r} vs vqubit {got!r}")
 
 
+#: Gates whose value equality is a different contract entirely -- the Clifford
+#: gates compare their tableau, and vqubit compares their matrices -- so the
+#: ``equality`` section skips them instead of pretending to check them. Recorded
+#: in ``ROADMAP.md``: until it is closed, ``vq.CZSWAP ** 3 != vq.CZSWAP`` where
+#: Cirq says they are equal.
+EQUALITY_EXEMPT = frozenset({"CZSWAP", "CXSWAP"})
+
+#: Powers to use for the equality check: two whole turns, one more (which the
+#: period folds back) and the inverse (which does not fold for every gate).
+EQUALITY_POWERS = (2, 3, -1)
+
+
+def check_equality(report: Report) -> None:
+	"""``gate ** power == gate`` must answer as Cirq answers.
+
+	A power gate *is* its eigenphases, and Cirq compares them modulo their period
+	(through ``PeriodicValue``), which is why ``cirq.X ** 3 == cirq.X`` and
+	``cirq.CNOT ** -1 == cirq.CNOT`` while ``cirq.ISWAP ** -1 != cirq.ISWAP``.
+	When neither library defines the power the check passes: whether ``**`` is
+	available at all is the ``power`` section's business.
+	"""
+	shared = gate_instances(cirq).keys() & gate_instances(vq).keys()
+	for name in sorted(shared - EQUALITY_EXEMPT):
+		for power in EQUALITY_POWERS:
+			want = same_value(getattr(cirq, name), power)
+			got = same_value(getattr(vq, name), power)
+			if want is None or got is None:
+				report.check(
+					"equality", f"{name}**{power}", want is got, "one library defines the power, the other refuses it"
+				)
+				continue
+			report.check("equality", f"{name}**{power}", got == want, f"cirq {want} vs vqubit {got}")
+
+
 SECTIONS: dict[str, Callable[[Report], None]] = {
 	"namespace": check_namespace,
 	"unitary": check_unitary,
@@ -358,6 +401,7 @@ SECTIONS: dict[str, Callable[[Report], None]] = {
 	"isinstance": check_isinstance,
 	"class": check_classes,
 	"diagram": check_diagram,
+	"equality": check_equality,
 }
 
 

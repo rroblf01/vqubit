@@ -90,23 +90,29 @@ assert vq.I ** 0.5 == vq.I
 
 The historical names `vq.CZGate`, `vq.CNOTGate`, `vq.SWAPGate`, `vq.CCXGate` and
 `vq.ISWAPGate` live on as **aliases** of the power classes, so code that mentions
-them (in an `isinstance`, say) keeps working. `vq.FREDKIN` and `vq.CSWAP` are
-deliberately not powerable: neither is `cirq.CSWAP`.
+them (in an `isinstance`, say) keeps working.
 
-What does change is **equality**. Cirq compares the eigenphases modulo the gate's
-period, so `cirq.X ** 3 == cirq.X` and `cirq.CNOT ** -1 == cirq.CNOT` are `True`;
-vqubit compares the raw exponent, so both are `False` even though the unitary is
-the same. It is a known parity gap, with its closing criterion in `ROADMAP.md`:
+**Equality** is Cirq's too: it compares the eigenphases modulo the gate's period,
+so `vq.X ** 3 == vq.X` and `vq.CNOT ** -1 == vq.CNOT`, as in Cirq. `vq.ISWAP` is
+the case that shows it is not a blunt "modulo 2" on the exponent: one of its
+eigenspaces sits at half a turn, so `vq.ISWAP ** -1 != vq.ISWAP`.
 
 ```python
 import vqubit as vq
 
-assert vq.X ** 3 != vq.X  # cirq.X ** 3 == cirq.X
-assert vq.CNOT ** -1 != vq.CNOT  # cirq.CNOT ** -1 == cirq.CNOT
+assert vq.X ** 3 == vq.X
+assert vq.CNOT ** -1 == vq.CNOT
+assert vq.ISWAP ** -1 != vq.ISWAP
 ```
 
-When the exponent can wrap around the period, compare unitaries (`vq.unitary`)
-instead of gates.
+`vq.FREDKIN` and `vq.CSWAP` do not take fractional powers, exactly like
+`cirq.CSWAP`; they do take the two powers every gate has, `** 1` (the gate
+itself) and `** -1` (its inverse, which for CSWAP is CSWAP again).
+
+One exception remains: the **Clifford** gates (`CZSWAP`, `CXSWAP`) compare their
+matrix rather than their tableau, so `vq.CZSWAP ** 3` is not equal to
+`vq.CZSWAP` even though Cirq says it is (the matrix's floating-point noise keeps
+them apart). It is recorded, with its closing criterion, in `ROADMAP.md`.
 
 ## The simulators take only `seed`
 

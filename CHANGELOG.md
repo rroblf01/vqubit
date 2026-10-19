@@ -16,12 +16,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The plain
   gates themselves are the power gates now: see *Changed*.
 - **A Cirq contract harness**, `benchmarks/parity.py`, run in the `cirq-parity`
-  CI job: it checks names, `**`, `isinstance`, gate classes and text diagrams
-  against Cirq, and keeps the accepted divergences in
+  CI job: it checks names, `**`, `isinstance`, gate classes, text diagrams and
+  value equality against Cirq, and keeps the accepted divergences in
   `benchmarks/parity_tolerated.toml`, where an entry that stops silencing a real
   divergence fails the build.
 
 ### Changed
+
+- **Value equality is periodic, the way Cirq's is.** A power gate now compares
+  its eigenphases modulo the gate's period, so `vq.X ** 3 == vq.X`,
+  `vq.CNOT ** -1 == vq.CNOT` and `vq.Z ** 0.5 == vq.Z ** 2.5`, exactly as in
+  Cirq, while `vq.ISWAP ** -1 != vq.ISWAP` (its second eigenspace sits at half a
+  turn) and `vq.rx(0.3) ** 3 != vq.rx(0.3)`, as before.
+  `PhasedXPowGate` compares the canonical exponent modulo 2, and
+  `vqubit.PeriodicValue` normalizes its value on the way in, so
+  `PeriodicValue(3, 2) == PeriodicValue(1, 2)` and both read `1`.
+- **The gate families accept a gate *type*,** as Cirq's do:
+  `ParallelGateFamily(vqubit.ZPowGate)` now means *any* `ZPowGate` (an instance
+  still means that one gate), `AnyIntegerPowerGateFamily(vqubit.CZPowGate)` takes
+  the class as well as an instance and no longer raises on a symbolic exponent,
+  and `ParallelGateFamily` takes Cirq's `max_parallel_allowed` (its `name` and
+  `description` are keyword-only now, as in Cirq).
+- **`AnyUnitaryGateFamily` takes `num_qubits` first, as Cirq does.**
+  `AnyUnitaryGateFamily(2)` is now the two-qubit unitary gates, where it used to
+  set the family's name to the integer `2` and accept everything.
 
 - **The plain gates *are* the power gates, as in Cirq.** `vq.CZ` is now
   `CZPowGate(exponent=1)`, `vq.CNOT`/`vq.CX` are `CXPowGate`, `vq.SWAP` is
@@ -41,6 +59,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`global_shift` did not do what Cirq documents.** It was applied as a phase
+  that depended on the eigenvalue (`exp(iπ·s)` on the `+1` block, `exp(-iπ·s)` on
+  the `-1` one) instead of the **global phase** `exp(iπ·s·e)`, so
+  `vq.ZPowGate(exponent=0.5, global_shift=0.25)` — and every controlled gate built
+  on it — differed from Cirq, and `XX`/`YY`/`ZZ` had no `global_shift` argument at
+  all. All 17 power-gate families now agree with Cirq for every exponent and
+  shift; the new `global shift` section of `benchmarks/verify.py` compares them
+  exactly (510 checks).
+- **`vq.CSWAP ** 1` and `** -1` raised**, even though every gate has those two
+  powers: `gate ** 1` is the gate itself and `gate ** -1` its inverse, as in
+  Cirq's `Gate.__pow__`. Fractional powers still raise, like `cirq.CSWAP`.
+- **`is_native_neutral_atom_gate` accepted any `CZPowGate`** — the square root
+  included — and rejected `X`. It now answers against Cirq's gateset: integer
+  powers of `CNOT`/`CCX`/`CZ`/`CCZ`, the parallel families of
+  `X`/`Y`/`Z`/`PhasedX`, and measurement and identity.
 - **JSON wrote the plain gates under their old type names.** `to_json(vq.CNOT)`
   produced `{"cirq_type": "CNOTGate"}`, where Cirq writes
   `{"cirq_type": "CXPowGate", "exponent": 1.0, "global_shift": 0.0}`, so the two

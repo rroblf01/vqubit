@@ -91,24 +91,29 @@ assert vq.I ** 0.5 == vq.I
 
 Los nombres históricos `vq.CZGate`, `vq.CNOTGate`, `vq.SWAPGate`, `vq.CCXGate` y
 `vq.ISWAPGate` siguen existiendo como **alias** de las clases de potencia, así que
-el código que los mencione (por ejemplo en un `isinstance`) no se rompe. `vq.FREDKIN`
-y `vq.CSWAP` no admiten `**` a propósito: `cirq.CSWAP` tampoco.
+el código que los mencione (por ejemplo en un `isinstance`) no se rompe.
 
-Lo que sí cambia es la **igualdad**. Cirq compara las fases propias módulo el
-periodo de la puerta, así que `cirq.X ** 3 == cirq.X` y
-`cirq.CNOT ** -1 == cirq.CNOT` son `True`; vqubit compara el exponente tal cual,
-así que ambas son `False` aunque la unitaria sea la misma. Es un hueco de paridad
-conocido, con su criterio de cierre en `ROADMAP.md`:
+La **igualdad** también es la de Cirq: compara las fases propias módulo el periodo
+de la puerta, así que `vq.X ** 3 == vq.X` y `vq.CNOT ** -1 == vq.CNOT`, como en
+Cirq. `vq.ISWAP` es el caso que demuestra que no es un «módulo 2» a lo bruto: uno
+de sus espacios propios está a media vuelta, así que `vq.ISWAP ** -1 != vq.ISWAP`.
 
 ```python
 import vqubit as vq
 
-assert vq.X ** 3 != vq.X  # cirq.X ** 3 == cirq.X
-assert vq.CNOT ** -1 != vq.CNOT  # cirq.CNOT ** -1 == cirq.CNOT
+assert vq.X ** 3 == vq.X
+assert vq.CNOT ** -1 == vq.CNOT
+assert vq.ISWAP ** -1 != vq.ISWAP
 ```
 
-Cuando el exponente pueda dar la vuelta al periodo, compara unitarias
-(`vq.unitary`) en vez de puertas.
+`vq.FREDKIN` y `vq.CSWAP` no admiten potencias fraccionarias, igual que
+`cirq.CSWAP`; sí admiten las dos que toda puerta tiene, `** 1` (la propia puerta)
+y `** -1` (su inversa, que en CSWAP es ella misma).
+
+Queda una excepción: las puertas de **Clifford** (`CZSWAP`, `CXSWAP`) comparan su
+matriz y no su *tableau*, así que `vq.CZSWAP ** 3` no es igual a `vq.CZSWAP`
+aunque Cirq diga que sí (el ruido de coma flotante de la matriz los separa). Está
+anotado con su criterio de cierre en `ROADMAP.md`.
 
 ## Los simuladores solo aceptan `seed`
 

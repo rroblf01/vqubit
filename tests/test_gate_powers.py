@@ -87,9 +87,15 @@ def test_rotations_scale_their_angle(factory: Callable[[float], vq.Gate], gate_c
 
 @pytest.mark.parametrize("name", ["FREDKIN", "CSWAP"])
 def test_fredkin_is_not_powerable_like_in_cirq(name: str) -> None:
-	# cirq.CSWAP ** 0.5 raises TypeError; vqubit says so explicitly.
-	with pytest.raises(NotImplementedError):
-		getattr(vq, name) ** 0.5
+	gate = getattr(vq, name)
+	# ``cirq.CSWAP ** 0.5`` raises TypeError; vqubit says so explicitly. The two
+	# powers every gate has do work, as in Cirq: ``** 1`` is the gate and
+	# ``** -1`` its inverse, which for CSWAP is CSWAP again.
+	assert gate**1 is gate
+	assert gate**-1 == gate
+	for power in (0.5, 2, -2, 0):
+		with pytest.raises(NotImplementedError):
+			gate**power
 
 
 def test_a_symbolic_power_stays_symbolic_until_resolved() -> None:
@@ -131,20 +137,38 @@ def test_the_plain_gate_class_names_are_aliases() -> None:
 	assert vq.OpIdentifier(vq.CNOTGate, 2).gate_type is vq.CXPowGate
 
 
-def test_value_equality_uses_the_raw_exponent_not_the_cirq_period() -> None:
-	"""The documented divergence: Cirq folds the exponent modulo the gate period.
+def test_value_equality_folds_the_exponent_modulo_the_period() -> None:
+	"""The eigenphases are defined modulo their period, which is how Cirq reads them.
 
-	``cirq.CNOT ** -1 == cirq.CNOT`` and ``cirq.X ** 3 == cirq.X`` are both True,
-	because Cirq compares the eigenphases modulo 2 (its value equality stores a
-	``PeriodicValue``). vqubit compares the raw exponent, so both are False here.
-	The git history and ``guide/cirq-differences`` record why; if this ever
-	changes, update that page together with this test.
+	Cirq compares ``PeriodicValue(exponent * (global_shift + θ), 2)`` for every
+	half turn ``θ`` of the gate, so ``cirq.X ** 3 == cirq.X`` and
+	``cirq.CNOT ** -1 == cirq.CNOT``. ``iSWAP`` is the case that proves it is not
+	a blanket "modulo 2 on the exponent": one of its eigenspaces sits at half a
+	turn, so ``ISWAP ** -1`` is *not* ``ISWAP`` in either library.
 	"""
-	assert vq.CNOT**-1 != vq.CNOT
-	assert vq.X**3 != vq.X
+	assert vq.X**3 == vq.X
+	assert vq.Z**-1 == vq.Z
+	assert vq.H**-1 == vq.H
+	assert vq.CNOT**-1 == vq.CNOT
+	assert vq.CZ**3 == vq.CZ
+	assert vq.XX**3 == vq.XX
+	assert vq.Z**0.5 == vq.Z**2.5
 	assert vq.ISWAP**-1 != vq.ISWAP
-	assert_matrix_close(vq.unitary(vq.CNOT**-1), vq.unitary(vq.CNOT))
-	assert_matrix_close(vq.unitary(vq.X**3), vq.unitary(vq.X))
+	assert vq.ISWAP**3 != vq.ISWAP
+	assert vq.rx(0.3) ** 3 != vq.rx(0.3)
+
+
+def test_the_equality_fold_agrees_with_the_unitaries() -> None:
+	# Folding the exponent must never claim two gates are equal when they are not.
+	for raised, plain in [(vq.Z**3, vq.Z), (vq.X**-1, vq.X), (vq.CZ**-1, vq.CZ), (vq.XX**3, vq.XX)]:
+		assert raised == plain
+		assert_matrix_close(vq.unitary(raised), vq.unitary(plain))
+
+
+def test_the_canonical_exponent_of_a_phased_gate_is_the_cirq_one() -> None:
+	# ``cirq.PhasedXPowGate`` compares the exponent modulo 2.
+	assert vq.PhasedXPowGate(phase_exponent=0.25, exponent=3) == vq.PhasedXPowGate(phase_exponent=0.25, exponent=1)
+	assert vq.PhasedXPowGate(phase_exponent=0.25, exponent=1) != vq.PhasedXPowGate(phase_exponent=0.5, exponent=1)
 
 
 def _matmul(a: list[list[complex]], b: list[list[complex]]) -> list[list[complex]]:

@@ -26,11 +26,21 @@ def test_quirk_json_import() -> None:
 
 def test_neutral_atoms() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
+	# The gateset is Cirq's: integer powers of CZ/CNOT/CCX/CCZ, the X/Y/Z/PhasedX
+	# families, measurement and identity. In particular a *fractional* CZ is not
+	# native, and X is.
 	assert vqubit.is_native_neutral_atom_gate(vqubit.CZ)
-	assert vqubit.is_native_neutral_atom_gate(vqubit.CZPowGate(exponent=0.5))
-	assert not vqubit.is_native_neutral_atom_gate(vqubit.X)
+	assert vqubit.is_native_neutral_atom_gate(vqubit.CZ**2)
+	assert vqubit.is_native_neutral_atom_gate(vqubit.CNOT**-1)
+	assert vqubit.is_native_neutral_atom_gate(vqubit.X)
+	assert vqubit.is_native_neutral_atom_gate(vqubit.I)
+	assert not vqubit.is_native_neutral_atom_gate(vqubit.CZPowGate(exponent=0.5))
+	assert not vqubit.is_native_neutral_atom_gate(vqubit.H)
+	assert not vqubit.is_native_neutral_atom_gate(vqubit.SWAP)
 	assert vqubit.is_native_neutral_atom_op(vqubit.CZ(q0, q1))
-	assert not vqubit.is_native_neutral_atom_op(vqubit.X(q0))
+	assert vqubit.is_native_neutral_atom_op(vqubit.X(q0))
+	assert vqubit.is_native_neutral_atom_op(vqubit.measure(q0, key="m"))
+	assert not vqubit.is_native_neutral_atom_op(vqubit.H(q0))
 
 
 def test_circuit_diagram_info() -> None:

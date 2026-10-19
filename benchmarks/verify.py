@@ -166,6 +166,55 @@ def check_gates(report: Report) -> None:
 		report.check("gates", name, up_to_phase(got, expected))
 
 
+# --- global shift --------------------------------------------------------------
+
+#: Every family whose gate accepts ``global_shift`` (``PhasedXZGate`` has no such
+#: argument, in either library), with the extra keyword the phased ones need.
+_SHIFT_FAMILIES: dict[str, dict[str, Any]] = {
+	"XPowGate": {},
+	"YPowGate": {},
+	"ZPowGate": {},
+	"HPowGate": {},
+	"CXPowGate": {},
+	"CYPowGate": {},
+	"CZPowGate": {},
+	"CCXPowGate": {},
+	"CCYPowGate": {},
+	"CCZPowGate": {},
+	"SwapPowGate": {},
+	"ISwapPowGate": {},
+	"XXPowGate": {},
+	"YYPowGate": {},
+	"ZZPowGate": {},
+	"PhasedXPowGate": {"phase_exponent": 0.25},
+	"PhasedISwapPowGate": {"phase_exponent": 0.25},
+}
+
+_SHIFT_EXPONENTS = (0.3, 0.5, 1.0, -1.0, 3.0)
+_SHIFT_SHIFTS = (0.0, 0.25, -0.25, 0.5, -0.5, 1.0)
+
+
+def check_global_shift(report: Report) -> None:
+	"""``global_shift`` must be the *global phase* Cirq documents.
+
+	These are compared exactly rather than up to phase, because the phase is the
+	thing under test: ``ZPowGate(0.5, global_shift=0.25)`` is
+	``exp(iπ·0.5·0.25)`` times ``Z ** 0.5``, and Cirq's is the same phase.
+	"""
+	for name, extra in _SHIFT_FAMILIES.items():
+		for exponent in _SHIFT_EXPONENTS:
+			for shift in _SHIFT_SHIFTS:
+				kwargs = {**extra, "exponent": exponent, "global_shift": shift}
+				label = f"{name}(e={exponent}, s={shift})"
+				try:
+					got = np.asarray(vq.unitary(getattr(vq, name)(**kwargs)), dtype=complex)
+					want = np.asarray(cirq.unitary(getattr(cirq, name)(**kwargs)), dtype=complex)
+				except Exception as exc:
+					report.check("global shift", label, False, f"{type(exc).__name__}: {exc}")
+					continue
+				report.check("global shift", label, bool(np.allclose(got, want, atol=ATOL)))
+
+
 # --- channels ----------------------------------------------------------------
 
 
@@ -384,6 +433,7 @@ def main() -> None:
 
 	sections: dict[str, Callable[[Report], None]] = {
 		"gates": check_gates,
+		"global shift": check_global_shift,
 		"channels": check_channels,
 		"circuits": check_circuits,
 		"sampling": check_sampling,

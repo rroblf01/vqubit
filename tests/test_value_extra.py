@@ -52,7 +52,13 @@ def test_duration_and_timestamp() -> None:
 
 
 def test_periodic_value() -> None:
+	# The value is normalized on the way in, as Cirq's is, so both read ``1`` and
+	# hash alike.
 	assert vqubit.PeriodicValue(3.0, 2.0) == vqubit.PeriodicValue(1.0, 2.0)
+	assert vqubit.PeriodicValue(3.0, 2.0).value == 1.0
+	assert hash(vqubit.PeriodicValue(3.0, 2.0)) == hash(vqubit.PeriodicValue(1.0, 2.0))
+	assert vqubit.PeriodicValue(-0.5, 2.0) == vqubit.PeriodicValue(1.5, 2.0)
+	assert vqubit.PeriodicValue(1.0, 2.0) != vqubit.PeriodicValue(1.0, 4.0)
 
 
 def test_measurement_type() -> None:

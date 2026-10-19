@@ -69,3 +69,24 @@ def value_equality(cls: Any = None, *, unhashable: bool = False) -> Any:
 	if cls is None:
 		return wrap
 	return wrap(cls)
+
+
+@value_equality
+class PeriodicValue:
+	"""A value that is periodic with a given period.
+
+	Cirq's wrapper: the value is normalized into ``[0, period)`` on the way in,
+	so ``PeriodicValue(3, 2) == PeriodicValue(1, 2)`` and both read ``1``. The
+	power gates compare their eigenphases through it, which is what makes
+	``cirq.X ** 3 == cirq.X`` and ``cirq.CNOT ** -1 == cirq.CNOT``.
+	"""
+
+	def __init__(self, value: float, period: float) -> None:
+		self.period = float(period)
+		self.value = float(value) % self.period
+
+	def _value_equality_values_(self) -> Any:
+		return (self.value, self.period)
+
+	def __repr__(self) -> str:
+		return f"vqubit.PeriodicValue({self.value!r}, {self.period!r})"

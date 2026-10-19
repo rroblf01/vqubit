@@ -26,7 +26,6 @@ from ._gates import (
 	Rz,
 	RzGate,
 	S,
-	SqrtISwapGate,
 	X,
 	Y,
 	Z,
@@ -672,7 +671,15 @@ class SqrtIswapTargetGateset(TwoQubitCompilationTargetGateset):
 
 
 def _is_sqrt_iswap_like(gate: Gate) -> bool:
-	return isinstance(gate, (SqrtISwapGate, PhasedXPowGate, ZPowGate, RzGate, RxGate, RyGate))
+	"""Whether the sqrt-iSWAP target can keep ``gate`` as it is.
+
+	``SQRT_ISWAP`` is a plain ``ISwapPowGate`` at exponent ``±0.5`` -- as in
+	Cirq -- rather than a class of its own, so the test is on the exponent.
+	"""
+	if isinstance(gate, ISwapPowGate):
+		exponent = gate.exponent
+		return isinstance(exponent, int | float) and abs(abs(exponent) - 0.5) < 1e-12
+	return isinstance(gate, (PhasedXPowGate, ZPowGate, RzGate, RxGate, RyGate))
 
 
 __all__ = [

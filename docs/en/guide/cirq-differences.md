@@ -70,43 +70,43 @@ assert vq.X ** 0.5 == vq.XPowGate(exponent=0.5)
 assert (vq.X ** 0.5)(q0) == vq.XPowGate(exponent=0.5)(q0)
 ```
 
-Every gate whose Cirq counterpart is exponentiated answers `**` too, and returns
-the matching power gate: `vq.CZ ** 0.5` is a `CZPowGate`, and the same holds for
-`vq.CNOT`, `vq.SWAP`, `vq.ISWAP`, `vq.SQRT_ISWAP`, `vq.CCX` and `vq.TOFFOLI`. The
-rotations scale their angle, as `cirq.rz` does.
+The plain gates **are** the power gates, as in Cirq: `vq.CZ` is a
+`CZPowGate(exponent=1)`, so `isinstance(vq.CZ, vq.CZPowGate)` and
+`vq.CZ == vq.CZPowGate()` are `True`. Likewise for `CNOT`/`CX` (a `CXPowGate`),
+`SWAP`, `ISWAP`, `SQRT_ISWAP`, `CCX`/`TOFFOLI`/`CCNOT`, `CY`, `CCZ` and `CCY`.
 
 ```python
 import vqubit as vq
 
+q0, q1 = vq.LineQubit.range(2)
+
+assert isinstance(vq.CZ, vq.CZPowGate)
+assert vq.CZ == vq.CZPowGate(exponent=1)
 assert vq.CZ ** 0.5 == vq.CZPowGate(exponent=0.5)
 assert vq.SQRT_ISWAP ** 0.5 == vq.ISwapPowGate(exponent=0.25)
 assert vq.rz(0.3) ** 0.5 == vq.RzGate(0.15)
 assert vq.I ** 0.5 == vq.I
 ```
 
-(`vq.FREDKIN` and `vq.CSWAP` are deliberately not powerable: neither is
-`cirq.CSWAP`.)
+The historical names `vq.CZGate`, `vq.CNOTGate`, `vq.SWAPGate`, `vq.CCXGate` and
+`vq.ISWAPGate` live on as **aliases** of the power classes, so code that mentions
+them (in an `isinstance`, say) keeps working. `vq.FREDKIN` and `vq.CSWAP` are
+deliberately not powerable: neither is `cirq.CSWAP`.
 
-What still differs is the *class* of the plain gates. In Cirq `cirq.CZ` **is** a
-`CZPowGate(exponent=1)`, so `isinstance(cirq.CZ, cirq.CZPowGate)` is `True` and
-`cirq.CZ == cirq.CZPowGate()`. In vqubit `vq.CZ` is a `CZGate`, a class of its
-own that bridges to `CZPowGate` under `**`, so both of those are `False`:
-
-```python
-import vqubit as vq
-
-assert vq.CZ ** 0.5 == vq.CZPowGate(exponent=0.5)  # behaviour matches
-assert not isinstance(vq.CZ, vq.CZPowGate)  # the class does not
-```
-
-Reach for the `Pow` classes directly when the class itself matters:
+What does change is **equality**. Cirq compares the eigenphases modulo the gate's
+period, so `cirq.X ** 3 == cirq.X` and `cirq.CNOT ** -1 == cirq.CNOT` are `True`;
+vqubit compares the raw exponent, so both are `False` even though the unitary is
+the same. It is a known parity gap, with its closing criterion in `ROADMAP.md`:
 
 ```python
 import vqubit as vq
 
-assert vq.CZPowGate(exponent=0.5) == vq.CZPowGate() ** 0.5
-assert vq.SwapPowGate(exponent=0.5) == vq.SwapPowGate() ** 0.5
+assert vq.X ** 3 != vq.X  # cirq.X ** 3 == cirq.X
+assert vq.CNOT ** -1 != vq.CNOT  # cirq.CNOT ** -1 == cirq.CNOT
 ```
+
+When the exponent can wrap around the period, compare unitaries (`vq.unitary`)
+instead of gates.
 
 ## The simulators take only `seed`
 
@@ -157,6 +157,22 @@ state = vq.Simulator().simulate(circuit).state_vector()
 assert abs(abs(state[0]) - 2**-0.5) < 1e-9
 assert abs(abs(state[3]) - 2**-0.5) < 1e-9
 ```
+
+## The text diagram
+
+`vq.Circuit` draws one line per qubit and one column per moment, and it matches
+Cirq's for the shared gates, exponents included: `vq.CZ ** 0.5` draws `@` over
+`@^0.5`, just like `cirq.CZ ** 0.5`. Two details still differ, by design of the
+renderer:
+
+- **No tableau blocks.** Cirq draws a `CliffordGate` as a multi-line
+  "Clifford Gate with Tableau" block; vqubit draws the one-line symbol
+  `CliffordGate(2q)`.
+- **Decimal exponents.** vqubit writes every exponent as a decimal (`Z^0.125`)
+  where Cirq writes the fractions it recognizes as such (`Z^(1/8)`).
+
+Both sit in the harness's list of tolerated divergences, with
+`plan = "permanent"`.
 
 ## What is unchanged
 

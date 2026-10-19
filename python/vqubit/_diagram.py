@@ -53,7 +53,10 @@ def to_text_diagram(circuit: Circuit) -> str:
 		for width, moment_cells in zip(widths, cells, strict=True):
 			row += _COLUMN_GAP
 			symbol = moment_cells.get(qubit_index)
-			row += symbol.center(width) if symbol is not None else "─" * width
+			# The symbol is left aligned and the rest of the cell is wire, so a bare
+			# ``@`` in a five-wide cell is ``@────`` and not ``  @  ``: that is how
+			# Cirq draws ``@`` next to ``@^0.5``.
+			row += symbol.ljust(width, "─") if symbol is not None else "─" * width
 		row += _COLUMN_GAP
 		lines.append(row.rstrip())
 
@@ -61,7 +64,8 @@ def to_text_diagram(circuit: Circuit) -> str:
 			connector_row = " " * (label_width + 2)
 			for width, moment_connectors in zip(widths, connectors, strict=True):
 				connector_row += _CONNECTOR_GAP
-				connector_row += _CONNECTOR.center(width) if qubit_index in moment_connectors else " " * width
+				# The connector lines up with the start of the cell, as in Cirq.
+				connector_row += _CONNECTOR.ljust(width) if qubit_index in moment_connectors else " " * width
 			connector_row += _CONNECTOR_GAP
 			stripped = connector_row.rstrip()
 			if stripped:

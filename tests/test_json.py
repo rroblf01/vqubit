@@ -85,6 +85,28 @@ def test_cirq_type_helpers() -> None:
 	assert vqubit.cirq_type_from_json("nope") is None
 
 
+def test_the_plain_gates_are_written_under_their_cirq_names() -> None:
+	# Cirq writes ``{"cirq_type": "CXPowGate", "exponent": 1.0, ...}`` for
+	# ``cirq.CNOT``, so a file should be readable by either library.
+	assert vqubit.json_cirq_type(vqubit.CNOT) == "CXPowGate"
+	assert vqubit.json_cirq_type(vqubit.CZ) == "CZPowGate"
+	assert vqubit.json_cirq_type(vqubit.SWAP) == "SwapPowGate"
+	assert vqubit.json_cirq_type(vqubit.CCX) == "CCXPowGate"
+	assert vqubit.json_cirq_type(vqubit.ISWAP) == "ISwapPowGate"
+	assert '"exponent": 1.0' in vqubit.to_json(vqubit.CNOT)
+
+
+def test_the_historical_gate_names_still_load() -> None:
+	# Before the plain gates became power gates, ``CNOT`` was written as
+	# ``CNOTGate``; those files still have to read back.
+	assert vqubit.read_json('{"cirq_type": "CNOTGate"}') == vqubit.CNOT
+	assert vqubit.read_json('{"cirq_type": "CZGate"}') == vqubit.CZ
+	assert vqubit.read_json('{"cirq_type": "SWAPGate"}') == vqubit.SWAP
+	assert vqubit.read_json('{"cirq_type": "CCXGate"}') == vqubit.CCX
+	assert vqubit.read_json('{"cirq_type": "ISWAPGate"}') == vqubit.ISWAP
+	assert vqubit.read_json('{"cirq_type": "CSWAPGate"}') == vqubit.CSWAP
+
+
 def test_unknown_type_raises() -> None:
 	with pytest.raises(ValueError):
 		vqubit.read_json('{"cirq_type": "Nope"}')

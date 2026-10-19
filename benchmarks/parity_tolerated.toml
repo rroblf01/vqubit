@@ -37,88 +37,29 @@ for introspection differs. Documented in guide/cirq-differences.
 """
 plan = "permanent"
 
-# --- `isinstance` against the public power classes (roadmap 0.3) --------------
+# --- text diagrams -----------------------------------------------------------
 
 
 [[tolerated]]
-check = "isinstance"
-name = "CCX<-CCXPowGate"
-reason = "vq.CCX is a CCXGate, not a CCXPowGate; cirq.CCX is a CCXPowGate."
-plan = "0.3"
+check = "diagram"
+name = "C?SWAP"
+reason = """
+vqubit draws ``CXSWAP`` and ``CZSWAP`` as the one-line symbol
+``CliffordGate(2q)``, where Cirq prints a multi-line "Clifford Gate with
+Tableau" block. The renderer here is deliberately one line per qubit (see
+``python/vqubit/_diagram.py``); the tableau block belongs to Cirq's much larger
+drawer, not to the gate, whose tableau, unitaries and `**` all agree. Documented
+in guide/cirq-differences.
+"""
+plan = "permanent"
 
 
 [[tolerated]]
-check = "isinstance"
-name = "CCX<-CCNotPowGate"
-reason = "Alias of the previous entry (CCNotPowGate is CCXPowGate)."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "TOFFOLI<-CCXPowGate"
-reason = "vq.TOFFOLI is a CCXGate; cirq.TOFFOLI is a CCXPowGate."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "TOFFOLI<-CCNotPowGate"
-reason = "Alias of the previous entry (CCNotPowGate is CCXPowGate)."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "CNOT<-CXPowGate"
-reason = "vq.CNOT is a CNOTGate; cirq.CNOT is a CXPowGate."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "CNOT<-CNotPowGate"
-reason = "Alias of the previous entry (CNotPowGate is CXPowGate)."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "CX<-CXPowGate"
-reason = "vq.CX is a CNOTGate; cirq.CX is a CXPowGate."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "CX<-CNotPowGate"
-reason = "Alias of the previous entry (CNotPowGate is CXPowGate)."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "CZ<-CZPowGate"
-reason = "vq.CZ is a CZGate; cirq.CZ is a CZPowGate."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "ISWAP<-ISwapPowGate"
-reason = "vq.ISWAP is an ISWAPGate; cirq.ISWAP is an ISwapPowGate."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "SQRT_ISWAP<-ISwapPowGate"
-reason = "vq.SQRT_ISWAP is a SqrtISwapGate; cirq.SQRT_ISWAP is an ISwapPowGate."
-plan = "0.3"
-
-
-[[tolerated]]
-check = "isinstance"
-name = "SWAP<-SwapPowGate"
-reason = "vq.SWAP is a SWAPGate; cirq.SWAP is a SwapPowGate."
-plan = "0.3"
+check = "diagram"
+name = "T**0.5"
+reason = """
+Reading the same exponent differently: vqubit writes every exponent as a
+decimal (``Z^0.125``) where Cirq writes the fractions it recognizes as such
+(``Z^(1/8)``). Same gate, same number, different notation.
+"""
+plan = "permanent"

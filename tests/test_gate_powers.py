@@ -1,9 +1,10 @@
-"""The plain gates answer ``**`` the way their Cirq counterparts do.
+"""The plain gates *are* power gates, as in Cirq.
 
-Cirq's ``CZ``, ``CNOT``, ``SWAP``, ``iSWAP`` and friends *are* power gates
-(``cirq.CZ is cirq.CZPowGate(exponent=1)``), so ``cirq.CZ ** 0.5`` gives a
-square-root CZ and ``cirq.rz(0.3) ** 0.5`` halves the angle. vqubit keeps the
-fixed gates as their own classes, so ``**`` has to bridge to the power gate.
+Cirq's ``CZ``, ``CNOT``, ``SWAP``, ``iSWAP`` and friends are power gates at
+exponent 1 (``cirq.CZ`` is a ``CZPowGate``), so ``cirq.CZ ** 0.5`` gives a
+square-root CZ, ``isinstance(cirq.CZ, cirq.CZPowGate)`` holds and
+``cirq.rz(0.3) ** 0.5`` halves the angle. vqubit now does the same: the plain
+gate names are aliases of the power-gate classes.
 """
 
 from __future__ import annotations
@@ -31,10 +32,18 @@ POWER_CASES = [
 
 
 @pytest.mark.parametrize(("name", "power_class", "base"), POWER_CASES)
+def test_a_plain_gate_is_an_instance_of_its_power_gate(name: str, power_class: str, base: float) -> None:
+	gate = getattr(vq, name)
+	assert isinstance(gate, getattr(vq, power_class))
+	assert gate == getattr(vq, power_class)(exponent=base)
+
+
+@pytest.mark.parametrize(("name", "power_class", "base"), POWER_CASES)
 def test_a_plain_gate_raised_to_a_power_is_the_power_gate(name: str, power_class: str, base: float) -> None:
 	gate = getattr(vq, name)
 	expected = getattr(vq, power_class)(exponent=base * 0.5)
 	assert gate**0.5 == expected
+	assert isinstance(gate**0.5, getattr(vq, power_class))
 	assert_matrix_close(vq.unitary(gate**0.5), vq.unitary(expected))
 
 
@@ -46,8 +55,12 @@ def test_the_plain_gate_is_that_power_gate_to_the_first(name: str, power_class: 
 
 @pytest.mark.parametrize(("name", "power_class", "base"), POWER_CASES)
 def test_power_one_round_trips(name: str, power_class: str, base: float) -> None:
-	del power_class, base
-	assert getattr(vq, name) ** 1 is getattr(vq, name)
+	del base
+	gate = getattr(vq, name)
+	# A fresh object, but the same value -- exactly what ``cirq.CNOT ** 1`` does.
+	assert gate**1 == gate
+	assert gate**1 is not gate
+	assert isinstance(gate**1, getattr(vq, power_class))
 
 
 @pytest.mark.parametrize("name", ["CZ", "CNOT", "SWAP", "ISWAP", "SQRT_ISWAP", "CCX"])
@@ -101,16 +114,37 @@ def test_a_fractional_power_matches_the_analytic_matrix() -> None:
 	assert_matrix_close(_matmul(root, root), vq.unitary(vq.CZ))
 
 
-def test_the_documented_class_divergence_still_holds() -> None:
-	"""``**`` bridges to the power gate; the plain gate is still its own class.
+def test_the_plain_gate_class_names_are_aliases() -> None:
+	"""``vq.CZGate`` used to be a class of its own; it names the power gate now.
 
-	This is the divergence documented in ``docs/*/guide/cirq-differences.md``
-	("No `**` on operations"). If ``vq.CZ`` ever *becomes* a ``CZPowGate``
-	(roadmap 0.3), delete this test together with that paragraph instead of
-	letting the two drift apart.
+	The divergence this replaces is gone from the differences page, so keep the
+	two in step the way that page says: this is the fold, and
+	``vq.CZGate is vq.CZPowGate`` is what makes ``isinstance`` and ``==`` agree
+	with Cirq.
 	"""
-	assert not isinstance(vq.CZ, vq.CZPowGate)
-	assert vq.CZPowGate() != vq.CZ
+	assert vq.CZGate is vq.CZPowGate
+	assert vq.CNOTGate is vq.CXPowGate
+	assert vq.SWAPGate is vq.SwapPowGate
+	assert vq.CCXGate is vq.CCXPowGate
+	assert vq.ISWAPGate is vq.ISwapPowGate
+	# ``OpIdentifier`` takes a gate type, so the aliases have to stay usable.
+	assert vq.OpIdentifier(vq.CNOTGate, 2).gate_type is vq.CXPowGate
+
+
+def test_value_equality_uses_the_raw_exponent_not_the_cirq_period() -> None:
+	"""The documented divergence: Cirq folds the exponent modulo the gate period.
+
+	``cirq.CNOT ** -1 == cirq.CNOT`` and ``cirq.X ** 3 == cirq.X`` are both True,
+	because Cirq compares the eigenphases modulo 2 (its value equality stores a
+	``PeriodicValue``). vqubit compares the raw exponent, so both are False here.
+	The git history and ``guide/cirq-differences`` record why; if this ever
+	changes, update that page together with this test.
+	"""
+	assert vq.CNOT**-1 != vq.CNOT
+	assert vq.X**3 != vq.X
+	assert vq.ISWAP**-1 != vq.ISWAP
+	assert_matrix_close(vq.unitary(vq.CNOT**-1), vq.unitary(vq.CNOT))
+	assert_matrix_close(vq.unitary(vq.X**3), vq.unitary(vq.X))
 
 
 def _matmul(a: list[list[complex]], b: list[list[complex]]) -> list[list[complex]]:

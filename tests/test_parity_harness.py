@@ -41,6 +41,13 @@ def test_every_section_reports(parity: Any) -> None:
 	assert set(parity.build_report().sections) == set(parity.SECTIONS)
 
 
+def test_the_diagram_section_covers_the_plain_gates(parity: Any) -> None:
+	"""``vq.CZ`` and its fractional power must be drawn against Cirq's."""
+	drawn = {name: ok for name, ok, _detail in parity.build_report().sections["diagram"]}
+	for name in ("CZ", "CNOT", "SWAP", "ISWAP", "CCX", "CZ**0.5", "SWAP**0.5", "ISWAP**0.5"):
+		assert drawn[name], f"the diagram of {name} is not compared with Cirq's"
+
+
 def test_an_allowance_without_a_reason_is_refused(parity: Any, tmp_path: Any) -> None:
 	path = tmp_path / "parity_tolerated.toml"
 	path.write_text('[[tolerated]]\ncheck = "power"\nname = "CZ"\nreason = "   "\n')

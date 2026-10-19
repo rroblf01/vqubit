@@ -20,6 +20,7 @@ from ._gates import (
 	XPowGate,
 	YPowGate,
 	ZPowGate,
+	is_plain_gate,
 )
 
 _QUIRK_URL = "https://algassert.com/quirk#circuit="
@@ -43,11 +44,11 @@ def _single_qubit_column(gate: Any) -> str | None:
 
 
 def _two_qubit_column(gate: Any) -> tuple[str, str] | None:
-	if isinstance(gate, CNOTGate):
+	if isinstance(gate, CNOTGate) and is_plain_gate(gate):
 		return ("•", "X")
-	if isinstance(gate, CZGate):
+	if isinstance(gate, CZGate) and is_plain_gate(gate):
 		return ("•", "•")
-	if isinstance(gate, SWAPGate):
+	if isinstance(gate, SWAPGate) and is_plain_gate(gate):
 		return ("Swap", "Swap")
 	return None
 

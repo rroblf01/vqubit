@@ -30,6 +30,7 @@ from ._gates import (
 	XPowGate,
 	YPowGate,
 	ZPowGate,
+	is_plain_gate,
 )
 from ._linalg import vector_from_flat
 from ._pauli import Pauli
@@ -64,11 +65,11 @@ def _instruction_code(gate: Any) -> _native.CliffordOp | None:
 		return _INSTR_X
 	if isinstance(gate, YPowGate) and gate.exponent in (1, -1):
 		return _INSTR_Y
-	if isinstance(gate, CNOTGate):
+	if isinstance(gate, CNOTGate) and is_plain_gate(gate):
 		return _INSTR_CNOT
-	if isinstance(gate, CZGate):
+	if isinstance(gate, CZGate) and is_plain_gate(gate):
 		return _INSTR_CZ
-	if isinstance(gate, SWAPGate):
+	if isinstance(gate, SWAPGate) and is_plain_gate(gate):
 		return _INSTR_SWAP
 	raise TypeError(f"{gate!r} is not a Clifford gate")
 

@@ -70,7 +70,13 @@ def test_inverse_of_circuit_reverses_order() -> None:
 	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.CNOT(q0, q1))
 	inverted = vqubit.inverse(circuit)
 	operations = list(inverted.all_operations())
-	assert operations[0] == vqubit.CNOT(q0, q1)
+	# ``inverse(CNOT)`` is ``CXPowGate(exponent=-1)``, exactly as in Cirq. Cirq
+	# reports that as ``== cirq.CNOT`` because its value equality folds the
+	# exponent modulo the gate's period; vqubit compares the raw exponent (see
+	# guide/cirq-differences), so the check here is on the value and the unitary.
+	assert operations[0].gate == vqubit.CNOT**-1
+	assert_matrix_close(vqubit.unitary(operations[0].gate), vqubit.unitary(vqubit.CNOT))
+	assert operations[0].qubits == (q0, q1)
 	assert operations[1].gate == vqubit.inverse(vqubit.H)
 	assert operations[1].qubits == (q0,)
 

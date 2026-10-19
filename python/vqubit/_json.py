@@ -15,20 +15,29 @@ from typing import Any
 from ._circuits import Circuit, FrozenCircuit
 from ._gates import (
 	CCXGate,
+	CCXPowGate,
+	CCYPowGate,
+	CCZPowGate,
 	CNOTGate,
 	ControlledGate,
 	CSWAPGate,
+	CXPowGate,
+	CYPowGate,
 	CZGate,
+	CZPowGate,
 	HPowGate,
 	IdentityGate,
 	ISWAPGate,
+	ISwapPowGate,
 	MeasurementGate,
 	PhasedXPowGate,
 	PhasedXZGate,
 	RxGate,
 	RyGate,
 	RzGate,
+	SqrtISwapGate,
 	SWAPGate,
+	SwapPowGate,
 	XPowGate,
 	XXPowGate,
 	YPowGate,
@@ -77,7 +86,29 @@ def _encode(value: Any) -> Any:
 		return {"cirq_type": "GridQubit", "row": value.row, "col": value.col}
 	if isinstance(value, NamedQubit):
 		return {"cirq_type": "NamedQubit", "name": value.name}
-	if isinstance(value, (XPowGate, YPowGate, ZPowGate, HPowGate, XXPowGate, YYPowGate, ZZPowGate)):
+	if isinstance(
+		value,
+		(
+			XPowGate,
+			YPowGate,
+			ZPowGate,
+			HPowGate,
+			XXPowGate,
+			YYPowGate,
+			ZZPowGate,
+			CXPowGate,
+			CYPowGate,
+			CZPowGate,
+			CCXPowGate,
+			CCYPowGate,
+			CCZPowGate,
+			SwapPowGate,
+			ISwapPowGate,
+			SqrtISwapGate,
+		),
+	):
+		# The same shape Cirq writes for its power gates, so ``vq.CNOT`` comes out
+		# as ``CXPowGate`` with exponent 1 rather than a gate type of its own.
 		return {
 			"cirq_type": type(value).__name__,
 			"exponent": _encode(value.exponent),
@@ -115,7 +146,9 @@ def _encode(value: Any) -> Any:
 			"num_controls": value.num_controls,
 			"control_values": list(value.control_values),
 		}
-	if isinstance(value, (CNOTGate, CZGate, SWAPGate, CCXGate, CSWAPGate, ISWAPGate)):
+	if isinstance(value, CSWAPGate):
+		# ``CSWAP`` is the one plain multi-qubit gate that is *not* a power gate,
+		# so it keeps a type name of its own (as in Cirq).
 		return {"cirq_type": type(value).__name__}
 	if isinstance(value, GateOperation):
 		return {"cirq_type": "GateOperation", "gate": _encode(value.gate), "qubits": _encode(list(value.qubits))}
@@ -153,6 +186,18 @@ _TYPES: dict[str, Any] = {
 	"IdentityGate": IdentityGate,
 	"MeasurementGate": MeasurementGate,
 	"ControlledGate": ControlledGate,
+	"CXPowGate": CXPowGate,
+	"CYPowGate": CYPowGate,
+	"CZPowGate": CZPowGate,
+	"CCXPowGate": CCXPowGate,
+	"CCYPowGate": CCYPowGate,
+	"CCZPowGate": CCZPowGate,
+	"SwapPowGate": SwapPowGate,
+	"ISwapPowGate": ISwapPowGate,
+	"SqrtISwapGate": SqrtISwapGate,
+	# Legacy type names: the plain gates used to be classes of their own, and
+	# files written then must keep loading. They decode to the exponent-1 power
+	# gate, which is the same value.
 	"CNOTGate": CNOTGate,
 	"CZGate": CZGate,
 	"SWAPGate": SWAPGate,
@@ -261,6 +306,37 @@ def _register_all() -> None:
 	_DECODERS["ControlledGate"] = lambda d: ControlledGate(
 		_decode(d["sub_gate"]), num_controls=d["num_controls"], control_values=tuple(d["control_values"])
 	)
+	# The multi-qubit power gates, the same shape Cirq writes for ``CNOT``,
+	# ``CZ``, ``SWAP``, ``iSWAP`` and Toffoli (at exponent 1 for the plain gates).
+	_DECODERS["CXPowGate"] = lambda d: CXPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["CYPowGate"] = lambda d: CYPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["CZPowGate"] = lambda d: CZPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["CCXPowGate"] = lambda d: CCXPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["CCYPowGate"] = lambda d: CCYPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["CCZPowGate"] = lambda d: CCZPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["SwapPowGate"] = lambda d: SwapPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["ISwapPowGate"] = lambda d: ISwapPowGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	_DECODERS["SqrtISwapGate"] = lambda d: SqrtISwapGate(
+		exponent=_decode(d["exponent"]), global_shift=_decode(d.get("global_shift", 0.0))
+	)
+	# Legacy names, from before the plain gates became power gates. They carry no
+	# exponent, because the gate they name had none.
 	_DECODERS["CNOTGate"] = lambda d: CNOTGate()
 	_DECODERS["CZGate"] = lambda d: CZGate()
 	_DECODERS["SWAPGate"] = lambda d: SWAPGate()

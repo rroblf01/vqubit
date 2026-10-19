@@ -20,6 +20,16 @@ a medida que avanzan los hitos.
 > la cobertura (77 %), y destapa el hueco de paridad más visible que queda:
 > **`**` sobre las puertas planas**. Las peticiones a vcraft están en
 > [`UPSTREAM.md`](UPSTREAM.md).
+>
+> **Actualización (0.3, 2026-10-19).** Las puertas planas **son** las puertas de
+> potencia: `vq.CZ` es un `CZPowGate(exponent=1)`, así que
+> `isinstance(vq.CZ, vq.CZPowGate)` y `vq.CZ == vq.CZPowGate()` son `True`, como
+> en Cirq, y `vq.CZ ** 0.5` dibuja `@` sobre `@^0.5`, el diagrama de
+> `cirq.CZ ** 0.5`. Las **12** entradas con `plan = "0.3"` de la lista de
+> toleradas quedan tapadas y desaparecen, el arnés gana una sección de
+> **diagramas** (1789 comprobaciones, 4 toleradas) y la auditoría destapa dos
+> huecos nuevos, anotados en el eje de paridad: la **igualdad periódica** de Cirq
+> y su *gateset* de **átomos neutros**.
 
 ### Principios
 
@@ -66,7 +76,7 @@ La paridad no se declara: se comprueba. Tres artefactos, todos en CI:
 | --------- | ------------- | ----------- |
 | `tests/test_cirq_parity.py` | que los nombres públicos de `cirq-core` existen aquí y que los submódulos se reflejan (`vqubit.work`, `vqubit.vis`, …) | job `test` |
 | `benchmarks/verify.py` | que los **resultados** coinciden: unitarias, canales, simulación, muestreo, descomposiciones, KAK, Clifford | job `cirq-parity` |
-| `benchmarks/parity.py` | que el **contrato** coincide: `**` disponible justo cuando Cirq lo permite, misma unitaria resultante, misma retícula de `isinstance` y mismas clases | job `cirq-parity` |
+| `benchmarks/parity.py` | que el **contrato** coincide: `**` disponible justo cuando Cirq lo permite, misma unitaria resultante, misma retícula de `isinstance`, mismas clases y mismos diagramas de texto | job `cirq-parity` |
 
 `benchmarks/parity_tolerated.toml` es la lista de divergencias aceptadas. Cada
 entrada exige un `reason` (no vacío) y un `plan` (`permanent`, o el hito en el que
@@ -84,8 +94,8 @@ Las divergencias `permanent` están explicadas en
       a propósito (su importador QASM necesita el tercero `ply`). Reflejado en
       `tests/test_cirq_parity.py` y en el arnés.
 - [ ] Congelar la superficie pública y declarar la política SemVer en detalle,
-      incluida la decisión sobre los nombres de las clases de potencia (`vq.CZ`
-      debería *ser* un `CZPowGate`, como en Cirq).
+      incluida la decisión sobre los nombres de las clases de potencia, ya
+      tomada: `vq.CZ` *es* un `CZPowGate`, como en Cirq (ver el eje 2).
 - [ ] Política de deprecación con **mecanismo**: un ayudante que emita
       `DeprecationWarning`, ventana mínima, guía de migración en `CHANGELOG.md` y
       un test que compruebe que el aviso se emite de verdad.
@@ -103,15 +113,31 @@ Las divergencias `permanent` están explicadas en
       `SQRT_ISWAP`, `CCX`/`TOFFOLI`, `I`, `rx` y `ry`. `FREDKIN`/`CSWAP` siguen
       sin admitir `**`, igual que `cirq.CSWAP`. Ese trabajo destapó además dos
       bugs de inversa en `iSWAP` (ver `CHANGELOG.md`).
-- [ ] Que `vq.CZ` **sea** un `CZPowGate`. El comportamiento ya coincide, pero la
-      clase no: `isinstance(vq.CZ, vq.CZPowGate)` es `False`, y también
-      `vq.CZ == vq.CZPowGate()`, mientras que en Cirq ambas son `True`. Son las
-      **12** entradas que quedan en la lista de toleradas con `plan = "0.3"`.
-      Cerrarlo exige decidir entre convertir las puertas planas en las clases de
-      potencia (rompe `type()` y el diagrama, y obliga a auditar los
-      `isinstance` de QASM, Clifford, gatesets y átomos neutros) o dejarlas como
-      clases fijas que saltan a la de potencia (documentado y sin tocar el
-      resto).
+- [x] (0.3) Que `vq.CZ` **sea** un `CZPowGate`. Las puertas planas *son* ahora las
+      puertas de potencia: `vq.CZ` es `CZPowGate(exponent=1)` y `vq.CZGate` un
+      alias de la clase; lo mismo para `CNOT`/`CX`, `SWAP`, `ISWAP`,
+      `SQRT_ISWAP`, `CCX`/`TOFFOLI`/`CCNOT`, `CY`, `CCZ` y `CCY`. `isinstance`,
+      `==` y el diagrama coinciden con Cirq, y se auditaron las tablas de
+      instrucciones (QASM, Clifford, gatesets, átomos neutros) y el JSON para
+      exigir exponente 1 donde Cirq lo exige. **Medido:** las **12** entradas
+      `plan = "0.3"` de la lista de toleradas desaparecen; el arnés gana la
+      sección `diagram` (56 comprobaciones) y pasa a **1789** comprobaciones con
+      **4** divergencias toleradas.
+- [ ] **Igualdad de valor periódica**, como la de Cirq. Cirq compara las fases
+      propias módulo el periodo de la puerta (`PeriodicValue`), así que
+      `cirq.X ** 3 == cirq.X`, `cirq.CNOT ** -1 == cirq.CNOT` y
+      `cirq.H ** -1 == cirq.H` son `True`; vqubit compara el exponente en crudo y
+      las tres son `False` (las unitarias coinciden). **Criterio:** una sección
+      `equality` en `benchmarks/parity.py` que compare `g ** k == g` con Cirq
+      para `k ∈ {2, 3, -1}` y salga con 0 divergencias inesperadas. Mientras
+      tanto queda documentado en `docs/{es,en}/guide/cirq-differences.md`.
+- [ ] **`is_native_neutral_atom_gate` frente al *gateset* de Cirq.** Cirq acepta
+      cualquier potencia entera de `CNOT`/`CCX`/`CZ`/`CCZ`, las familias
+      paralelas de `Z`/`X`/`Y`/`PhasedX` y `MeasurementGate`, así que
+      `is_native_neutral_atom_gate(cirq.X)` es `True` y
+      `(cirq.CZ ** 0.5)` es `False`; vqubit acepta cualquier `CZPowGate`
+      (incluida la raíz cuadrada) y rechaza `X`. **Criterio:** un test unitario
+      que fije esas dos respuestas al *gateset* de Cirq.
 - [ ] Implementar los stubs pendientes: `decompose_clifford_tableau_to_operations`,
       `ResetChannel` multiqubit, `CliffordTableau.kron/factor/reindex` y
       `StabilizerStateChForm.apply_operation` (hoy es una cáscara que no aplica
@@ -213,7 +239,7 @@ Las divergencias `permanent` están explicadas en
 | Versión | Tema | Contenido clave |
 | ------- | ---- | --------------- |
 | 0.2 | Plataformas | vcraft 1.4.5, Windows `win_amd64`, sdist, `--strip`, API nativa moderna |
-| 0.3 | Paridad | `**` en las puertas planas y las rotaciones, métodos de simulador, stubs restantes |
+| 0.3 | Paridad | Las puertas planas como puertas de potencia, `**` en las rotaciones, métodos de simulador, stubs restantes |
 | 0.4 | Interop | import QASM propio, puente `cirq` |
 | 0.5 | Calidad | cobertura ≥95 %, Hypothesis, `stubtest`, fuzzers |
 | 0.6 | Rendimiento | 20 qubits (páginas gigantes), benchmarks en CI, SIMD/OpenMP |
@@ -278,6 +304,15 @@ guarantees. It is a living document, updated as milestones land.
 > ticks off five already-finished boxes, measures coverage (77 %), and uncovers
 > the most visible remaining parity gap: **`**` on the plain gates**. Requests to
 > vcraft live in [`UPSTREAM.md`](UPSTREAM.md).
+>
+> **Update (0.3, 2026-10-19).** The plain gates **are** the power gates:
+> `vq.CZ` is a `CZPowGate(exponent=1)`, so `isinstance(vq.CZ, vq.CZPowGate)` and
+> `vq.CZ == vq.CZPowGate()` are `True`, as in Cirq, and `vq.CZ ** 0.5` draws `@`
+> over `@^0.5`, the diagram of `cirq.CZ ** 0.5`. The **12** entries with
+> `plan = "0.3"` in the tolerated list are silenced and disappear, the harness
+> gains a **diagram** section (1789 checks, 4 tolerated) and the audit uncovers
+> two new gaps, noted on the parity axis: Cirq's **periodic equality** and its
+> **neutral-atom gateset**.
 
 ### Principles
 
@@ -323,7 +358,7 @@ Parity is not declared: it is checked. Three artifacts, all in CI:
 | -------- | -------------- | ------------- |
 | `tests/test_cirq_parity.py` | that `cirq-core`'s public names exist here, and that submodules are mirrored (`vqubit.work`, `vqubit.vis`, …) | `test` job |
 | `benchmarks/verify.py` | that the **numbers** agree: unitaries, channels, simulation, sampling, decompositions, KAK, Clifford | `cirq-parity` job |
-| `benchmarks/parity.py` | that the **contract** agrees: `**` available exactly when Cirq allows it, same resulting unitary, same `isinstance` lattice and same classes | `cirq-parity` job |
+| `benchmarks/parity.py` | that the **contract** agrees: `**` available exactly when Cirq allows it, same resulting unitary, same `isinstance` lattice, same classes and same text diagrams | `cirq-parity` job |
 
 `benchmarks/parity_tolerated.toml` is the list of accepted divergences. Every
 entry needs a non-empty `reason` and a `plan` (`permanent`, or the milestone that
@@ -341,8 +376,8 @@ blanket. The `permanent` divergences are explained in
       purpose (its QASM importer needs the third-party `ply`). Reflected in
       `tests/test_cirq_parity.py` and in the harness.
 - [ ] Freeze the public surface and spell out the SemVer policy, including the
-      decision on the power-class names (`vq.CZ` should *be* a `CZPowGate`, as in
-      Cirq).
+      decision on the power-class names, which is already made: `vq.CZ` *is* a
+      `CZPowGate`, as in Cirq (see axis 2).
 - [ ] Deprecation policy with a **mechanism**: a helper that emits
       `DeprecationWarning`, a minimum window, migration notes in `CHANGELOG.md`
       and a test that the warning really fires.
@@ -360,15 +395,30 @@ blanket. The `permanent` divergences are explained in
       `SQRT_ISWAP`, `CCX`/`TOFFOLI`, `I`, `rx` and `ry`. `FREDKIN`/`CSWAP` still
       refuse `**`, exactly like `cirq.CSWAP`. That work also uncovered two
       inverse bugs in `iSWAP` (see `CHANGELOG.md`).
-- [ ] Make `vq.CZ` **be** a `CZPowGate`. The behaviour already matches, the class
-      does not: `isinstance(vq.CZ, vq.CZPowGate)` is `False`, and so is
-      `vq.CZ == vq.CZPowGate()`, where Cirq has both `True`. These are the **12**
-      entries still carrying `plan = "0.3"` in the tolerated list. Closing it
-      means choosing between folding the plain gates into the power classes
-      (breaks `type()` and the diagram, and forces an audit of the `isinstance`
-      checks in QASM, Clifford, gatesets and neutral atoms) or keeping them as
-      fixed classes that bridge to the power gate (documented, nothing else
-      touched).
+- [x] (0.3) Make `vq.CZ` **be** a `CZPowGate`. The plain gates *are* the power
+      gates now: `vq.CZ` is `CZPowGate(exponent=1)` and `vq.CZGate` an alias of
+      the class; likewise for `CNOT`/`CX`, `SWAP`, `ISWAP`, `SQRT_ISWAP`,
+      `CCX`/`TOFFOLI`/`CCNOT`, `CY`, `CCZ` and `CCY`. `isinstance`, `==` and the
+      diagram agree with Cirq, and the instruction tables (QASM, Clifford,
+      gatesets, neutral atoms) plus the JSON were audited to require exponent 1
+      where Cirq requires it. **Measured:** the **12** `plan = "0.3"` entries in
+      the tolerated list disappear; the harness gains the `diagram` section (56
+      checks) and stands at **1789** checks with **4** tolerated divergences.
+- [ ] **Periodic value equality**, as Cirq has it. Cirq compares the eigenphases
+      modulo the gate's period (`PeriodicValue`), so `cirq.X ** 3 == cirq.X`,
+      `cirq.CNOT ** -1 == cirq.CNOT` and `cirq.H ** -1 == cirq.H` are all `True`;
+      vqubit compares the raw exponent and all three are `False` (the unitaries
+      agree). **Criterion:** an `equality` section in `benchmarks/parity.py` that
+      compares `g ** k == g` with Cirq for `k ∈ {2, 3, -1}` and reports 0
+      unexpected divergences. Until then it is documented in
+      `docs/{es,en}/guide/cirq-differences.md`.
+- [ ] **`is_native_neutral_atom_gate` against Cirq's gateset.** Cirq accepts any
+      integer power of `CNOT`/`CCX`/`CZ`/`CCZ`, the parallel families of
+      `Z`/`X`/`Y`/`PhasedX` and `MeasurementGate`, so
+      `is_native_neutral_atom_gate(cirq.X)` is `True` and `(cirq.CZ ** 0.5)` is
+      `False`; vqubit accepts any `CZPowGate` (the square root included) and
+      rejects `X`. **Criterion:** a unit test pinning those two answers to
+      Cirq's gateset.
 - [ ] Implement the remaining stubs: `decompose_clifford_tableau_to_operations`,
       multi-qubit `ResetChannel`, `CliffordTableau.kron/factor/reindex` and
       `StabilizerStateChForm.apply_operation` (a shell that applies no gates
@@ -470,7 +520,7 @@ blanket. The `permanent` divergences are explained in
 | Version | Theme | Key content |
 | ------- | ----- | ----------- |
 | 0.2 | Platforms | vcraft 1.4.5, Windows `win_amd64`, sdist, `--strip`, modern native API |
-| 0.3 | Parity | `**` on the plain gates and the rotations, simulator methods, remaining stubs |
+| 0.3 | Parity | The plain gates as power gates, `**` on the rotations, simulator methods, remaining stubs |
 | 0.4 | Interop | own QASM import, `cirq` bridge |
 | 0.5 | Quality | coverage ≥95 %, Hypothesis, `stubtest`, fuzzers |
 | 0.6 | Performance | 20 qubits (huge pages), benchmarks in CI, SIMD/OpenMP |

@@ -27,6 +27,7 @@ from ._gates import (
 	XPowGate,
 	YPowGate,
 	ZPowGate,
+	is_plain_gate,
 )
 from ._ops import GateOperation, Operation
 from ._parameter import is_symbolic
@@ -73,13 +74,13 @@ def _gate_instruction(gate: Any, qubits: list[str]) -> str | None:
 		return f"ry({_format_angle(gate.radians)}) {qubits[0]};"
 	if isinstance(gate, RzGate):
 		return f"rz({_format_angle(gate.radians)}) {qubits[0]};"
-	if isinstance(gate, CNOTGate):
+	if isinstance(gate, CNOTGate) and is_plain_gate(gate):
 		return f"cx {qubits[0]},{qubits[1]};"
-	if isinstance(gate, CZGate):
+	if isinstance(gate, CZGate) and is_plain_gate(gate):
 		return f"cz {qubits[0]},{qubits[1]};"
-	if isinstance(gate, SWAPGate):
+	if isinstance(gate, SWAPGate) and is_plain_gate(gate):
 		return f"swap {qubits[0]},{qubits[1]};"
-	if isinstance(gate, CCXGate):
+	if isinstance(gate, CCXGate) and is_plain_gate(gate):
 		return f"ccx {qubits[0]},{qubits[1]},{qubits[2]};"
 	if (
 		isinstance(gate, ControlledGate)

@@ -13,15 +13,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `vq.SWAP ** 0.5`, `vq.ISWAP ** 0.5`, `vq.SQRT_ISWAP ** 0.5`, `vq.CCX ** 0.5`,
   `vq.TOFFOLI ** 0.5` and `vq.I ** 0.5` now return the matching power gate, as
   the Cirq idioms do, and `vq.rz(0.3) ** 0.5` scales the angle to `vq.rz(0.15)`.
-  `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The classes
-  themselves are unchanged.
+  `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The plain
+  gates themselves are the power gates now: see *Changed*.
 - **A Cirq contract harness**, `benchmarks/parity.py`, run in the `cirq-parity`
-  CI job: it checks names, `**`, `isinstance` and gate classes against Cirq, and
-  keeps the accepted divergences in `benchmarks/parity_tolerated.toml`, where an
-  entry that stops silencing a real divergence fails the build.
+  CI job: it checks names, `**`, `isinstance`, gate classes and text diagrams
+  against Cirq, and keeps the accepted divergences in
+  `benchmarks/parity_tolerated.toml`, where an entry that stops silencing a real
+  divergence fails the build.
+
+### Changed
+
+- **The plain gates *are* the power gates, as in Cirq.** `vq.CZ` is now
+  `CZPowGate(exponent=1)`, `vq.CNOT`/`vq.CX` are `CXPowGate`, `vq.SWAP` is
+  `SwapPowGate`, `vq.ISWAP` is `ISwapPowGate`, `vq.SQRT_ISWAP` is
+  `ISwapPowGate(exponent=0.5)`, and `vq.CCX`/`vq.TOFFOLI` are `CCXPowGate`, so
+  `isinstance(vq.CZ, vq.CZPowGate)` and `vq.CZ == vq.CZPowGate()` are `True`
+  where they used to be `False`. Two visible consequences: `type(vq.CZ).__name__`
+  is `"CZPowGate"`, and `vq.SQRT_ISWAP` is no longer an instance of
+  `SqrtISwapGate` (the class survives as an `ISwapPowGate` subclass that
+  defaults to exponent 0.5). The old class names — `CZGate`, `CNOTGate`,
+  `SWAPGate`, `CCXGate`, `ISWAPGate` — remain as **aliases** of the power
+  classes, so code that imports or compares them keeps working; the instruction
+  tables (QASM, Clifford, target gatesets, neutral atoms) were audited so that
+  only the exponent-1 gate maps to the plain instruction.
+- **Text diagrams left-align their symbols and annotate the exponent**, as Cirq
+  does: `vq.CZ ** 0.5` draws `@` over `@^0.5` instead of `@` over `Z`.
 
 ### Fixed
 
+- **JSON wrote the plain gates under their old type names.** `to_json(vq.CNOT)`
+  produced `{"cirq_type": "CNOTGate"}`, where Cirq writes
+  `{"cirq_type": "CXPowGate", "exponent": 1.0, "global_shift": 0.0}`, so the two
+  files were not interchangeable. The sixteen power gates now round-trip under
+  their Cirq names and parameters, and the legacy names still load.
 - **`vq.inverse(vq.ISWAP)` returned iSWAP, not its inverse.** The shared
   `_FixedGate._inverse_` returned `type(self)()`, which is only correct for the
   self-inverse gates, so `U(iSWAP) @ U(iSWAP⁻¹)` was not the identity. It now

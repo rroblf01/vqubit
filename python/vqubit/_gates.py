@@ -248,6 +248,40 @@ def _describe(value: Any) -> str:
 	return str(value) if is_symbolic(value) else str(_clean(value))
 
 
+def _exponent_suffix(exponent: Any) -> str:
+	"""The ``^0.5`` a Cirq diagram appends to a power gate's symbol.
+
+	An exponent of ``1`` adds nothing, so the plain gates keep the bare symbol
+	they have always had: ``vq.CZ`` is still ``@`` and ``vq.CZ ** 0.5`` is
+	``@^0.5``, exactly as in Cirq.
+	"""
+	if is_symbolic(exponent):
+		return f"^{exponent}"
+	if abs(float(exponent) - 1.0) < _EPS:
+		return ""
+	return f"^{_clean(exponent)}"
+
+
+def is_plain_gate(gate: Any) -> bool:
+	"""Whether ``gate`` is the unexponentiated form of a power gate.
+
+	The plain gates *are* power gates here (``vq.CZ`` is a ``CZPowGate``), so a
+	table that maps a gate onto a circuit instruction has to ask this before
+	mapping: only the unexponentiated gate *is* the ``CZ``/``CX``/``SWAP``
+	instruction, not ``vq.CZ ** 0.5``. A gate that is not a power gate at all is
+	not this function's business, so it counts as plain and the caller's own
+	``isinstance`` decides.
+	"""
+	if not isinstance(gate, _PowGate):
+		return True
+	return (
+		not is_symbolic(gate._exponent)
+		and not is_symbolic(gate._global_shift)
+		and abs(float(gate._exponent) - 1.0) < _EPS
+		and abs(float(gate._global_shift)) < _EPS
+	)
+
+
 class XPowGate(EigenGate):
 	"""The power of the Pauli ``X`` gate."""
 
@@ -269,7 +303,7 @@ class XPowGate(EigenGate):
 		return [[diagonal, off], [off, diagonal]]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("X",)
+		return ("X" + _exponent_suffix(self._exponent),)
 
 
 class YPowGate(EigenGate):
@@ -293,7 +327,7 @@ class YPowGate(EigenGate):
 		return [[diagonal, -off], [off, diagonal]]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("Y",)
+		return ("Y" + _exponent_suffix(self._exponent),)
 
 
 class ZPowGate(EigenGate):
@@ -320,7 +354,7 @@ class ZPowGate(EigenGate):
 				return ("S",)
 			if abs(self._exponent - 0.25) < _EPS:
 				return ("T",)
-		return ("Z",)
+		return ("Z" + _exponent_suffix(self._exponent),)
 
 
 class HPowGate(EigenGate):
@@ -347,7 +381,225 @@ class HPowGate(EigenGate):
 		return [[top_left, off], [off, bottom_right]]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("H",)
+		return ("H" + _exponent_suffix(self._exponent),)
+
+
+# --- multi-qubit power gates ------------------------------------------------
+#
+# In Cirq the plain multi-qubit gates *are* these classes at exponent 1:
+# ``cirq.CZ`` is a ``CZPowGate``, so ``isinstance(cirq.CZ, cirq.CZPowGate)``
+# holds and ``cirq.CZ == cirq.CZPowGate()``. That is true here too, which is why
+# the plain gate classes below are aliases of these, declared next to the
+# single-qubit power gates rather than in ``_gates_more``.
+#
+# They are *not* ``EigenGate`` subclasses: vqubit's ``EigenGate._unitary_`` is
+# 2x2 by construction, so it cannot hold a multi-qubit gate. That is the
+# documented, permanent ``*-EigenGate`` divergence.
+
+
+@value_equality
+class _PowGate(Gate):
+	"""Shared machinery for the multi-qubit power gates."""
+
+	def __init__(self, *, exponent: Any = 1.0, global_shift: Any = 0.0) -> None:
+		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
+		self._global_shift = global_shift if is_symbolic(global_shift) else float(global_shift)
+
+	@property
+	def exponent(self) -> Any:
+		return self._exponent
+
+	@property
+	def global_shift(self) -> Any:
+		return self._global_shift
+
+	def _is_parameterized_(self) -> bool:
+		return is_symbolic(self._exponent) or is_symbolic(self._global_shift)
+
+	def _value_equality_values_(self) -> Any:
+		return (self._exponent, self._global_shift)
+
+	def __pow__(self, power: float) -> _PowGate:
+		return type(self)(exponent=self._exponent * power, global_shift=self._global_shift)
+
+	def _inverse_(self) -> _PowGate:
+		return type(self)(exponent=-self._exponent, global_shift=self._global_shift)
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> _PowGate:
+		if not self._is_parameterized_():
+			return self
+		return type(self)(
+			exponent=resolve_value(self._exponent, resolver),
+			global_shift=resolve_value(self._global_shift, resolver),
+		)
+
+	def __str__(self) -> str:
+		return f"{type(self).__name__}(exponent={self._exponent})"
+
+	def __repr__(self) -> str:
+		return f"vqubit.{type(self).__name__}(exponent={self._exponent!r}, global_shift={self._global_shift!r})"
+
+
+@value_equality
+class _ControlledPowGate(_PowGate):
+	"""A power of a controlled single-qubit power gate."""
+
+	_SubGate: type[EigenGate] = XPowGate
+	_NumControls = 1
+	_Symbol = "X"
+
+	def _num_qubits_(self) -> int:
+		return self._NumControls + 1
+
+	def _unitary_(self) -> Matrix | None:
+		sub = self._SubGate(exponent=self._exponent, global_shift=self._global_shift)._unitary_()
+		if sub is None:
+			return None
+		block = len(sub)
+		dim = (1 << self._NumControls) * block
+		matrix = identity(dim)
+		offset = dim - block
+		for i in range(block):
+			for j in range(block):
+				matrix[offset + i][offset + j] = sub[i][j]
+		return matrix
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("@",) * self._NumControls + (self._Symbol + _exponent_suffix(self._exponent),)
+
+
+class CXPowGate(_ControlledPowGate):
+	"""A power of the controlled-``X`` gate."""
+
+	_SubGate = XPowGate
+	_Symbol = "X"
+
+
+class CYPowGate(_ControlledPowGate):
+	"""A power of the controlled-``Y`` gate."""
+
+	_SubGate = YPowGate
+	_Symbol = "Y"
+
+
+class CZPowGate(_ControlledPowGate):
+	"""A power of the controlled-``Z`` gate, which draws as two ``@``."""
+
+	_SubGate = ZPowGate
+	_Symbol = "@"
+
+
+class CCXPowGate(_ControlledPowGate):
+	"""A power of the doubly-controlled ``X`` gate."""
+
+	_SubGate = XPowGate
+	_NumControls = 2
+	_Symbol = "X"
+
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation]:
+		"""The eleven-gate H/T/CNOT circuit, which only exists at exponent 1."""
+		if not is_plain_gate(self):
+			raise ValueError(f"cannot decompose {self!r}: the Toffoli circuit only applies at exponent 1")
+		control0, control1, target = qubits
+		return [
+			H.on(target),
+			CNOT.on(control1, target),
+			(T**-1).on(target),
+			CNOT.on(control0, target),
+			T.on(target),
+			CNOT.on(control1, target),
+			(T**-1).on(target),
+			CNOT.on(control0, target),
+			T.on(control1),
+			T.on(target),
+			H.on(target),
+			CNOT.on(control0, control1),
+			T.on(control0),
+			(T**-1).on(control1),
+			CNOT.on(control0, control1),
+		]
+
+
+class CCYPowGate(_ControlledPowGate):
+	"""A power of the doubly-controlled ``Y`` gate."""
+
+	_SubGate = YPowGate
+	_NumControls = 2
+	_Symbol = "Y"
+
+
+class CCZPowGate(_ControlledPowGate):
+	"""A power of the doubly-controlled ``Z`` gate, which draws as three ``@``."""
+
+	_SubGate = ZPowGate
+	_NumControls = 2
+	_Symbol = "@"
+
+
+CNotPowGate = CXPowGate
+CCNotPowGate = CCXPowGate
+
+
+@value_equality
+class SwapPowGate(_PowGate):
+	"""A power of the ``SWAP`` gate."""
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		phase = cmath.exp(1j * math.pi * self._exponent)
+		a = (1 + phase) / 2
+		b = (1 - phase) / 2
+		shift = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
+		return [
+			[shift * (a + b), 0j, 0j, 0j],
+			[0j, shift * a, shift * b, 0j],
+			[0j, shift * b, shift * a, 0j],
+			[0j, 0j, 0j, shift * (a + b)],
+		]
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("×", "×" + _exponent_suffix(self._exponent))
+
+
+@value_equality
+class ISwapPowGate(_PowGate):
+	"""A power of the ``iSWAP`` gate."""
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _unitary_(self) -> Matrix | None:
+		if self._is_parameterized_():
+			return None
+		c = math.cos(math.pi * self._exponent / 2)
+		s = math.sin(math.pi * self._exponent / 2)
+		shift = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
+		return [
+			[shift, 0j, 0j, 0j],
+			[0j, shift * c, shift * 1j * s, 0j],
+			[0j, shift * 1j * s, shift * c, 0j],
+			[0j, 0j, 0j, shift],
+		]
+
+	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
+		return ("iSwap", "iSwap" + _exponent_suffix(self._exponent))
+
+
+class SqrtISwapGate(ISwapPowGate):
+	"""The square root of the ``iSWAP`` gate, at exponent ``0.5`` by default.
+
+	Cirq has no such class -- ``cirq.SQRT_ISWAP`` is a plain ``ISwapPowGate``,
+	and so is ``vq.SQRT_ISWAP`` -- so this name is vqubit's own, kept because
+	``vq.SqrtISwapGate()`` used to be the class of ``vq.SQRT_ISWAP``. Being a
+	subclass, an instance of it still passes ``isinstance(gate, vq.ISwapPowGate)``.
+	"""
+
+	def __init__(self, *, exponent: Any = 0.5, global_shift: Any = 0.0) -> None:
+		super().__init__(exponent=exponent, global_shift=global_shift)
 
 
 @value_equality
@@ -679,11 +931,13 @@ class MeasurementGate(Gate):
 
 @value_equality
 class _FixedGate(Gate):
-	"""Shared machinery for the fixed two-qubit gates.
+	"""Shared machinery for the fixed multi-qubit gates.
 
-	The matrix and the diagram symbols are produced by static methods rather
-	than stored as class attributes, so a gate instance never hands out a
-	shared, mutable matrix.
+	``CSWAP`` is the only plain gate left that is not a power gate (``vq.CZ``
+	and friends are ``CZPowGate``/``SwapPowGate``/… at exponent 1, as in Cirq),
+	so this is what it builds on. The matrix and the diagram symbols are produced
+	by static methods rather than stored as class attributes, so a gate instance
+	never hands out a shared, mutable matrix.
 	"""
 
 	@staticmethod
@@ -720,87 +974,20 @@ class _FixedGate(Gate):
 		return f"vqubit.{type(self).__name__}()"
 
 
-class _PowerableFixedGate(_FixedGate):
-	"""A fixed gate that can be raised to a power, as in Cirq.
-
-	``vq.CZ ** 0.5`` is a :class:`CZPowGate`, exactly what ``cirq.CZ ** 0.5``
-	gives, and a power of ``1`` returns the gate itself so ``vq.CZ ** 1``
-	round-trips. A subclass only has to say *what it is*: the power gate it turns
-	into, and the exponent that represents it.
-
-	``FREDKIN``/``CSWAP`` are deliberately *not* powerable, because neither is
-	``cirq.CSWAP``.
-	"""
-
-	#: Name of the power-gate class defined in ``_gates_more`` (imported lazily:
-	#: that module imports this one).
-	_pow_gate_name = ""
-	#: The exponent of that power gate which reproduces this fixed gate.
-	_pow_base_exponent = 1.0
-
-	def __pow__(self, power: float) -> Gate:
-		from . import _gates_more
-
-		if not is_symbolic(power) and float(power) == 1.0:
-			return self
-		return getattr(_gates_more, self._pow_gate_name)(exponent=self._pow_base_exponent * power)
-
-
-class CNOTGate(_PowerableFixedGate):
-	"""The controlled-NOT gate: ``X`` on the target when the control is ``1``."""
-
-	_pow_gate_name = "CXPowGate"
-
-	@staticmethod
-	def _base_symbols() -> tuple[str, ...]:
-		return ("@", "X")
-
-	@staticmethod
-	def _base_matrix() -> Matrix:
-		return [
-			[1.0 + 0j, 0j, 0j, 0j],
-			[0j, 1.0 + 0j, 0j, 0j],
-			[0j, 0j, 0j, 1.0 + 0j],
-			[0j, 0j, 1.0 + 0j, 0j],
-		]
-
-
-class CZGate(_PowerableFixedGate):
-	"""The controlled-Z gate: ``Z`` on the target when the control is ``1``."""
-
-	_pow_gate_name = "CZPowGate"
-
-	@staticmethod
-	def _base_symbols() -> tuple[str, ...]:
-		return ("@", "@")
-
-	@staticmethod
-	def _base_matrix() -> Matrix:
-		return [
-			[1.0 + 0j, 0j, 0j, 0j],
-			[0j, 1.0 + 0j, 0j, 0j],
-			[0j, 0j, 1.0 + 0j, 0j],
-			[0j, 0j, 0j, -1.0 + 0j],
-		]
-
-
-class SWAPGate(_PowerableFixedGate):
-	"""The gate that exchanges two qubits."""
-
-	_pow_gate_name = "SwapPowGate"
-
-	@staticmethod
-	def _base_symbols() -> tuple[str, ...]:
-		return ("×", "×")
-
-	@staticmethod
-	def _base_matrix() -> Matrix:
-		return [
-			[1.0 + 0j, 0j, 0j, 0j],
-			[0j, 0j, 1.0 + 0j, 0j],
-			[0j, 1.0 + 0j, 0j, 0j],
-			[0j, 0j, 0j, 1.0 + 0j],
-		]
+# The plain gates *are* the power gates at exponent 1, as in Cirq: ``vq.CZ`` is
+# a ``CZPowGate``, so ``isinstance(vq.CZ, vq.CZPowGate)`` and
+# ``vq.CZ == vq.CZPowGate()`` both hold. The historical class names stay as
+# aliases, so ``vq.CZGate`` and ``vq.OpIdentifier(vq.CNOTGate, 2)`` keep working.
+#
+# Tables that map a gate to a circuit instruction (QASM, Clifford, JSON, ...)
+# must therefore use ``is_plain_gate`` below: after this fold
+# ``isinstance(vq.CZ ** 0.5, vq.CZGate)`` is ``True``, and a fractional power is
+# not the ``CZ`` instruction.
+CNOTGate = CXPowGate
+CZGate = CZPowGate
+SWAPGate = SwapPowGate
+CCXGate = CCXPowGate
+ISWAPGate = ISwapPowGate
 
 
 def _swap_basis_states(num_qubits: int, swaps: Sequence[tuple[int, int]]) -> Matrix:
@@ -812,45 +999,6 @@ def _swap_basis_states(num_qubits: int, swaps: Sequence[tuple[int, int]]) -> Mat
 		matrix[a][b] = 1.0 + 0j
 		matrix[b][a] = 1.0 + 0j
 	return matrix
-
-
-class CCXGate(_PowerableFixedGate):
-	"""The Toffoli gate: ``X`` on the target when both controls are ``1``."""
-
-	_pow_gate_name = "CCXPowGate"
-
-	@staticmethod
-	def _base_num_qubits() -> int:
-		return 3
-
-	@staticmethod
-	def _base_symbols() -> tuple[str, ...]:
-		return ("@", "@", "X")
-
-	@staticmethod
-	def _base_matrix() -> Matrix:
-		# Swap |110> and |111>, the two states whose two controls are set.
-		return _swap_basis_states(3, [(0b110, 0b111)])
-
-	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation]:
-		control0, control1, target = qubits
-		return [
-			H.on(target),
-			CNOT.on(control1, target),
-			(T**-1).on(target),
-			CNOT.on(control0, target),
-			T.on(target),
-			CNOT.on(control1, target),
-			(T**-1).on(target),
-			CNOT.on(control0, target),
-			T.on(control1),
-			T.on(target),
-			H.on(target),
-			CNOT.on(control0, control1),
-			T.on(control0),
-			(T**-1).on(control1),
-			CNOT.on(control0, control1),
-		]
 
 
 class CSWAPGate(_FixedGate):
@@ -931,7 +1079,9 @@ class _PauliProductPowGate(Gate):
 		return type(self)(exponent=-self._exponent)
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return self._symbols
+		# The exponent rides on the last symbol only, as in Cirq: ``XX**0.5``
+		# draws as ``XX`` over ``XX^0.5``.
+		return (*self._symbols[:-1], self._symbols[-1] + _exponent_suffix(self._exponent))
 
 	def __str__(self) -> str:
 		return f"{type(self).__name__}(exponent={_describe(self._exponent)})"
@@ -956,31 +1106,6 @@ class ZZPowGate(_PauliProductPowGate):
 
 	_letter = "Z"
 	_symbols = ("ZZ", "ZZ")
-
-
-class ISWAPGate(_PowerableFixedGate):
-	"""The iSWAP gate: swap two qubits, adding an ``i`` phase to ``|01>`` and ``|10>``."""
-
-	_pow_gate_name = "ISwapPowGate"
-
-	def _inverse_(self) -> Gate:
-		"""``iSWAP`` is *not* self-inverse: its inverse is ``ISWAP_INV``."""
-		from . import _gates_more
-
-		return _gates_more.ISWAP_INV
-
-	@staticmethod
-	def _base_symbols() -> tuple[str, ...]:
-		return ("iSwap", "iSwap")
-
-	@staticmethod
-	def _base_matrix() -> Matrix:
-		return [
-			[1.0 + 0j, 0j, 0j, 0j],
-			[0j, 0j, 1j, 0j],
-			[0j, 1j, 0j, 0j],
-			[0j, 0j, 0j, 1.0 + 0j],
-		]
 
 
 @value_equality
@@ -1098,7 +1223,8 @@ class ControlledGate(Gate):
 		return f"vqubit.ControlledGate({self._sub_gate!r}, num_controls={self._num_controls}, control_values={self._control_values!r})"
 
 
-# Instances, as in Cirq.
+# Instances, as in Cirq. The plain gates are the power gates at exponent 1, so
+# ``CZ`` and ``CZPowGate()`` are the same value, as they are in Cirq.
 X: XPowGate = XPowGate()
 Y: YPowGate = YPowGate()
 Z: ZPowGate = ZPowGate()
@@ -1106,19 +1232,26 @@ H: HPowGate = HPowGate()
 S: ZPowGate = ZPowGate(exponent=0.5)
 T: ZPowGate = ZPowGate(exponent=0.25)
 I: IdentityGate = IdentityGate()  # noqa: E741 - the name matches Cirq's identity gate
-CNOT: CNOTGate = CNOTGate()
-CX: CNOTGate = CNOTGate()
-CZ: CZGate = CZGate()
-SWAP: SWAPGate = SWAPGate()
-CCX: CCXGate = CCXGate()
-TOFFOLI: CCXGate = CCXGate()
+CNOT: CXPowGate = CXPowGate()
+CX: CXPowGate = CXPowGate()
+CZ: CZPowGate = CZPowGate()
+SWAP: SwapPowGate = SwapPowGate()
+CCX: CCXPowGate = CCXPowGate()
+TOFFOLI: CCXPowGate = CCXPowGate()
 CSWAP: CSWAPGate = CSWAPGate()
 FREDKIN: CSWAPGate = CSWAPGate()
 CSwapGate = CSWAPGate
 XX: XXPowGate = XXPowGate()
 YY: YYPowGate = YYPowGate()
 ZZ: ZZPowGate = ZZPowGate()
-ISWAP: ISWAPGate = ISWAPGate()
+ISWAP: ISwapPowGate = ISwapPowGate()
+CY: CYPowGate = CYPowGate()
+CCNOT: CCXPowGate = CCXPowGate()
+CCZ: CCZPowGate = CCZPowGate()
+CCY: CCYPowGate = CCYPowGate()
+ISWAP_INV: ISwapPowGate = ISwapPowGate(exponent=-1)
+SQRT_ISWAP_INV: ISwapPowGate = ISwapPowGate(exponent=-0.5)
+SWAP_INV: SwapPowGate = SwapPowGate(exponent=-1)
 
 
 def Rx(radians: Any) -> RxGate:
@@ -1295,33 +1428,6 @@ class FSimGate(Gate):
 		return f"vqubit.FSimGate({self._theta!r}, {self._phi!r})"
 
 
-class SqrtISwapGate(_PowerableFixedGate):
-	"""The square root of the iSWAP gate."""
-
-	_pow_gate_name = "ISwapPowGate"
-	_pow_base_exponent = 0.5
-
-	def _inverse_(self) -> Gate:
-		"""The inverse of the square root is its negative power, not itself."""
-		from . import _gates_more
-
-		return _gates_more.SQRT_ISWAP_INV
-
-	@staticmethod
-	def _base_symbols() -> tuple[str, ...]:
-		return ("√iSwap", "√iSwap")
-
-	@staticmethod
-	def _base_matrix() -> Matrix:
-		r = 1 / math.sqrt(2)
-		return [
-			[1 + 0j, 0j, 0j, 0j],
-			[0j, r + 0j, 1j * r, 0j],
-			[0j, 1j * r, r + 0j, 0j],
-			[0j, 0j, 0j, 1 + 0j],
-		]
-
-
 @value_equality
 class MSGate(Gate):
 	"""The Mølmer-Sørensen gate on two qubits: ``exp(-i rads X X)``."""
@@ -1366,4 +1472,4 @@ class MSGate(Gate):
 		return f"vqubit.MSGate(rads={self._rads!r})"
 
 
-SQRT_ISWAP: SqrtISwapGate = SqrtISwapGate()
+SQRT_ISWAP: ISwapPowGate = ISwapPowGate(exponent=0.5)

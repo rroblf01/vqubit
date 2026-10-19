@@ -201,6 +201,23 @@ def power(gate: Any, exponent: float = 0.5) -> tuple[bool, Any]:
 		return False, None
 
 
+def text_diagram(module: types.ModuleType, gate: Any) -> str | None:
+	"""Draw ``gate`` on ``LineQubit``\\ s, or ``None`` when it cannot be drawn.
+
+	Cirq 1.7 exposes ``num_qubits`` as a method on its Pauli singletons and as a
+	property elsewhere, so both spellings are accepted.
+	"""
+	try:
+		num_qubits = gate.num_qubits
+		count = num_qubits() if callable(num_qubits) else int(num_qubits)
+		if count > 4:
+			return None
+		qubits = [module.LineQubit(i) for i in range(count)]
+		return module.Circuit(gate.on(*qubits)).to_text_diagram().rstrip()
+	except Exception:
+		return None
+
+
 # --- checks ------------------------------------------------------------------
 
 
@@ -308,6 +325,31 @@ def check_classes(report: Report) -> None:
 		report.check("class", name, up_to_phase(got, want))
 
 
+def check_diagram(report: Report) -> None:
+	"""The text diagram of a shared gate must read the same as Cirq's.
+
+	Each shared gate instance is drawn twice, once as it is and once raised to
+	``** 0.5``, which is how the power gates advertise their exponent
+	(``@^0.5``). This is the check that sees the plain gates fold into the power
+	gates: ``vq.CZ`` and ``cirq.CZ`` are both a ``CZPowGate`` at exponent 1 and
+	both draw a bare ``@``.
+	"""
+	shared = gate_instances(cirq).keys() & gate_instances(vq).keys()
+	for name in sorted(shared):
+		cirq_gate, vq_gate = getattr(cirq, name), getattr(vq, name)
+		want, got = text_diagram(cirq, cirq_gate), text_diagram(vq, vq_gate)
+		report.check("diagram", name, got is not None and got == want, f"cirq {want!r} vs vqubit {got!r}")
+		cirq_ok, cirq_pow = power(cirq_gate)
+		vq_ok, vq_pow = power(vq_gate)
+		if cirq_ok != vq_ok:
+			report.check("diagram", f"{name}**0.5", False, "vqubit and Cirq disagree on whether ** is allowed")
+		elif not cirq_ok:
+			report.check("diagram", f"{name}**0.5", True)
+		else:
+			want, got = text_diagram(cirq, cirq_pow), text_diagram(vq, vq_pow)
+			report.check("diagram", f"{name}**0.5", got is not None and got == want, f"cirq {want!r} vs vqubit {got!r}")
+
+
 SECTIONS: dict[str, Callable[[Report], None]] = {
 	"namespace": check_namespace,
 	"unitary": check_unitary,
@@ -315,6 +357,7 @@ SECTIONS: dict[str, Callable[[Report], None]] = {
 	"rotation": check_rotations,
 	"isinstance": check_isinstance,
 	"class": check_classes,
+	"diagram": check_diagram,
 }
 
 

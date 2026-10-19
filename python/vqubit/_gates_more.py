@@ -1,9 +1,14 @@
 """Additional gates, matching the rest of Cirq's ``cirq.ops`` surface.
 
-This module adds the controlled power gates (``CXPowGate`` and friends), the
-swap-family power gates, the diagonal gates, the permutation and Fourier gates,
-and the lowercase factory helpers (``q``, ``rx``, ``ms`` ...). The base classes
-and the elementary gates live in :mod:`vqubit._gates`.
+This module adds the diagonal gates, the permutation and Fourier gates, the
+lowercase factory helpers (``q``, ``rx``, ``ms`` ...) and the remaining power
+gates (``PhasedISwapPowGate``).
+
+The other power gates (``CXPowGate``, ``CZPowGate``, ``SwapPowGate`` ...) and
+their instances are *defined* in :mod:`vqubit._gates`, next to the single-qubit
+power gates: the plain gates are those classes at exponent 1 (``vq.CZ`` is a
+``CZPowGate``), so they belong there. They are re-exported here to keep this
+module's public surface unchanged.
 """
 
 from __future__ import annotations
@@ -14,16 +19,29 @@ from collections.abc import Sequence
 from typing import Any
 
 from ._gates import (
-	EigenGate,
+	CCNOT,
+	CCY,
+	CCZ,
+	CY,
+	ISWAP_INV,
+	SQRT_ISWAP_INV,
+	SWAP_INV,
+	CCNotPowGate,
+	CCXPowGate,
+	CCYPowGate,
+	CCZPowGate,
+	CNotPowGate,
+	CXPowGate,
+	CYPowGate,
+	CZPowGate,
 	Gate,
 	GlobalPhaseGate,
+	ISwapPowGate,
 	MatrixGate,
 	MSGate,
+	SwapPowGate,
 	WaitGate,
-	XPowGate,
-	YPowGate,
-	ZPowGate,
-	identity,
+	_PowGate,
 	is_symbolic,
 	resolve_value,
 	value_equality,
@@ -31,174 +49,6 @@ from ._gates import (
 from ._linalg import Matrix
 from ._parameter import ParamResolver
 from ._qubits import Qid
-
-
-class _PowGate(Gate):
-	"""Shared machinery for the multi-qubit power gates."""
-
-	def __init__(self, *, exponent: Any = 1.0, global_shift: Any = 0.0) -> None:
-		self._exponent = exponent if is_symbolic(exponent) else float(exponent)
-		self._global_shift = global_shift if is_symbolic(global_shift) else float(global_shift)
-
-	@property
-	def exponent(self) -> Any:
-		return self._exponent
-
-	@property
-	def global_shift(self) -> Any:
-		return self._global_shift
-
-	def _is_parameterized_(self) -> bool:
-		return is_symbolic(self._exponent) or is_symbolic(self._global_shift)
-
-	def _value_equality_values_(self) -> Any:
-		return (self._exponent, self._global_shift)
-
-	def __pow__(self, power: float) -> _PowGate:
-		return type(self)(exponent=self._exponent * power, global_shift=self._global_shift)
-
-	def _inverse_(self) -> _PowGate:
-		return type(self)(exponent=-self._exponent, global_shift=self._global_shift)
-
-	def _resolve_parameters_(self, resolver: ParamResolver) -> _PowGate:
-		if not self._is_parameterized_():
-			return self
-		return type(self)(
-			exponent=resolve_value(self._exponent, resolver),
-			global_shift=resolve_value(self._global_shift, resolver),
-		)
-
-	def __str__(self) -> str:
-		return f"{type(self).__name__}(exponent={self._exponent})"
-
-	def __repr__(self) -> str:
-		return f"vqubit.{type(self).__name__}(exponent={self._exponent!r}, global_shift={self._global_shift!r})"
-
-
-@value_equality
-class _ControlledPowGate(_PowGate):
-	"""A power of a controlled single-qubit power gate."""
-
-	_SubGate: type[EigenGate] = XPowGate
-	_NumControls = 1
-	_Symbol = "X"
-
-	def _num_qubits_(self) -> int:
-		return self._NumControls + 1
-
-	def _unitary_(self) -> Matrix | None:
-		sub = self._SubGate(exponent=self._exponent, global_shift=self._global_shift)._unitary_()
-		if sub is None:
-			return None
-		block = len(sub)
-		dim = (1 << self._NumControls) * block
-		matrix = identity(dim)
-		offset = dim - block
-		for i in range(block):
-			for j in range(block):
-				matrix[offset + i][offset + j] = sub[i][j]
-		return matrix
-
-	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("@",) * self._NumControls + (self._Symbol,)
-
-
-class CXPowGate(_ControlledPowGate):
-	"""A power of the controlled-``X`` gate."""
-
-	_SubGate = XPowGate
-	_Symbol = "X"
-
-
-class CYPowGate(_ControlledPowGate):
-	"""A power of the controlled-``Y`` gate."""
-
-	_SubGate = YPowGate
-	_Symbol = "Y"
-
-
-class CZPowGate(_ControlledPowGate):
-	"""A power of the controlled-``Z`` gate."""
-
-	_SubGate = ZPowGate
-	_Symbol = "Z"
-
-
-class CCXPowGate(_ControlledPowGate):
-	"""A power of the doubly-controlled ``X`` gate."""
-
-	_SubGate = XPowGate
-	_NumControls = 2
-	_Symbol = "X"
-
-
-class CCYPowGate(_ControlledPowGate):
-	"""A power of the doubly-controlled ``Y`` gate."""
-
-	_SubGate = YPowGate
-	_NumControls = 2
-	_Symbol = "Y"
-
-
-class CCZPowGate(_ControlledPowGate):
-	"""A power of the doubly-controlled ``Z`` gate."""
-
-	_SubGate = ZPowGate
-	_NumControls = 2
-	_Symbol = "Z"
-
-
-CNotPowGate = CXPowGate
-CCNotPowGate = CCXPowGate
-
-
-@value_equality
-class SwapPowGate(_PowGate):
-	"""A power of the ``SWAP`` gate."""
-
-	def _num_qubits_(self) -> int:
-		return 2
-
-	def _unitary_(self) -> Matrix | None:
-		if self._is_parameterized_():
-			return None
-		phase = cmath.exp(1j * math.pi * self._exponent)
-		a = (1 + phase) / 2
-		b = (1 - phase) / 2
-		shift = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
-		return [
-			[shift * (a + b), 0j, 0j, 0j],
-			[0j, shift * a, shift * b, 0j],
-			[0j, shift * b, shift * a, 0j],
-			[0j, 0j, 0j, shift * (a + b)],
-		]
-
-	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("Swap", "Swap")
-
-
-@value_equality
-class ISwapPowGate(_PowGate):
-	"""A power of the ``iSWAP`` gate."""
-
-	def _num_qubits_(self) -> int:
-		return 2
-
-	def _unitary_(self) -> Matrix | None:
-		if self._is_parameterized_():
-			return None
-		c = math.cos(math.pi * self._exponent / 2)
-		s = math.sin(math.pi * self._exponent / 2)
-		shift = cmath.exp(1j * math.pi * self._exponent * self._global_shift)
-		return [
-			[shift, 0j, 0j, 0j],
-			[0j, shift * c, shift * 1j * s, 0j],
-			[0j, shift * 1j * s, shift * c, 0j],
-			[0j, 0j, 0j, shift],
-		]
-
-	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		return ("iSwap", "iSwap")
 
 
 @value_equality
@@ -430,16 +280,6 @@ class QuantumFourierTransformGate(Gate):
 
 	def __repr__(self) -> str:
 		return f"vqubit.QuantumFourierTransformGate({self._num_qubits}, without_reverse={self._without_reverse!r})"
-
-
-# Fixed-gate instances and aliases, as in Cirq.
-CY: CYPowGate = CYPowGate()
-CCZ: CCZPowGate = CCZPowGate()
-CCY: CCYPowGate = CCYPowGate()
-CCNOT: CCXPowGate = CCXPowGate()
-ISWAP_INV: ISwapPowGate = ISwapPowGate(exponent=-1)
-SQRT_ISWAP_INV: ISwapPowGate = ISwapPowGate(exponent=-0.5)
-SWAP_INV: SwapPowGate = SwapPowGate(exponent=-1)
 
 
 def rx(radians: Any) -> Gate:

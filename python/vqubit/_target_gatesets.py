@@ -14,7 +14,7 @@ silently miscompiled.
 from __future__ import annotations
 
 from ._circuits import Circuit
-from ._gates import CNOTGate, CZGate, Gate, H
+from ._gates import CNOTGate, CZGate, Gate, H, is_plain_gate
 from ._ops import Operation
 from ._optimizers import single_qubit_matrix_to_phxz
 from ._transformers import expand_composite, merge_single_qubit_moments_to_phxz
@@ -51,7 +51,7 @@ class TargetGateset:
 				raise TypeError(f"{gate!r} is not a unitary single-qubit gate")
 			phxz = single_qubit_matrix_to_phxz([list(row) for row in matrix], atol=self.atol)
 			return [phxz.on(operation.qubits[0])]
-		if isinstance(gate, self.two_qubit_gates()):
+		if isinstance(gate, self.two_qubit_gates()) and is_plain_gate(gate):
 			return [operation]
 		converted = self.convert_two_qubit(operation)
 		if converted is not None:
@@ -79,7 +79,7 @@ class CZTargetGateset(TargetGateset):
 
 	def convert_two_qubit(self, operation: Operation) -> list[Operation] | None:
 		# CNOT = (I x H) CZ (I x H), the H on the target.
-		if isinstance(operation.gate, CNOTGate):
+		if isinstance(operation.gate, CNOTGate) and is_plain_gate(operation.gate):
 			control, target = operation.qubits
 			return [H.on(target), CZGate().on(control, target), H.on(target)]
 		return None
@@ -106,7 +106,7 @@ class CNOTTargetGateset(TargetGateset):
 
 	def convert_two_qubit(self, operation: Operation) -> list[Operation] | None:
 		# CZ = (I x H) CNOT (I x H), the H on the target.
-		if isinstance(operation.gate, CZGate):
+		if isinstance(operation.gate, CZGate) and is_plain_gate(operation.gate):
 			control, target = operation.qubits
 			return [H.on(target), CNOTGate().on(control, target), H.on(target)]
 		return None

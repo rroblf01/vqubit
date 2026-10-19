@@ -71,42 +71,44 @@ assert vq.X ** 0.5 == vq.XPowGate(exponent=0.5)
 assert (vq.X ** 0.5)(q0) == vq.XPowGate(exponent=0.5)(q0)
 ```
 
-Toda puerta cuyo equivalente en Cirq está exponenciado también admite `**`, y
-devuelve la puerta de potencia correspondiente: `vq.CZ ** 0.5` es un `CZPowGate`,
-y lo mismo ocurre con `vq.CNOT`, `vq.SWAP`, `vq.ISWAP`, `vq.SQRT_ISWAP`, `vq.CCX`
-y `vq.TOFFOLI`. Las rotaciones escalan su ángulo, como `cirq.rz`.
+Las puertas planas **son** las puertas de potencia, como en Cirq: `vq.CZ` es un
+`CZPowGate(exponent=1)`, así que `isinstance(vq.CZ, vq.CZPowGate)` y
+`vq.CZ == vq.CZPowGate()` son `True`. Lo mismo para `CNOT`/`CX` (un `CXPowGate`),
+`SWAP`, `ISWAP`, `SQRT_ISWAP`, `CCX`/`TOFFOLI`/`CCNOT`, `CY`, `CCZ` y `CCY`.
 
 ```python
 import vqubit as vq
 
+q0, q1 = vq.LineQubit.range(2)
+
+assert isinstance(vq.CZ, vq.CZPowGate)
+assert vq.CZ == vq.CZPowGate(exponent=1)
 assert vq.CZ ** 0.5 == vq.CZPowGate(exponent=0.5)
 assert vq.SQRT_ISWAP ** 0.5 == vq.ISwapPowGate(exponent=0.25)
 assert vq.rz(0.3) ** 0.5 == vq.RzGate(0.15)
 assert vq.I ** 0.5 == vq.I
 ```
 
-(`vq.FREDKIN` y `vq.CSWAP` no admiten `**` a propósito: `cirq.CSWAP` tampoco.)
+Los nombres históricos `vq.CZGate`, `vq.CNOTGate`, `vq.SWAPGate`, `vq.CCXGate` y
+`vq.ISWAPGate` siguen existiendo como **alias** de las clases de potencia, así que
+el código que los mencione (por ejemplo en un `isinstance`) no se rompe. `vq.FREDKIN`
+y `vq.CSWAP` no admiten `**` a propósito: `cirq.CSWAP` tampoco.
 
-Lo que aún cambia es la *clase* de las puertas planas. En Cirq `cirq.CZ` **es** un
-`CZPowGate(exponent=1)`, así que `isinstance(cirq.CZ, cirq.CZPowGate)` es `True` y
-`cirq.CZ == cirq.CZPowGate()`. En vqubit `vq.CZ` es un `CZGate`, una clase propia
-que salta a `CZPowGate` al elevar a una potencia, así que ambas cosas son `False`:
-
-```python
-import vqubit as vq
-
-assert vq.CZ ** 0.5 == vq.CZPowGate(exponent=0.5)  # el comportamiento coincide
-assert not isinstance(vq.CZ, vq.CZPowGate)  # la clase no
-```
-
-Usa las clases `Pow` directamente cuando importe la clase:
+Lo que sí cambia es la **igualdad**. Cirq compara las fases propias módulo el
+periodo de la puerta, así que `cirq.X ** 3 == cirq.X` y
+`cirq.CNOT ** -1 == cirq.CNOT` son `True`; vqubit compara el exponente tal cual,
+así que ambas son `False` aunque la unitaria sea la misma. Es un hueco de paridad
+conocido, con su criterio de cierre en `ROADMAP.md`:
 
 ```python
 import vqubit as vq
 
-assert vq.CZPowGate(exponent=0.5) == vq.CZPowGate() ** 0.5
-assert vq.SwapPowGate(exponent=0.5) == vq.SwapPowGate() ** 0.5
+assert vq.X ** 3 != vq.X  # cirq.X ** 3 == cirq.X
+assert vq.CNOT ** -1 != vq.CNOT  # cirq.CNOT ** -1 == cirq.CNOT
 ```
+
+Cuando el exponente pueda dar la vuelta al periodo, compara unitarias
+(`vq.unitary`) en vez de puertas.
 
 ## Los simuladores solo aceptan `seed`
 
@@ -157,6 +159,23 @@ estado = vq.Simulator().simulate(circuito).state_vector()
 assert abs(abs(estado[0]) - 2**-0.5) < 1e-9
 assert abs(abs(estado[3]) - 2**-0.5) < 1e-9
 ```
+
+## El diagrama de texto
+
+`vq.Circuit` dibuja un diagrama de una línea por qubit y una columna por momento
+que coincide con el de Cirq para las puertas compartidas, exponentes incluidos:
+`vq.CZ ** 0.5` se dibuja `@` sobre `@^0.5`, igual que `cirq.CZ ** 0.5`. Dos
+detalles siguen siendo distintos, por diseño del renderizador:
+
+- **Sin bloques de *tableau*.** Cirq dibuja una `CliffordGate` como un bloque de
+  varias líneas con su tabla («Clifford Gate with Tableau»); vqubit la dibuja
+  como el símbolo de una línea `CliffordGate(2q)`.
+- **Exponentes en decimal.** vqubit escribe todo exponente en decimal
+  (`Z^0.125`) donde Cirq escribe las fracciones que reconoce como tales
+  (`Z^(1/8)`).
+
+Ambas están en la lista de divergencias toleradas del arnés, con
+`plan = "permanent"`.
 
 ## Lo que no cambia
 

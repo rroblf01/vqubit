@@ -90,10 +90,14 @@ def test_run_is_deterministic_for_a_basis_state() -> None:
 	assert result.histogram(key="m") == {1: 5}
 
 
-def test_simulate_rejects_measurements() -> None:
+def test_simulate_samples_and_reports_measurements() -> None:
+	# As in Cirq, ``simulate`` samples the measurements, collapses the state and
+	# reports what it sampled.
 	q0 = vqubit.LineQubit(0)
-	with pytest.raises(ValueError):
-		vqubit.DensityMatrixSimulator().simulate(vqubit.Circuit(vqubit.measure(q0)))
+	result = vqubit.DensityMatrixSimulator(seed=0).simulate(
+		vqubit.Circuit(vqubit.measure(q0), key="m") if False else vqubit.Circuit(vqubit.measure(q0, key="m"))
+	)
+	assert result.measurements["m"] in ([[0]], [[1]])
 
 
 def test_trial_result_exposes_the_density_matrix() -> None:

@@ -82,8 +82,11 @@ def test_pauli_string_unitary() -> None:
 
 
 def test_pauli_string_validates_types() -> None:
+	# The values may be a ``Pauli``, a Pauli gate or its letter, as in Cirq.
 	with pytest.raises(TypeError):
-		vqubit.PauliString({vqubit.LineQubit(0): "X"})  # ty: ignore[invalid-argument-type]
+		vqubit.PauliString({vqubit.LineQubit(0): "H"})
+	with pytest.raises(TypeError):
+		vqubit.PauliString({vqubit.LineQubit(0): vqubit.H})
 	with pytest.raises(TypeError):
 		vqubit.PauliString({0: vqubit.Pauli.X})  # ty: ignore[invalid-argument-type]
 

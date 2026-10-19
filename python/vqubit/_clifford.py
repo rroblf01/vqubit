@@ -35,7 +35,7 @@ from ._linalg import vector_from_flat
 from ._ops import Operation
 from ._pauli import Pauli
 from ._qubits import LineQubit, Qid
-from ._sim import _SweepsAndBatches
+from ._sim import _SampledExpectationValues, _SweepsAndBatches
 
 #: Tolerance for comparing exponents (``Z ** 0.5`` is ``S``, and ``0.1 + 0.4``
 #: has to count as ``0.5``).
@@ -772,7 +772,7 @@ def _is_clifford_gate(gate: Any) -> bool:
 	return True
 
 
-class CliffordSimulator(_SweepsAndBatches):
+class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 	"""A stabilizer simulator for Clifford circuits."""
 
 	def __init__(self, *, seed: int | None = None) -> None:

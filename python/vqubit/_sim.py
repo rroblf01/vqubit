@@ -21,7 +21,7 @@ import vqubit_native as _native
 
 from ._circuits import Circuit
 from ._compat import HAS_NUMPY, is_numpy_array, native_complex_view
-from ._gates import MeasurementGate
+from ._gates import H, MeasurementGate, S, measure
 from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._ops import Moment
 from ._protocols import is_parameterized, resolve_parameters
@@ -89,6 +89,180 @@ def _resolve_program(program: Circuit, param_resolver: Any) -> Circuit:
 	if is_parameterized(program):
 		raise ValueError("the circuit still contains unsolved symbols; pass param_resolver= to fix them")
 	return program
+
+
+def _qubit_pauli(qubit: Qid, letter: str) -> Any:
+	"""A one-qubit ``PauliString`` naming ``qubit``, for the Bloch vector."""
+	from ._pauli import Pauli, PauliString
+
+	return PauliString({qubit: Pauli(letter)})
+
+
+def _reduced_density_matrix(state_vector: Any, qubit_map: Any, qubits: Sequence[Qid] | None) -> Any:
+	"""The density matrix of ``qubits``, the rest traced out."""
+	from ._qis import partial_trace
+	from ._qis_extra import density_matrix_from_state_vector
+
+	full = density_matrix_from_state_vector(list(state_vector))
+	keep = [qubit_map[qubit] for qubit in qubits] if qubits is not None else list(range(len(qubit_map)))
+	return partial_trace(full, sorted(keep))
+
+
+def _copy_records(records: dict[str, list[list[int]]]) -> dict[str, list[list[int]]]:
+	"""A defensive copy of measurement records, so a step does not keep growing."""
+	return {key: [list(row) for row in rows] for key, rows in records.items()}
+
+
+def _as_observables(observables: Any) -> list[Any]:
+	"""The observables as a list of ``PauliSum``, accepting one or many."""
+	from ._pauli import PauliSum
+
+	if isinstance(observables, list):
+		return [PauliSum.wrap(observable) for observable in observables]
+	return [PauliSum.wrap(observables)]
+
+
+class _ExpectationValues:
+	"""Exact expectation values of Pauli observables, as Cirq's simulators give.
+
+	Everything is written on top of ``simulate_sweep_iter`` and the per-simulator
+	:meth:`_observable_expectation`, the way Cirq's ``SimulatesExpectationValues``
+	is written on top of ``simulate_expectation_values_sweep_iter``.
+	"""
+
+	simulate_sweep_iter: Any
+
+	def _observable_expectation(self, result: Any, observable: Any) -> complex:
+		"""How this simulator reads an observable off a trial result."""
+		raise NotImplementedError
+
+	def simulate_expectation_values_sweep_iter(
+		self,
+		program: Circuit,
+		observables: Any,
+		params: Any,
+		qubit_order: Sequence[Qid] | None = None,
+		initial_state: Any = 0,
+		permit_terminal_measurements: bool = False,
+	) -> Iterator[list[complex]]:
+		"""Exact expectation values at every point of the sweep ``params``."""
+		if not permit_terminal_measurements and _has_terminal_measurements(program):
+			raise ValueError(
+				"the circuit has terminal measurements, which may skew expectation values; "
+				"pass permit_terminal_measurements=True if that is what you want"
+			)
+		sums = _as_observables(observables)
+		for result in self.simulate_sweep_iter(program, params, qubit_order, initial_state):
+			yield [self._observable_expectation(result, observable) for observable in sums]
+
+	def simulate_expectation_values_sweep(
+		self,
+		program: Circuit,
+		observables: Any,
+		params: Any,
+		qubit_order: Sequence[Qid] | None = None,
+		initial_state: Any = 0,
+		permit_terminal_measurements: bool = False,
+	) -> list[list[complex]]:
+		"""Like :meth:`simulate_expectation_values_sweep_iter`, but a list."""
+		return list(
+			self.simulate_expectation_values_sweep_iter(
+				program, observables, params, qubit_order, initial_state, permit_terminal_measurements
+			)
+		)
+
+	def simulate_expectation_values(
+		self,
+		program: Circuit,
+		observables: Any,
+		param_resolver: Any = None,
+		qubit_order: Sequence[Qid] | None = None,
+		initial_state: Any = 0,
+		permit_terminal_measurements: bool = False,
+	) -> list[complex]:
+		"""Exact expectation values of ``observables`` on the final state."""
+		return self.simulate_expectation_values_sweep(
+			program, observables, param_resolver, qubit_order, initial_state, permit_terminal_measurements
+		)[0]
+
+
+class _SampledExpectationValues:
+	"""Expectation values estimated by sampling, as Cirq's samplers give.
+
+	Each Pauli string is measured in its own basis (rotating it onto ``Z``) for
+	``num_samples`` repetitions, and the parity of the measured bits averages to
+	its expectation value -- which is what a real device (or Cirq's
+	``Sampler.sample_expectation_values``) does.
+	"""
+
+	run: Any
+
+	def sample_expectation_values(
+		self,
+		program: Circuit,
+		observables: Any,
+		*,
+		num_samples: int,
+		params: Any = None,
+		permit_terminal_measurements: bool = False,
+	) -> list[list[float]]:
+		"""Estimate expectation values from ``num_samples`` repetitions."""
+		if num_samples <= 0:
+			raise ValueError(f"expectation values need at least one sample, got {num_samples}")
+		sums = _as_observables(observables)
+		if not sums:
+			raise ValueError("at least one observable is needed")
+		if not permit_terminal_measurements and _has_terminal_measurements(program):
+			raise ValueError(
+				"the circuit has terminal measurements, which may skew expectation values; "
+				"pass permit_terminal_measurements=True if that is what you want"
+			)
+		from ._study import to_resolvers
+
+		estimates: list[list[float]] = []
+		for resolver in to_resolvers(params):
+			row: list[float] = []
+			for observable in sums:
+				total = 0.0
+				for term in observable:
+					total += _sample_pauli_string(self, program, term, num_samples, resolver)
+				row.append(total)
+			estimates.append(row)
+		return estimates
+
+
+def _sample_pauli_string(
+	simulator: Any, program: Circuit, pauli_string: Any, num_samples: int, param_resolver: Any
+) -> float:
+	"""Estimate ``<P>`` by measuring ``P`` in its own basis.
+
+	The basis change is written with the stabilizer kernels' own gates (``X``
+	needs a Hadamard, ``Y`` a Hadamard after an ``S†``; both verified against the
+	unitaries), because those kernels can only apply the instructions they know,
+	and ``PauliString.to_z_basis_ops`` hands out general Clifford gates.
+	"""
+	from ._parameter import ParamResolver
+	from ._pauli import Pauli
+
+	if not pauli_string:
+		return pauli_string.coefficient.real
+	stages: list[list[Any]] = []
+	for qubit, pauli in pauli_string.items():
+		if pauli is Pauli.Z:
+			continue
+		gates = (H,) if pauli is Pauli.X else (S**-1, H)
+		for depth, gate in enumerate(gates):
+			stages.extend([] for _ in range(depth + 1 - len(stages)))
+			stages[depth].append(gate.on(qubit))
+	measured = Circuit(
+		*program.moments,
+		*[Moment(stage) for stage in stages if stage],
+		Moment([measure(*pauli_string.qubits, key="m")]),
+	)
+	result = simulator.run(measured, ParamResolver(param_resolver), num_samples)
+	rows = result.measurements["m"]
+	signs = sum(1 if sum(row) % 2 == 0 else -1 for row in rows)
+	return pauli_string.coefficient.real * signs / num_samples
 
 
 class _SweepsAndBatches:
@@ -199,10 +373,17 @@ def _format_complex(value: complex, decimals: int) -> str:
 class SimulationResult(SimulationTrialResultBase):
 	"""The result of :meth:`Simulator.simulate`."""
 
-	def __init__(self, qubits: Sequence[Qid], state: StateVector, params: Any = None) -> None:
+	def __init__(
+		self,
+		qubits: Sequence[Qid],
+		state: StateVector,
+		params: Any = None,
+		measurements: dict[str, list[list[int]]] | None = None,
+	) -> None:
 		self._qubits = tuple(qubits)
 		self._final_state = state
 		self._params = _as_resolver(params)
+		self._measurements = measurements if measurements is not None else {}
 
 	@property
 	def params(self) -> Any:
@@ -218,10 +399,23 @@ class SimulationResult(SimulationTrialResultBase):
 		"""Which index each qubit holds in the state, as Cirq reports it."""
 		return {qubit: index for index, qubit in enumerate(self._qubits)}
 
+	def bloch_vector_of(self, qubit: Qid) -> list[float]:
+		"""The Bloch vector of ``qubit`` in the final state: ``[<X>, <Y>, <Z>]``."""
+		return [
+			_qubit_pauli(qubit, letter)
+			.expectation_from_state_vector(self.final_state_vector, self.qubit_map, check_preconditions=False)
+			.real
+			for letter in "XYZ"
+		]
+
+	def density_matrix_of(self, qubits: Sequence[Qid] | None = None) -> Any:
+		"""The reduced density matrix of ``qubits`` (every qubit by default)."""
+		return _reduced_density_matrix(self.final_state_vector, self.qubit_map, qubits)
+
 	@property
 	def measurements(self) -> dict[str, list[list[int]]]:
-		"""Always empty: a simulation is a circuit with no measurements."""
-		return {}
+		"""The measurement outcomes the simulation sampled (empty when none)."""
+		return self._measurements
 
 	@property
 	def final_state(self) -> StateVector:
@@ -299,6 +493,22 @@ def _record_bits(
 	measurements.setdefault(gate.key, []).append(bits)
 
 
+def _has_terminal_measurements(program: Circuit) -> bool:
+	"""Whether any measurement is left un-followed on its qubits, as Cirq checks.
+
+	Cirq's ``are_any_measurements_terminal``: a measurement at the end of the
+	circuit usually means the caller wanted samples, not expectation values.
+	"""
+	operations = list(program.all_operations())
+	for index, operation in enumerate(operations):
+		if not isinstance(operation.gate, MeasurementGate):
+			continue
+		qubits = set(operation.qubits)
+		if not any(qubits & set(later.qubits) for later in operations[index + 1 :]):
+			return True
+	return False
+
+
 def _measurements_are_terminal(program: Circuit) -> bool:
 	"""Report whether every measurement happens after all non-measurements.
 
@@ -341,6 +551,8 @@ def _outcome_of(targets: Sequence[int], positions: dict[int, int], union_outcome
 
 class Simulator(
 	_SweepsAndBatches,
+	_ExpectationValues,
+	_SampledExpectationValues,
 	SimulatorBase,
 	SimulatesSamples,
 	SimulatesAmplitudes,
@@ -372,12 +584,16 @@ class Simulator(
 			state.set_zero_state()
 		else:
 			state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
+		# A measurement is sampled and collapses the state, as in Cirq's simulator.
+		records: dict[str, list[list[int]]] = {}
 		for moment in program.moments:
-			self._apply_moment(state, moment, index, rng=None, measurements=None)
+			self._apply_moment(state, moment, index, rng=random.Random(self._seed), measurements=records)
 		view = native_complex_view(state)
 		if view is not None:
-			return SimulationResult(qubits, StateVector(view, qubits, owner=state), param_resolver)
-		return SimulationResult(qubits, StateVector(vector_from_flat(state.amplitudes()), qubits), param_resolver)
+			return SimulationResult(qubits, StateVector(view, qubits, owner=state), param_resolver, records)
+		return SimulationResult(
+			qubits, StateVector(vector_from_flat(state.amplitudes()), qubits), param_resolver, records
+		)
 
 	def simulate_moment_steps(
 		self,
@@ -397,9 +613,12 @@ class Simulator(
 			state.set_zero_state()
 		else:
 			state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << len(qubits))))
+		records: dict[str, list[list[int]]] = {}
 		for moment in program.moments:
-			self._apply_moment(state, moment, index, rng=None, measurements=None)
-			yield SparseSimulatorStep(qubits=qubits, measurements={}, state_vector=vector_from_flat(state.amplitudes()))
+			self._apply_moment(state, moment, index, rng=random.Random(self._seed), measurements=records)
+			yield SparseSimulatorStep(
+				qubits=qubits, measurements=_copy_records(records), state_vector=vector_from_flat(state.amplitudes())
+			)
 
 	def compute_amplitudes(
 		self,
@@ -490,6 +709,12 @@ class Simulator(
 
 	sample = run
 
+	def _observable_expectation(self, result: SimulationResult, observable: Any) -> complex:
+		"""Read an observable off the final state vector of a simulation."""
+		return observable.expectation_from_state_vector(
+			result.final_state_vector, result.qubit_map, check_preconditions=False
+		)
+
 	def _apply_moment(
 		self,
 		state: Any,
@@ -547,10 +772,17 @@ class DensityMatrix:
 class DensityMatrixTrialResult(SimulationTrialResultBase):
 	"""The result of :meth:`DensityMatrixSimulator.simulate`."""
 
-	def __init__(self, qubits: Sequence[Qid], density: DensityMatrix, params: Any = None) -> None:
+	def __init__(
+		self,
+		qubits: Sequence[Qid],
+		density: DensityMatrix,
+		params: Any = None,
+		measurements: dict[str, list[list[int]]] | None = None,
+	) -> None:
 		self._qubits = tuple(qubits)
 		self._final_density_matrix = density
 		self._params = _as_resolver(params)
+		self._measurements = measurements if measurements is not None else {}
 
 	@property
 	def params(self) -> Any:
@@ -568,8 +800,8 @@ class DensityMatrixTrialResult(SimulationTrialResultBase):
 
 	@property
 	def measurements(self) -> dict[str, list[list[int]]]:
-		"""Always empty: a simulation is a circuit with no measurements."""
-		return {}
+		"""The measurement outcomes the simulation sampled (empty when none)."""
+		return self._measurements
 
 	@property
 	def final_density_matrix(self) -> DensityMatrix:
@@ -587,7 +819,13 @@ def _density_flat_to_nested(flat: Sequence[float], dim: int) -> list[list[comple
 
 
 class DensityMatrixSimulator(
-	_SweepsAndBatches, SimulatorBase, SimulatesSamples, SimulatesFinalState, SimulatesIntermediateState
+	_SweepsAndBatches,
+	_ExpectationValues,
+	_SampledExpectationValues,
+	SimulatorBase,
+	SimulatesSamples,
+	SimulatesFinalState,
+	SimulatesIntermediateState,
 ):
 	"""A simulator that evolves a density matrix, so it can run noisy circuits."""
 
@@ -610,14 +848,16 @@ class DensityMatrixSimulator(
 			density.set_zero_state()
 		else:
 			density.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << num_qubits)))
+		# A measurement is sampled and collapses the state, as in Cirq's simulator.
+		records: dict[str, list[list[int]]] = {}
 		for moment in program.moments:
-			self._apply_moment(density, moment, index, rng=None, measurements=None)
+			self._apply_moment(density, moment, index, rng=random.Random(self._seed), measurements=records)
 		view = native_complex_view(density)
 		if view is not None:
 			matrix = DensityMatrix(view.reshape(1 << num_qubits, 1 << num_qubits), qubits, owner=density)
 		else:
 			matrix = DensityMatrix(_density_flat_to_nested(density.density_matrix(), 1 << num_qubits), qubits)
-		return DensityMatrixTrialResult(qubits, matrix, param_resolver)
+		return DensityMatrixTrialResult(qubits, matrix, param_resolver, records)
 
 	def simulate_moment_steps(
 		self,
@@ -639,10 +879,13 @@ class DensityMatrixSimulator(
 			density.set_zero_state()
 		else:
 			density.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, dim)))
+		records: dict[str, list[list[int]]] = {}
 		for moment in program.moments:
-			self._apply_moment(density, moment, index, rng=None, measurements=None)
+			self._apply_moment(density, moment, index, rng=random.Random(self._seed), measurements=records)
 			yield DensityMatrixStepResult(
-				qubits=qubits, measurements={}, density_matrix=_density_flat_to_nested(density.density_matrix(), dim)
+				qubits=qubits,
+				measurements=_copy_records(records),
+				density_matrix=_density_flat_to_nested(density.density_matrix(), dim),
 			)
 
 	def run(
@@ -672,6 +915,12 @@ class DensityMatrixSimulator(
 		return Result(records, param_resolver)
 
 	sample = run
+
+	def _observable_expectation(self, result: DensityMatrixTrialResult, observable: Any) -> complex:
+		"""Read an observable off the final density matrix of a simulation."""
+		return observable.expectation_from_density_matrix(
+			result.density_matrix(), result.qubit_map, check_preconditions=False
+		)
 
 	def _apply_moment(
 		self,

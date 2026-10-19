@@ -17,7 +17,7 @@ from ._gates import MeasurementGate
 from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._qis_extra import density_matrix_from_state_vector
 from ._qubits import Qid
-from ._sim import StateVector, _initial_state_vector
+from ._sim import StateVector, _initial_state_vector, _qubit_pauli, _reduced_density_matrix
 from ._sim_abc import (
 	SimulationStateBase,
 	SimulationTrialResultBase,
@@ -181,6 +181,11 @@ class StepResult(StepResultBase):
 	def qubits(self) -> tuple[Qid, ...]:
 		return self._qubits
 
+	@property
+	def qubit_map(self) -> dict[Qid, int]:
+		"""Which index each qubit holds in the state, as Cirq reports it."""
+		return {qubit: index for index, qubit in enumerate(self._qubits)}
+
 	def state_vector(self) -> list[complex]:
 		if self._state_vector is None:
 			raise ValueError("this step result has no state vector")
@@ -211,6 +216,19 @@ class StateVectorStepResult(StepResult, StateVectorMixin):
 	def __init__(self, *, qubits: Sequence[Qid], measurements: dict[str, Any], state_vector: Sequence[complex]) -> None:
 		super().__init__(qubits=qubits, measurements=measurements, state_vector=state_vector)
 
+	def bloch_vector_of(self, qubit: Qid) -> list[float]:
+		"""The Bloch vector of ``qubit`` in this step's state: ``[<X>, <Y>, <Z>]``."""
+		return [
+			_qubit_pauli(qubit, letter)
+			.expectation_from_state_vector(self.state_vector(), self.qubit_map, check_preconditions=False)
+			.real
+			for letter in "XYZ"
+		]
+
+	def density_matrix_of(self, qubits: Sequence[Qid] | None = None) -> Any:
+		"""The reduced density matrix of ``qubits`` in this step (all by default)."""
+		return _reduced_density_matrix(self.state_vector(), self.qubit_map, qubits)
+
 
 class DensityMatrixStepResult(StepResult):
 	"""A step result holding a density matrix."""
@@ -227,6 +245,11 @@ class CliffordSimulatorStepResult(StepResult):
 	def __init__(self, *, qubits: Sequence[Qid], measurements: dict[str, Any], state: Any) -> None:
 		self._clifford_state = state
 		super().__init__(qubits=qubits, measurements=measurements, state_vector=state.state_vector())
+
+	@property
+	def state(self) -> Any:
+		"""The Clifford state of this step, under the name Cirq gives it."""
+		return self._clifford_state
 
 	@property
 	def clifford_state(self) -> Any:

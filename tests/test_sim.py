@@ -32,11 +32,20 @@ def test_simulate_with_initial_basis_state() -> None:
 	assert_vector_close(result.state_vector(), [0j, 0j, 0j, 1 + 0j])
 
 
-def test_simulate_rejects_measurements() -> None:
+def test_simulate_samples_and_reports_measurements() -> None:
+	# As in Cirq, ``simulate`` runs a circuit with measurements: it samples them,
+	# collapses the state and reports the outcome.
 	q0 = vqubit.LineQubit(0)
-	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.measure(q0))
-	with pytest.raises(ValueError):
-		vqubit.Simulator().simulate(circuit)
+	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.measure(q0, key="m"))
+	result = vqubit.Simulator(seed=0).simulate(circuit)
+	assert result.measurements["m"] in ([[0]], [[1]])
+	# The measurement collapsed the state onto the outcome it reported.
+	vector = result.state_vector()
+	assert abs(abs(vector[0]) - 1) < 1e-9 or abs(abs(vector[1]) - 1) < 1e-9
+	collapsed = 0 if abs(vector[0]) > 0.5 else 1
+	assert result.measurements["m"] == [[collapsed]]
+	density = vqubit.DensityMatrixSimulator(seed=0).simulate(circuit)
+	assert density.measurements["m"] in ([[0]], [[1]])
 
 
 def test_run_counts_have_the_right_total() -> None:

@@ -167,12 +167,122 @@ def check_gates(report: Report) -> None:
 		report.check("gates", name, up_to_phase(got, expected))
 
 
-# --- sweeps, steps and amplitudes --------------------------------------------
+# --- expectation values -------------------------------------------------------
+
+
+def check_expectations(report: Report) -> None:
+	"""Expectation values must agree with Cirq, exactly and by sampling.
+
+	Cirq is asked for its state in ``complex128`` here, because its default
+	``complex64`` only carries about seven digits.
+	"""
+	cq0, cq1 = cirq.LineQubit.range(2)
+	vq0, vq1 = vq.LineQubit.range(2)
+	circuit_c = cirq.Circuit(cirq.H(cq0), cirq.CNOT(cq0, cq1), cirq.rz(0.7)(cq1))
+	circuit_v = vq.Circuit(vq.H(vq0), vq.CNOT(vq0, vq1), vq.rz(0.7)(vq1))
+	observables_c = [
+		cirq.PauliString({cq0: cirq.Z}),
+		cirq.PauliString({cq0: cirq.X, cq1: cirq.X}),
+		cirq.PauliString({cq0: cirq.Z}, coefficient=0.5) - 0.3,
+	]
+	observables_v = [
+		vq.PauliString({vq0: vq.Z}),
+		vq.PauliString({vq0: vq.X, vq1: vq.X}),
+		vq.PauliString({vq0: vq.Z}, coefficient=0.5) - 0.3,
+	]
+
+	want = cirq.Simulator(dtype=np.complex128).simulate_expectation_values(circuit_c, observables_c)
+	got = vq.Simulator().simulate_expectation_values(circuit_v, observables_v)
+	report.check(
+		"expectations",
+		"simulate_expectation_values",
+		all(abs(a - b) < ATOL for a, b in zip(want, got, strict=True)),
+		f"cirq {want} vs vqubit {got}",
+	)
+
+	want = cirq.DensityMatrixSimulator(dtype=np.complex128).simulate_expectation_values(circuit_c, observables_c)
+	got = vq.DensityMatrixSimulator().simulate_expectation_values(circuit_v, observables_v)
+	report.check(
+		"expectations",
+		"density matrix expectation values",
+		all(abs(a - b) < ATOL for a, b in zip(want, got, strict=True)),
+		f"cirq {want} vs vqubit {got}",
+	)
+
+	symbol, parameter = sympy.Symbol("t"), vq.Parameter("t")
+	sweep_c = cirq.Circuit(cirq.rx(symbol)(cq0))
+	sweep_v = vq.Circuit(vq.rx(parameter)(vq0))
+	want = cirq.Simulator(dtype=np.complex128).simulate_expectation_values_sweep(
+		sweep_c, [cirq.PauliString({cq0: cirq.Z})], cirq.Points("t", [0.0, 0.5, 1.0])
+	)
+	got = vq.Simulator().simulate_expectation_values_sweep(
+		sweep_v, [vq.PauliString({vq0: vq.Z})], vq.Points([{"t": 0.0}, {"t": 0.5}, {"t": 1.0}])
+	)
+	report.check(
+		"expectations",
+		"simulate_expectation_values_sweep",
+		all(abs(a[0] - b[0]) < ATOL for a, b in zip(want, got, strict=True)),
+		f"cirq {want} vs vqubit {got}",
+	)
+
+	# A permuted ``qubit_map`` reads the same state in another order. The state
+	# here is asymmetric (``|0>`` on one qubit, ``|+>`` on the other) on purpose:
+	# on a symmetric state such as a Bell pair an inverted qubit order is
+	# invisible, which is exactly how the first version of this got it backwards.
+	asymmetric_c = cirq.Circuit(cirq.I(cq0), cirq.H(cq1))
+	asymmetric_v = vq.Circuit(vq.I(vq0), vq.H(vq1))
+	state_c = cirq.Simulator(dtype=np.complex128).simulate(asymmetric_c)
+	state_v = vq.Simulator().simulate(asymmetric_v)
+	for label, letters, cirq_map, vqubit_map in [
+		("Z0 X1", {0: "Z", 1: "X"}, {cq0: 0, cq1: 1}, {vq0: 0, vq1: 1}),
+		("X0 Z1", {0: "X", 1: "Z"}, {cq0: 0, cq1: 1}, {vq0: 0, vq1: 1}),
+		("Z0 X1 swapped", {0: "Z", 1: "X"}, {cq0: 1, cq1: 0}, {vq0: 1, vq1: 0}),
+		("Y0", {0: "Y"}, {cq0: 0, cq1: 1}, {vq0: 0, vq1: 1}),
+	]:
+		want = cirq.PauliString({[cq0, cq1][index]: getattr(cirq, letter) for index, letter in letters.items()})
+		got = vq.PauliString({[vq0, vq1][index]: letter for index, letter in letters.items()})
+		want_value = want.expectation_from_state_vector(state_c.final_state_vector, cirq_map)
+		got_value = got.expectation_from_state_vector(state_v.final_state_vector, vqubit_map)
+		report.check(
+			"expectations",
+			f"expectation of {label}",
+			abs(want_value - got_value) < ATOL,
+			f"cirq {want_value} vs vqubit {got_value}",
+		)
+	report.check(
+		"expectations",
+		"density_matrix_of",
+		up_to_phase(state_v.density_matrix_of([vq0]), state_c.density_matrix_of([cq0])),
+		"reduced density matrix of the |0> qubit",
+	)
+	report.check(
+		"expectations",
+		"bloch_vector_of",
+		bool(
+			np.allclose(np.asarray(state_v.bloch_vector_of(vq1)), np.asarray(state_c.bloch_vector_of(cq1)), atol=ATOL)
+		),
+		f"cirq {state_c.bloch_vector_of(cq1)} vs vqubit {state_v.bloch_vector_of(vq1)}",
+	)
+
+	# Sampling estimates the same numbers: 4000 samples put the estimate within
+	# a few percent of the exact value (the two libraries use different RNGs, so
+	# the comparison is against the exact expectation, not against Cirq's mean).
+	exact = vq.Simulator().simulate_expectation_values(circuit_v, observables_v)
+	sampled = vq.Simulator(seed=11).sample_expectation_values(circuit_v, observables_v, num_samples=4000)[0]
+	report.check(
+		"expectations",
+		"sample_expectation_values",
+		all(abs(a - b) < 0.1 for a, b in zip(sampled, exact, strict=True)),
+		f"sampled {sampled} vs exact {exact}",
+	)
 
 
 def measured_bits(result: Any, key: str) -> list[list[int]]:
 	"""The measurements of ``key`` as plain lists (Cirq hands back arrays)."""
 	return [[int(bit) for bit in row] for row in result.measurements[key]]
+
+
+# --- sweeps, steps and amplitudes --------------------------------------------
 
 
 def check_sweeps(report: Report) -> None:
@@ -554,6 +664,7 @@ def main() -> None:
 
 	sections: dict[str, Callable[[Report], None]] = {
 		"gates": check_gates,
+		"expectations": check_expectations,
 		"sweeps": check_sweeps,
 		"global shift": check_global_shift,
 		"channels": check_channels,

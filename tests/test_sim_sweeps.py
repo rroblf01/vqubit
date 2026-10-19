@@ -89,11 +89,15 @@ def test_density_matrix_moment_steps() -> None:
 
 
 @pytest.mark.parametrize("simulator_class", [vqubit.Simulator, vqubit.DensityMatrixSimulator])
-def test_simulate_moment_steps_refuses_measurements(simulator_class: type) -> None:
+def test_simulate_moment_steps_reports_measurements(simulator_class: type) -> None:
 	q0 = vqubit.LineQubit(0)
-	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.measure(q0, key="m"))
-	with pytest.raises(ValueError):
-		list(simulator_class().simulate_moment_steps(circuit))
+	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.measure(q0, key="m"), vqubit.X(q0))
+	steps = list(simulator_class(seed=0).simulate_moment_steps(circuit))
+	assert len(steps) == 3
+	# The measurement is sampled in its own step and reported from there on.
+	assert steps[0].measurements == {}
+	assert steps[1].measurements["m"] in ([[0]], [[1]])
+	assert steps[2].measurements == steps[1].measurements
 
 
 def test_compute_amplitudes_picks_the_asked_for_basis_states() -> None:

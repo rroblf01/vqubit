@@ -15,6 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the Cirq idioms do, and `vq.rz(0.3) ** 0.5` scales the angle to `vq.rz(0.15)`.
   `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The plain
   gates themselves are the power gates now: see *Changed*.
+- **Expectation values.** `PauliString.expectation_from_state_vector` and
+  `expectation_from_density_matrix`, and the same on `PauliSum`, with Cirq's
+  `qubit_map`, `atol` and `check_preconditions`;
+  `simulate_expectation_values`, `simulate_expectation_values_sweep` and
+  `simulate_expectation_values_sweep_iter` on the state-vector and density-matrix
+  simulators; and `sample_expectation_values` on all three, which estimates them
+  by measuring each Pauli string in its own basis.
+- **A `PauliString` takes a Pauli gate or its letter** (`vq.PauliString({q0: vq.Z})`,
+  as Cirq does), and the Pauli arithmetic grew the operators Cirq has: `ps + ps`,
+  `s - ps`, `-s`, `s * ps`, `s / 2` and the rest build the `PauliString` or
+  `PauliSum` Cirq builds.
+- **`bloch_vector_of` and `density_matrix_of`** on the state-vector trial and
+  step results, `qubit_map` and `measurements` on every trial and step result,
+  and `state` on a Clifford step result, under the names Cirq gives them.
 - **The simulator entry points Cirq code reaches for.** `run_sweep`,
   `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter` and `run_batch` on
   all three simulators; `simulate_moment_steps` (the state after each moment) on
@@ -55,6 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `simulator.run(circuit, 100)` does not, so pass `repetitions=` (as the
   documentation always did). A circuit whose symbols are still unresolved raises
   `ValueError` instead of failing somewhere deeper.
+- **`simulate` and `simulate_moment_steps` run measurements**, sampling them,
+  collapsing the state and reporting the outcomes in `result.measurements`, as
+  Cirq's simulator does; a `ValueError` used to be raised instead.
+  `permit_terminal_measurements` in the expectation-value methods therefore does
+  what it says.
 - **The Clifford simulator takes integer powers of its gates**: `X ** 0` is
   nothing, `X ** 3` is `X` and `CNOT ** -1` is `CNOT`, as Cirq's does, and when it
   refuses an operation it names it (`TypeError`), the way Cirq's message does.

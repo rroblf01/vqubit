@@ -12,11 +12,12 @@ the same qubits, which is what makes them usable as dictionary keys.
 from __future__ import annotations
 
 import enum
+import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from typing import Any
+from typing import Any, TypeVar
 
 from ._compat import asarray
-from ._gates import I, X, Y, Z
+from ._gates import Gate, I, X, Y, Z
 from ._linalg import Matrix, kron
 from ._qubits import Qid
 from ._value import value_equality
@@ -72,6 +73,14 @@ class Pauli(enum.Enum):
 		return self.value
 
 
+#: What a Pauli string's values may be, as Cirq accepts them: the enum, its gate
+#: (``vq.X``, and any power that equals it) or its letter.
+PauliLike = Pauli | Gate | str
+
+#: The key of a qubit map, left open as Cirq leaves it: ``Mapping`` is invariant
+#: in its key type, so ``Mapping[Qid, int]`` would refuse a ``dict[LineQubit, int]``.
+TKey = TypeVar("TKey")
+
 # A product table keyed by enum members, so multiplying strings avoids string
 # comparisons in the hot loop.
 _PRODUCT_MAP: dict[tuple[Pauli, Pauli], tuple[Pauli, complex]] = {}
@@ -82,13 +91,89 @@ for _left in Pauli:
 del _left, _right, _result, _phase
 
 
+def _flatten_state(values: Any) -> list[complex]:
+	"""Flatten a flat or nested state vector (list or numpy array) to amplitudes."""
+	if hasattr(values, "ravel"):
+		return [complex(entry) for entry in values.ravel()]
+	flat: list[complex] = []
+	for value in values:
+		if isinstance(value, (list, tuple)):
+			flat.extend(_flatten_state(value))
+		else:
+			flat.append(complex(value))
+	return flat
+
+
+def _num_qubits_of(size: int) -> int:
+	"""``log2(size)`` for a power of two, the qubit count of a state of that size."""
+	if size == 0 or size & (size - 1):
+		raise ValueError(f"the state has {size} entries, which is not a power of two")
+	return size.bit_length() - 1
+
+
+def _validate_qubit_map(qubit_map: Mapping[Any, int], qubits: Sequence[Qid], num_qubits: int) -> None:
+	"""Refuse a map that is out of range or does not cover every qubit, as Cirq does."""
+	for index in qubit_map.values():
+		if not 0 <= index < num_qubits:
+			raise ValueError(f"the qubit map indices must be valid for a state over {num_qubits} qubits")
+	missing = set(qubits) - set(qubit_map)
+	if missing:
+		raise ValueError(f"the qubit map must cover every qubit of the Pauli string: {sorted(missing)!r} is missing")
+
+
+def _check_hermitian(coefficient: complex, pauli_string: PauliString) -> None:
+	"""Refuse a non-Hermitian string, whose ``<P>`` is not what a user means.
+
+	Expectation values are defined for Hermitian operators, which is what Cirq
+	checks (and the message it gives).
+	"""
+	if abs(coefficient.imag) > 1e-4:
+		raise NotImplementedError(
+			f"cannot compute the expectation value of the non-Hermitian PauliString <{pauli_string}>; "
+			"the coefficient must be real"
+		)
+
+
+def _check_normalized(amplitudes: Sequence[complex], atol: float) -> None:
+	"""Refuse a state vector that is not normalized, as Cirq does."""
+	norm = sum(abs(amplitude) ** 2 for amplitude in amplitudes) ** 0.5
+	if abs(norm - 1) > atol:
+		raise ValueError(f"the state vector is not normalized: its norm is {norm}")
+
+
+def _check_density_matrix(trace: complex, atol: float) -> None:
+	"""Refuse a density matrix that does not have unit trace, as Cirq refuses one."""
+	if abs(trace - 1) > atol:
+		raise ValueError(f"the density matrix is not normalized: its trace is {trace}")
+
+
+def _as_pauli(value: PauliLike) -> Pauli:
+	"""Accept what Cirq accepts for a Pauli string's values.
+
+	That is a :class:`Pauli`, one of its gates (``vq.X``, ``vq.Y``, ``vq.Z``,
+	``vq.I``, and any power that *equals* one of them) or its letter, so the Cirq
+	idiom ``vq.PauliString({q0: vq.Z})`` works.
+	"""
+	if isinstance(value, Pauli):
+		return value
+	if isinstance(value, str):
+		try:
+			return Pauli(value.upper())
+		except ValueError as exc:
+			raise TypeError(f"{value!r} is not a Pauli") from exc
+	for letter, gate in (("X", X), ("Y", Y), ("Z", Z), ("I", I)):
+		if value == gate:
+			return Pauli(letter)
+	raise TypeError(f"PauliString values must be a Pauli or a Pauli gate, got {type(value).__name__}")
+
+
 @value_equality
 class PauliString:
 	"""A Pauli on each of a set of qubits, with a complex coefficient."""
 
 	def __init__(
 		self,
-		qubit_pauli_map: Mapping[Qid, Pauli] | Iterable[tuple[Qid, Pauli]] | None = None,
+		qubit_pauli_map: Mapping[Qid, PauliLike] | Iterable[tuple[Qid, PauliLike]] | None = None,
 		coefficient: complex = 1,
 	) -> None:
 		items = dict(qubit_pauli_map) if qubit_pauli_map is not None else {}
@@ -96,10 +181,9 @@ class PauliString:
 		for qubit, pauli in items.items():
 			if not isinstance(qubit, Qid):
 				raise TypeError(f"PauliString keys must be Qid, got {type(qubit).__name__}")
-			if not isinstance(pauli, Pauli):
-				raise TypeError(f"PauliString values must be Pauli, got {type(pauli).__name__}")
-			if pauli is not Pauli.I:
-				self._map[qubit] = pauli
+			value = _as_pauli(pauli)
+			if value is not Pauli.I:
+				self._map[qubit] = value
 		self._coefficient = complex(coefficient)
 
 	@property
@@ -188,12 +272,127 @@ class PauliString:
 			return PauliString(self._map, self._coefficient / other)
 		return NotImplemented
 
+	def __add__(self, other: Any) -> Any:
+		"""A sum, as in ``cirq.PauliString + ...``: ``ps + ps`` is a ``PauliSum``."""
+		if not isinstance(other, PauliSum | PauliString | complex | int | float):
+			return NotImplemented
+		return PauliSum() + self + other
+
+	def __radd__(self, other: Any) -> Any:
+		if not isinstance(other, PauliSum | PauliString | complex | int | float):
+			return NotImplemented
+		return PauliSum() + other + self
+
+	def __sub__(self, other: Any) -> Any:
+		if not isinstance(other, PauliSum | PauliString | complex | int | float):
+			return NotImplemented
+		return PauliSum() + self - other
+
+	def __rsub__(self, other: Any) -> Any:
+		if not isinstance(other, PauliSum | PauliString | complex | int | float):
+			return NotImplemented
+		return PauliSum() + other - self
+
 	def to_z_basis_ops(self) -> Iterator[Any]:
 		"""Return single-qubit operations that rotate each Pauli to the Z basis."""
 		from ._clifford_gates import SingleQubitCliffordGate
 
 		for qubit, pauli in self.items():
 			yield SingleQubitCliffordGate.from_single_map({pauli: (Pauli.Z, False)}).on(qubit)
+
+	def _expectation_masks(self, qubit_map: Mapping[Any, int], num_qubits: int) -> tuple[int, int, int]:
+		"""``(bits X flips, bits that flip the sign, number of Y)`` for this string.
+
+		The Paulis act on a computational basis state ``|x>`` as
+		``P|x> = phase(x) |x XOR flipped>``, with ``phase(x) = i^(#Y) (-1)^(bits
+		of x in the Z and Y positions)``, which is all the expectation value needs.
+
+		Cirq's map gives each qubit its *axis* in the state, with axis ``0`` the
+		most significant bit and the last qubit the least significant one, so the
+		axis is turned into a bit position here. Getting that backwards is
+		invisible on a symmetric state such as a Bell pair, so it is exactly what
+		the harness compares with a non-symmetric one.
+		"""
+		flipped = 0
+		signs = 0
+		num_y = 0
+		for qubit, pauli in self._map.items():
+			index = num_qubits - 1 - qubit_map[qubit]
+			if pauli is not Pauli.Z:
+				flipped |= 1 << index
+			if pauli is not Pauli.X:
+				signs |= 1 << index
+			if pauli is Pauli.Y:
+				num_y += 1
+		return flipped, signs, num_y
+
+	def _expectation_from_amplitudes(
+		self, amplitudes: Sequence[complex], qubit_map: Mapping[Any, int], num_qubits: int
+	) -> complex:
+		"""``<psi|P|psi>``, walking the amplitudes ``P`` pairs up."""
+		flipped, signs, num_y = self._expectation_masks(qubit_map, num_qubits)
+		phase = 1j**num_y
+		total = 0j
+		for index, amplitude in enumerate(amplitudes):
+			sign = -1 if (index & signs).bit_count() % 2 else 1
+			total += amplitudes[index ^ flipped].conjugate() * phase * sign * amplitude
+		return self._coefficient * total
+
+	def _expectation_from_matrix(
+		self, matrix: Sequence[complex], dim: int, qubit_map: Mapping[Any, int], num_qubits: int
+	) -> complex:
+		"""``Tr(rho P)``, the same walk down a flattened density matrix."""
+		flipped, signs, num_y = self._expectation_masks(qubit_map, num_qubits)
+		phase = (1j**num_y).conjugate()
+		total = 0j
+		for row in range(dim):
+			sign = -1 if (row & signs).bit_count() % 2 else 1
+			total += matrix[(row ^ flipped) * dim + row] * phase * sign
+		return self._coefficient * total
+
+	def expectation_from_state_vector(
+		self,
+		state_vector: Any,
+		qubit_map: Mapping[TKey, int],
+		*,
+		atol: float = 1e-7,
+		check_preconditions: bool = True,
+	) -> complex:
+		"""Return ``<psi|P|psi>`` for a state vector expressed over ``qubit_map``.
+
+		``qubit_map`` says which index of the state each qubit of this string
+		holds, so the same state can be read in any qubit order, as in Cirq. The
+		expectation value is defined for Hermitian operators, so a non-Hermitian
+		coefficient raises, and the state must be normalized unless
+		``check_preconditions`` is ``False``.
+		"""
+		_check_hermitian(self._coefficient, self)
+		amplitudes = _flatten_state(state_vector)
+		num_qubits = _num_qubits_of(len(amplitudes))
+		_validate_qubit_map(qubit_map, self.qubits, num_qubits)
+		if check_preconditions:
+			_check_normalized(amplitudes, atol)
+		return self._expectation_from_amplitudes(amplitudes, qubit_map, num_qubits)
+
+	def expectation_from_density_matrix(
+		self,
+		state: Any,
+		qubit_map: Mapping[TKey, int],
+		*,
+		atol: float = 1e-7,
+		check_preconditions: bool = True,
+	) -> complex:
+		"""Return ``Tr(rho P)`` for a density matrix expressed over ``qubit_map``."""
+		_check_hermitian(self._coefficient, self)
+		matrix = _flatten_state(state)
+		dim = math.isqrt(len(matrix))
+		if dim * dim != len(matrix):
+			raise ValueError(f"the array has {len(matrix)} entries, which is not 2**n by 2**n")
+		num_qubits = _num_qubits_of(dim)
+		_validate_qubit_map(qubit_map, self.qubits, num_qubits)
+		if check_preconditions:
+			_check_density_matrix(sum(matrix[step * dim + step] for step in range(dim)), atol)
+		return self._expectation_from_matrix(matrix, dim, qubit_map, num_qubits)
 
 	def _value_equality_values_(self) -> Any:
 		return (self._coefficient, tuple(sorted(self._map.items())))
@@ -263,6 +462,45 @@ class PauliSum:
 	def __radd__(self, other: Any) -> PauliSum:
 		return self + other
 
+	def __neg__(self) -> PauliSum:
+		return PauliSum({pauli_string: -coefficient for pauli_string, coefficient in self._terms.items()})
+
+	def __sub__(self, other: Any) -> PauliSum:
+		if isinstance(other, PauliSum | PauliString):
+			return self + (-other)
+		if isinstance(other, complex | int | float):
+			return self + (-complex(other))
+		return NotImplemented
+
+	def __rsub__(self, other: Any) -> PauliSum:
+		return (-self) + other
+
+	def __mul__(self, other: Any) -> PauliSum:
+		"""Multiply by a number (scaling every term) or by a Pauli string."""
+		if isinstance(other, complex | int | float):
+			return PauliSum({pauli_string: coefficient * other for pauli_string, coefficient in self._terms.items()})
+		if isinstance(other, PauliString):
+			result = PauliSum()
+			for pauli_string, coefficient in self._terms.items():
+				result = result + PauliString(pauli_string._map, coefficient) * other
+			return result
+		if isinstance(other, PauliSum):
+			result = PauliSum()
+			for left, left_coefficient in self._terms.items():
+				for right, right_coefficient in other._terms.items():
+					product = PauliString(left._map, left_coefficient) * PauliString(right._map, right_coefficient)
+					result = result + product
+			return result
+		return NotImplemented
+
+	def __rmul__(self, other: Any) -> PauliSum:
+		return self * other
+
+	def __truediv__(self, other: Any) -> PauliSum:
+		if isinstance(other, complex | int | float):
+			return PauliSum({pauli_string: coefficient / other for pauli_string, coefficient in self._terms.items()})
+		return NotImplemented
+
 	def __getitem__(self, pauli_string: PauliString) -> complex:
 		return self._terms.get(pauli_string, 0j)
 
@@ -272,6 +510,49 @@ class PauliSum:
 	def __iter__(self) -> Iterator[PauliString]:
 		for pauli_string, coefficient in self._terms.items():
 			yield PauliString(pauli_string._map, coefficient)
+
+	def expectation_from_state_vector(
+		self,
+		state_vector: Any,
+		qubit_map: Mapping[TKey, int],
+		*,
+		atol: float = 1e-7,
+		check_preconditions: bool = True,
+	) -> complex:
+		"""Return ``<psi|S|psi>`` for the whole sum, one term at a time."""
+		amplitudes = _flatten_state(state_vector)
+		num_qubits = _num_qubits_of(len(amplitudes))
+		if check_preconditions:
+			_check_normalized(amplitudes, atol)
+		total = 0j
+		for pauli_string, coefficient in self._terms.items():
+			_check_hermitian(coefficient * pauli_string.coefficient, pauli_string)
+			_validate_qubit_map(qubit_map, pauli_string.qubits, num_qubits)
+			total += coefficient * pauli_string._expectation_from_amplitudes(amplitudes, qubit_map, num_qubits)
+		return total
+
+	def expectation_from_density_matrix(
+		self,
+		state: Any,
+		qubit_map: Mapping[TKey, int],
+		*,
+		atol: float = 1e-7,
+		check_preconditions: bool = True,
+	) -> complex:
+		"""Return ``Tr(rho S)`` for the whole sum, one term at a time."""
+		matrix = _flatten_state(state)
+		dim = math.isqrt(len(matrix))
+		if dim * dim != len(matrix):
+			raise ValueError(f"the array has {len(matrix)} entries, which is not 2**n by 2**n")
+		num_qubits = _num_qubits_of(dim)
+		if check_preconditions:
+			_check_density_matrix(sum(matrix[step * dim + step] for step in range(dim)), atol)
+		total = 0j
+		for pauli_string, coefficient in self._terms.items():
+			_check_hermitian(coefficient * pauli_string.coefficient, pauli_string)
+			_validate_qubit_map(qubit_map, pauli_string.qubits, num_qubits)
+			total += coefficient * pauli_string._expectation_from_matrix(matrix, dim, qubit_map, num_qubits)
+		return total
 
 	def __len__(self) -> int:
 		return len(self._terms)

@@ -45,6 +45,22 @@ rho = result.density_matrix()
 print(rho[0][3])  # the coherence, reduced by the noise
 ```
 
+## Expectation values
+
+`simulate_expectation_values` gives the exact expectation value of one or more
+Pauli observables on the final state, and `sample_expectation_values` estimates
+them by measuring (which the Clifford simulator can do too).
+
+```python
+import vqubit as vq
+
+q0, q1 = vq.LineQubit.range(2)
+circuit = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1))
+observables = [vq.PauliString({q0: vq.Z, q1: vq.Z}), vq.PauliString({q0: vq.Z})]
+
+print(vq.Simulator().simulate_expectation_values(circuit, observables))  # [1, 0]
+```
+
 ## Clifford (stabilizers)
 
 For Clifford circuits (H, S, CNOT, CZ, SWAP and Paulis), `CliffordSimulator`

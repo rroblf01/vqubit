@@ -54,6 +54,20 @@ a medida que avanzan los hitos.
 > (valores esperados, `sample` como `DataFrame`, los barridos con la firma de
 > Cirq y el `simulate_moment_steps` de Clifford, bloqueado por vcraft) está
 > anotado con su criterio.
+>
+> **Actualización (0.3, 2026-10-19, cuarta).** Los valores esperados están:
+> `PauliString`/`PauliSum.expectation_from_state_vector` y
+> `_from_density_matrix`, `simulate_expectation_values[_sweep[_iter]]` y
+> `sample_expectation_values` en los tres simuladores (midiendo cada cadena en su
+> base), más `bloch_vector_of`, `density_matrix_of`, `qubit_map` y
+> `measurements` en los resultados. El trabajo destapó tres cosas: la convención
+> del `qubit_map` (índices de **eje**, con el bit más significativo primero, que
+> al revés es invisible en un estado simétrico), que `simulate` no aceptaba
+> medidas (y por tanto `permit_terminal_measurements` no servía), y que a la
+> aritmética de Paulis le faltaban operadores (`ps + ps`, `s - ps`, `-s`,
+> `s * ps`, `s / 2`). La sección `expectations` del arnés compara 7
+> comprobaciones con un estado **no simétrico** a propósito; `verify.py` pasa a
+> **611** comprobaciones y la suite a **667** tests.
 
 ### Principios
 
@@ -208,15 +222,28 @@ Las divergencias `permanent` están explicadas en
       cada punto del barrido, los de cada momento (consumiendo los dos iteradores
       en paralelo, porque los pasos de Cirq comparten el estado vivo), las
       amplitudes y el orden de los argumentos.
-- [ ] **Valores esperados**: `simulate_expectation_values`,
-      `sample_expectation_values` y las variantes `_sweep*`, más los atributos que
-      faltan en los resultados (`bloch_vector_of`, `density_matrix_of`,
-      `get_state_containing_qubit`, `sample_measurement_ops`). Necesitan
-      `PauliString.expectation_from_state_vector` y
-      `PauliSum.expectation_from_density_matrix`, que vqubit todavía no tiene.
-      **Criterio:** esas funciones de expectativa medidas contra Cirq en una
-      sección `expectations` de `benchmarks/verify.py`, con 0 divergencias
-      inesperadas.
+- [x] **Valores esperados.** `PauliString.expectation_from_state_vector`,
+      `expectation_from_density_matrix` y las dos en `PauliSum`, con el
+      `qubit_map`, `atol` y `check_preconditions` de Cirq;
+      `simulate_expectation_values`, `simulate_expectation_values_sweep` y
+      `_sweep_iter` en los simuladores de vector de estado y matriz de densidad;
+      y `sample_expectation_values` en los tres, que mide cada cadena de Pauli en
+      su propia base. El trabajo destapó además dos cosas: la convención del
+      `qubit_map` (Cirq lo indexa por **ejes** con el bit más significativo
+      primero, y equivocarse es invisible en un estado simétrico como un par de
+      Bell), y que `simulate` no aceptaba medidas, así que
+      `permit_terminal_measurements` no servía de nada; ahora las muestrea,
+      colapsa el estado y las reporta. De paso, `PauliString` acepta la puerta o
+      la letra (`vq.PauliString({q0: vq.Z})`, como Cirq) y las operaciones de
+      Paulis que faltaban (`ps + ps`, `s - ps`, `-s`, `s * ps`, `s / 2`).
+      **Medido:** la sección `expectations` de `benchmarks/verify.py` (7
+      comprobaciones, con un estado **no simétrico** a propósito) y las
+      expectativas en los tres simuladores; 611 comprobaciones en total.
+- [ ] **Atributos que aún faltan en los resultados**:
+      `get_state_containing_qubit` y `sample_measurement_ops`, y las variantes
+      `_async` de los simuladores (`run_async`, `run_sweep_async`,
+      `run_batch_async`). **Criterio:** implementarlos y compararlos con Cirq en
+      `benchmarks/verify.py`, como el resto de los atributos.
 - [ ] **`Simulator.sample` devuelve un `Result`, no un `DataFrame`.** Cirq
       devuelve un `pandas.DataFrame` y acepta `params=` (un barrido); vqubit no
       puede devolver un `DataFrame` sin depender de pandas, así que devuelve su
@@ -428,6 +455,20 @@ guarantees. It is a living document, updated as milestones land.
 > axis (expectation values, `sample` as a `DataFrame`, the sweeps with Cirq's
 > signature and the Clifford `simulate_moment_steps`, blocked by vcraft) is noted
 > with its criterion.
+>
+> **Update (0.3, 2026-10-19, fourth).** Expectation values are in:
+> `PauliString`/`PauliSum.expectation_from_state_vector` and
+> `_from_density_matrix`, `simulate_expectation_values[_sweep[_iter]]` and
+> `sample_expectation_values` on all three simulators (measuring each string in
+> its own basis), plus `bloch_vector_of`, `density_matrix_of`, `qubit_map` and
+> `measurements` on the results. The work uncovered three things: the convention
+> of `qubit_map` (it holds **axis** indices, most significant bit first, and
+> getting it backwards is invisible on a symmetric state), that `simulate`
+> refused measurements (which made `permit_terminal_measurements` pointless) and
+> that the Pauli arithmetic was missing operators (`ps + ps`, `s - ps`, `-s`,
+> `s * ps`, `s / 2`). The harness's `expectations` section compares 7 checks on a
+> deliberately **asymmetric** state; `verify.py` now passes **611** checks and
+> the suite has **667** tests.
 
 ### Principles
 
@@ -577,15 +618,28 @@ blanket. The `permanent` divergences are explained in
       point of the sweep, at every moment (consuming both iterators in lockstep,
       because Cirq's steps share the live state), the amplitudes and the argument
       order.
-- [ ] **Expectation values**: `simulate_expectation_values`,
-      `sample_expectation_values` and the `_sweep*` variants, plus the result
-      attributes vqubit is missing (`bloch_vector_of`, `density_matrix_of`,
-      `get_state_containing_qubit`, `sample_measurement_ops`). They need
-      `PauliString.expectation_from_state_vector` and
-      `PauliSum.expectation_from_density_matrix`, which vqubit does not have yet.
-      **Criterion:** those expectation functions measured against Cirq in an
-      `expectations` section of `benchmarks/verify.py`, with 0 unexpected
-      divergences.
+- [x] **Expectation values.** `PauliString.expectation_from_state_vector`,
+      `expectation_from_density_matrix` and both on `PauliSum`, with Cirq's
+      `qubit_map`, `atol` and `check_preconditions`;
+      `simulate_expectation_values`, `simulate_expectation_values_sweep` and
+      `_sweep_iter` on the state-vector and density-matrix simulators; and
+      `sample_expectation_values` on all three, which measures each Pauli string
+      in its own basis. The work uncovered two more things: the convention of
+      `qubit_map` (Cirq indexes it by **axis**, most significant bit first, and
+      getting it backwards is invisible on a symmetric state such as a Bell
+      pair), and that `simulate` refused measurements, which made
+      `permit_terminal_measurements` useless; it now samples them, collapses the
+      state and reports them. `PauliString` also takes the gate or the letter
+      (`vq.PauliString({q0: vq.Z})`, as Cirq) and the missing Pauli operators
+      (`ps + ps`, `s - ps`, `-s`, `s * ps`, `s / 2`) are there.
+      **Measured:** the `expectations` section of `benchmarks/verify.py` (7
+      checks, with a deliberately **asymmetric** state) and the expectation
+      values of all three simulators; 611 checks in total.
+- [ ] **Result attributes still missing**: `get_state_containing_qubit` and
+      `sample_measurement_ops`, plus the simulators' `_async` variants
+      (`run_async`, `run_sweep_async`, `run_batch_async`). **Criterion:**
+      implement them and compare them against Cirq in `benchmarks/verify.py`, as
+      the rest of the attributes are.
 - [ ] **`Simulator.sample` returns a `Result`, not a `DataFrame`.** Cirq returns
       a `pandas.DataFrame` and takes `params=` (a sweep); vqubit cannot return a
       `DataFrame` without depending on pandas, so it returns its own `Result` and

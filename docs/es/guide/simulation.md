@@ -45,6 +45,22 @@ rho = resultado.density_matrix()
 print(rho[0][3])  # la coherencia, reducida por el ruido
 ```
 
+## Valores esperados
+
+`simulate_expectation_values` da el valor esperado exacto de uno o varios
+observables de Pauli sobre el estado final, y `sample_expectation_values` los
+estima midiendo (cosa que el simulador de Clifford también sabe hacer).
+
+```python
+import vqubit as vq
+
+q0, q1 = vq.LineQubit.range(2)
+circuito = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1))
+observables = [vq.PauliString({q0: vq.Z, q1: vq.Z}), vq.PauliString({q0: vq.Z})]
+
+print(vq.Simulator().simulate_expectation_values(circuito, observables))  # [1, 0]
+```
+
 ## Clifford (estabilizadores)
 
 Para circuitos de Clifford (H, S, CNOT, CZ, SWAP y Paulis) el

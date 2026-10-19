@@ -210,6 +210,19 @@ def _draw_outcome(probabilities: Sequence[float], rng: random.Random) -> int:
 	return len(probabilities) - 1
 
 
+def _outcome_of(targets: Sequence[int], positions: dict[int, int], union_outcome: int) -> int:
+	"""Read one measurement's outcome out of a joint outcome over the union.
+
+	The bits are most-significant-first, the same convention ``_draw_outcome``
+	and ``NativeState.measure`` use for a single measurement.
+	"""
+	size = len(positions)
+	outcome = 0
+	for target in targets:
+		outcome = (outcome << 1) | ((union_outcome >> (size - 1 - positions[target])) & 1)
+	return outcome
+
+
 class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesFinalState, SimulatesIntermediateState):
 	"""A state-vector simulator.
 
@@ -276,20 +289,34 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 					if flat is None:
 						raise TypeError(f"{operation.gate!r} has no unitary and cannot be simulated")
 					state.apply_gate(flat, [index[q] for q in operation.qubits])
-			probabilities = [list(state.probabilities(targets)) for _, targets in measurements]
+			if not measurements:
+				return Result(records)
+			# Every measurement is terminal, so their joint distribution is the one
+			# of the union of measured qubits. Sampling each measurement separately
+			# from its own marginal would decorrelate them: two qubits of a Bell
+			# state measured with two ``measure`` calls must still agree.
+			union: list[int] = []
+			for _, targets in measurements:
+				for target in targets:
+					if target not in union:
+						union.append(target)
+			positions = {target: position for position, target in enumerate(union)}
+			probabilities = list(state.probabilities(union))
 			if HAS_NUMPY:
 				import numpy as _np
 
 				np_rng = _np.random.default_rng(self._seed if seed is None else seed)
-				for (gate, targets), probs in zip(measurements, probabilities, strict=True):
-					cumulative = _np.cumsum(_np.asarray(probs, dtype=_np.float64))
-					outcomes = _np.searchsorted(cumulative, np_rng.random(repetitions))
-					for outcome in outcomes.tolist():
-						_record_bits(gate, int(outcome), len(targets), records)
+				cumulative = _np.cumsum(_np.asarray(probabilities, dtype=_np.float64))
+				for outcome in _np.searchsorted(cumulative, np_rng.random(repetitions)).tolist():
+					for gate, targets in measurements:
+						bits = _outcome_of(targets, positions, int(outcome))
+						_record_bits(gate, bits, len(targets), records)
 				return Result(records)
 			for _ in range(repetitions):
-				for (gate, targets), probs in zip(measurements, probabilities, strict=True):
-					_record_bits(gate, _draw_outcome(probs, rng), len(targets), records)
+				outcome = _draw_outcome(probabilities, rng)
+				for gate, targets in measurements:
+					bits = _outcome_of(targets, positions, outcome)
+					_record_bits(gate, bits, len(targets), records)
 			return Result(records)
 		for _ in range(repetitions):
 			state = _native.NativeState(num_qubits)

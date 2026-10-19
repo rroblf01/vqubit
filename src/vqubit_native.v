@@ -6,5 +6,5 @@ module vqubit_native
 // in step with `vcraft.toml` by a test, since the two are written by hand.
 @[vc_fn]
 pub fn version() string {
-	return '0.2.0'
+	return '0.2.1'
 }

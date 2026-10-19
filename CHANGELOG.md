@@ -5,6 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-10-19
+
+Correctness fixes in the state-vector simulator and the noise channels, plus
+documentation. No name changed.
+
+### Fixed
+
+- **Measurements now collapse the state in `Simulator`.** When every measurement
+  sat at the end of the circuit, the simulator sampled each `measure` operation
+  independently from its own marginal, so separate measurements came out
+  decorrelated: the two qubits of a Bell state measured with two `measure`
+  calls agreed only half the time, and measuring the same qubit twice could
+  report two different bits. The terminal measurements are now sampled jointly
+  from the union of the measured qubits, so they agree as they must.
+  `DensityMatrixSimulator` and `CliffordSimulator` were already correct.
+- **Channels reject probabilities outside `[0, 1]`.** `bit_flip`, `phase_flip`,
+  `bit_phase_flip`, `depolarize`, `amplitude_damp`, `phase_damp` and their
+  channel classes used to accept, say, `bit_flip(2.0)` and silently return a
+  density matrix that did not add up to one. They now raise `ValueError`, as
+  Cirq does.
+
+### Documentation
+
+- New **Differences from Cirq** page (English and Spanish), listing the call
+  conventions that still differ: renamed arguments, different argument order,
+  `**` on operations, the missing `noise=`/`dtype=` in the simulators, and the
+  names that mean something else.
+- Fixed the platform list on the documentation home page, which omitted Windows
+  and claimed an Intel macOS wheel that is not published.
+- Fixed the channel table in the noise chapter, which showed argument names the
+  constructors do not accept.
+- Fixed the Spanish documentation link in the README (`/es/` does not exist; the
+  Spanish documentation is served at the site root).
+
 ## [0.2.0] - 2026-10-18
 
 Platforms, packaging and Cirq's submodule layout: Windows wheels, a source

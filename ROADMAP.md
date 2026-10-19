@@ -38,6 +38,9 @@ a medida que avanzan los hitos.
 - 0.1.0: Linux y macOS (x86-64 y ARM), sin dependencias, solo wheels.
 - 0.2.0 (2026-10-18): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
   sobre **vcraft 1.4.5**.
+- 0.2.1 (2026-10-19): correctitud del simulador de vector de estado (las medidas
+  colapsan el estado), validación de las probabilidades de los canales y
+  documentación (página *Diferencias con Cirq*).
 
 ### Objetivo de la 1.0.0
 
@@ -193,6 +196,9 @@ guarantees. It is a living document, updated as milestones land.
 - 0.1.0: Linux and macOS (x86-64 and ARM), no dependencies, wheels only.
 - 0.2.0 (2026-10-18): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
   on **vcraft 1.4.5**.
+- 0.2.1 (2026-10-19): state-vector simulator correctness (measurements collapse
+  the state), channel probability validation, and documentation (the
+  *Differences from Cirq* page).
 
 ### Goal for 1.0.0
 

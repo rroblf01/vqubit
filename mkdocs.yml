@@ -66,6 +66,7 @@ plugins:
             Serialization: Serialización
             Devices: Dispositivos
             Benchmarks: Benchmarks
+            Differences from Cirq: Diferencias con Cirq
             Examples: Ejemplos
             Bell state: Estado de Bell
             API reference: Referencia de la API
@@ -113,6 +114,7 @@ nav:
       - Serialization: guide/serialization.md
       - Devices: guide/devices.md
       - Benchmarks: guide/benchmarks.md
+      - Differences from Cirq: guide/cirq-differences.md
   - Examples:
       - Bell state: examples/bell-state.md
   - API reference: api/index.md

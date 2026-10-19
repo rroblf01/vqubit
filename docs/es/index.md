@@ -29,9 +29,9 @@ print(resultado.histogram(key="result"))
   simulación están compiladas desde V, no interpretadas.
 - **Una rueda para todas las versiones de Python.** Una única rueda *abi3* cubre
   CPython 3.11–3.15 por plataforma.
-- **Multiplataforma.** Linux y macOS (x86-64 y ARM).
+- **Multiplataforma.** Linux (x86-64 y ARM), macOS (ARM) y Windows (x86-64).
 - **API compatible con Cirq.** Construye, transforma y simula circuitos tal como
-  documenta Cirq.
+  documenta Cirq; mira [qué cambia](guide/cirq-differences.md).
 
 ## ¿Nuevo en computación cuántica?
 

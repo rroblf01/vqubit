@@ -9,13 +9,16 @@ $\rho \to \sum_i K_i \rho K_i^\dagger$.
 
 | Canal | Constructor | Qué modela |
 | ----- | ----------- | ---------- |
-| Bit flip | `vq.bit_flip(p)` | Invierte el qubit con probabilidad `p`. |
-| Phase flip | `vq.phase_flip(p)` | Aplica `Z` con probabilidad `p`. |
-| Bit-phase flip | `vq.bit_phase_flip(p)` | Aplica `Y` con probabilidad `p`. |
-| Depolarizante | `vq.depolarize(p, n=1)` | Aplica un Pauli aleatorio con probabilidad `p`. |
+| Bit flip | `vq.bit_flip(probability)` | Invierte el qubit con probabilidad `probability`. |
+| Phase flip | `vq.phase_flip(probability)` | Aplica `Z` con probabilidad `probability`. |
+| Bit-phase flip | `vq.bit_phase_flip(probability)` | Aplica `Y` con probabilidad `probability`. |
+| Depolarizante | `vq.depolarize(probability, num_qubits=1)` | Aplica un Pauli aleatorio con probabilidad `probability`. |
 | Amortiguamiento de amplitud | `vq.amplitude_damp(gamma)` | Pérdida de energía (`|1>` → `|0>`). |
 | Amortiguamiento de fase | `vq.phase_damp(gamma)` | Pérdida de coherencia. |
-| Reset | `vq.reset(n=1)` | Lleva los qubits a `|0>`. |
+| Reset | `vq.reset(qubit)` | Lleva un qubit a `|0>`. |
+
+Los nombres de los argumentos son los que aceptan las funciones, así que puedes
+pasarlos por nombre; una probabilidad fuera de `[0, 1]` lanza `ValueError`.
 
 ## Usarlos en un circuito
 

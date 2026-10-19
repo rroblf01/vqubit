@@ -29,9 +29,9 @@ print(result.histogram(key="result"))
   from V, not interpreted.
 - **One wheel for every Python.** A single *abi3* wheel covers CPython
   3.11–3.15 per platform.
-- **Cross-platform.** Linux and macOS (x86-64 and ARM).
+- **Cross-platform.** Linux (x86-64 and ARM), macOS (ARM) and Windows (x86-64).
 - **Cirq-compatible API.** Build, transform and simulate circuits the way Cirq
-  documents them.
+  documents them; see [what changes](guide/cirq-differences.md).
 
 ## New to quantum computing?
 

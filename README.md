@@ -49,7 +49,7 @@ Requires Python 3.11 or newer. No other packages are installed.
 ## Documentation
 
 The full documentation is published at **https://rroblf01.github.io/vqubit/**
-in both [Spanish](https://rroblf01.github.io/vqubit/es/) and
+in both [Spanish](https://rroblf01.github.io/vqubit/) (the default) and
 [English](https://rroblf01.github.io/vqubit/en/). It starts from "what is a
 qubit?" and builds up to circuits and simulation.
 
@@ -57,7 +57,9 @@ qubit?" and builds up to circuits and simulation.
 
 vqubit is **alpha** (0.2.0). It exports every one of cirq-core's top-level
 names, and the simulators, optimizers, transformers and devices are in place;
-see [CHANGELOG.md](CHANGELOG.md) for the full list. The API may still change
+the call conventions that still differ are listed in
+[Differences from Cirq](https://rroblf01.github.io/vqubit/en/guide/cirq-differences/).
+See [CHANGELOG.md](CHANGELOG.md) for the full list. The API may still change
 before 1.0; [ROADMAP.md](ROADMAP.md) tracks the path to it.
 
 It ships wheels for Linux (x86-64 and ARM), macOS (ARM) and Windows (x86-64),

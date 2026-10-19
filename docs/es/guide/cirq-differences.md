@@ -135,6 +135,37 @@ Los vectores de estado y las matrices de densidad son siempre `complex128`. (El
 simulador de matrices de densidad de Cirq usa `complex64` por defecto, así que
 vqubit es más preciso y ocupa el doble de memoria para el mismo circuito.)
 
+## Los barridos de parámetros y `sample`
+
+`vq.Simulator().simulate(circuito, resolver)` y
+`vq.Simulator().run(circuito, resolver, repetitions=100)` toman el
+`ParamResolver` donde Cirq lo toma, y `run_sweep`, `simulate_sweep`,
+`simulate_moment_steps` y `run_batch` tienen la misma firma que en Cirq. Dos
+cosas cambian:
+
+- **Las clases de barrido llevan otra firma.** vqubit escribe
+  `vq.Linspace({"t": 0.0}, {"t": 1.0}, 4)` (dos asignaciones entre las que
+  interpolar, y sirve para varios parámetros a la vez) y
+  `vq.Points([{"t": 0.0}, {"t": 1.0}])`, donde Cirq escribe
+  `cirq.Linspace("t", 0.0, 1.0, 4)` y `cirq.Points("t", [0.0, 1.0])`.
+- **`sample` devuelve un `Result`, no un `DataFrame`.** Cirq devuelve un
+  `pandas.DataFrame` y acepta `params=`; vqubit no depende de pandas, así que
+  devuelve su `Result` (igual que `run`) y para barrer se usa `run_sweep`.
+
+```python
+import vqubit as vq
+
+q0 = vq.LineQubit(0)
+t = vq.Parameter("t")
+circuito = vq.Circuit(vq.rx(t)(q0), vq.measure(q0, key="m"))
+
+resultados = vq.Simulator(seed=0).run_sweep(
+    circuito, vq.Points([{"t": 0.0}, {"t": 0.5}]), repetitions=10
+)
+assert [dict(resultado.params)["t"] for resultado in resultados] == [0.0, 0.5]
+assert all(len(resultado) == 10 for resultado in resultados)
+```
+
 ## Mismo nombre, distinto papel
 
 Un puñado de nombres existen en las dos librerías pero significan otra cosa.

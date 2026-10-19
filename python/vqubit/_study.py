@@ -131,7 +131,15 @@ def to_sweep(value: Any) -> Sweep:
 
 
 def to_resolvers(value: Any) -> list[ParamResolver]:
-	"""Return the resolvers of ``value`` as a sweep."""
+	"""Return the resolvers of ``value`` as a sweep.
+
+	``None`` means "no parameters" and yields a single empty resolver, and an
+	empty sequence yields none at all, both as in Cirq.
+	"""
+	if value is None:
+		return [ParamResolver({})]
+	if isinstance(value, Sequence) and not isinstance(value, str) and not value:
+		return []
 	return to_sweep(value).param_resolvers
 
 
@@ -222,7 +230,7 @@ def sample(
 	seed: int | None = None,
 ) -> Result:
 	"""Sample ``program`` with the state-vector simulator."""
-	return Simulator(seed=seed).run(program, repetitions, qubit_order=qubit_order)
+	return Simulator(seed=seed).run(program, repetitions=repetitions, qubit_order=qubit_order)
 
 
 def run(
@@ -287,7 +295,7 @@ class Sampler:
 		qubit_order: Sequence[Qid] | None = None,
 		seed: int | None = None,
 	) -> Result:
-		return self._simulator.run(program, repetitions, qubit_order=qubit_order, seed=seed)
+		return self._simulator.run(program, repetitions=repetitions, qubit_order=qubit_order, seed=seed)
 
 	sample = run
 

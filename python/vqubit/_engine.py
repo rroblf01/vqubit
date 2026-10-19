@@ -47,7 +47,7 @@ class Engine:
 	) -> Result:
 		"""Run ``program`` locally and return a :class:`~vqubit.Result`."""
 		prepared = self._prepare(program, device, param_resolver)
-		return self._simulator.run(prepared, repetitions, seed=seed)
+		return self._simulator.run(prepared, repetitions=repetitions, seed=seed)
 
 	sample = run
 
@@ -68,7 +68,8 @@ class Engine:
 		else:
 			raise TypeError(f"cannot sweep over {params!r}")
 		return [
-			self.run(program, repetitions, param_resolver=resolver, device=device, seed=seed) for resolver in resolvers
+			self.run(program, repetitions=repetitions, param_resolver=resolver, device=device, seed=seed)
+			for resolver in resolvers
 		]
 
 	def get_sampler(self, device: Device | None = None) -> Sampler:
@@ -89,7 +90,7 @@ def sampler(
 	program: Circuit, repetitions: int = 1, *, qubit_order: Sequence[Qid] | None = None, seed: int | None = None
 ) -> Result:
 	"""Run ``program`` on a local sampler (a thin alias of ``vqubit.sample``)."""
-	return Simulator(seed=seed).run(program, repetitions, qubit_order=qubit_order)
+	return Simulator(seed=seed).run(program, repetitions=repetitions, qubit_order=qubit_order)
 
 
 __all__ = ["Engine", "get_engine", "sampler"]

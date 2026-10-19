@@ -40,6 +40,20 @@ a medida que avanzan los hitos.
 > toleradas; ese trabajo destapa a su vez la igualdad de las puertas de
 > **Clifford** (comparan matriz, no *tableau*) y el **exponente canónico** de
 > `PhasedXZGate`, los dos anotados en el eje de paridad con su criterio.
+>
+> **Actualización (0.3, 2026-10-19, tercera).** Los simuladores hablan como los de
+> Cirq: `run_sweep`, `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter`,
+> `simulate_moment_steps`, `run_batch` y `compute_amplitudes`, con
+> `param_resolver` en el segundo argumento (`simulator.simulate(circuito,
+> resolver)`) y los resultados llevando `params`, `qubit_map`, `measurements` y
+> `final_state_vector`. La sección `sweeps` de `benchmarks/verify.py` lo compara
+> con Cirq (601 comprobaciones en total) y el trabajo destapó y arregló tres
+> cosas: resolver un parámetro **a cero** reventaba con `ZeroDivisionError`,
+> `has_stabilizer_effect` **lanzaba** en vez de devolver `False`, y el simulador
+> de Clifford no aceptaba potencias enteras (`X ** 3`). Lo que queda de este eje
+> (valores esperados, `sample` como `DataFrame`, los barridos con la firma de
+> Cirq y el `simulate_moment_steps` de Clifford, bloqueado por vcraft) está
+> anotado con su criterio.
 
 ### Principios
 
@@ -181,10 +195,50 @@ Las divergencias `permanent` están explicadas en
       puertas), más una revisión de todos los `NotImplementedError`. **Medido:**
       52 en el fuente, de los cuales 48 son métodos abstractos legítimos (Cirq
       los tiene igual) y **4 son huecos reales**.
-- [ ] Paridad de simuladores: `simulate_expectation_values`, `simulate_sweep`,
-      `simulate_moment_steps`, `sample_expectation_values`, simuladores
-      *split/step*, `SimulatorBase`/`SimulatesIntermediateState`,
-      `DensityMatrixTrialResult`.
+- [x] **Barridos, pasos y amplitudes en los simuladores.** `run_sweep`,
+      `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter` y `run_batch` en
+      los tres simuladores; `simulate_moment_steps` (el estado tras cada momento)
+      en el de vector de estado y el de matriz de densidad; `compute_amplitudes`
+      en el de vector de estado; e `is_supported_operation` en el de Clifford.
+      `simulate` y `run` aceptan además `param_resolver` como **segundo**
+      argumento (el idioma de Cirq, `simulator.simulate(circuito, resolver)`) y
+      los resultados llevan `params`, `qubit_map`, `measurements` y
+      `final_state_vector`. **Medido:** la sección `sweeps` de
+      `benchmarks/verify.py` compara 17 comprobaciones con Cirq: los estados de
+      cada punto del barrido, los de cada momento (consumiendo los dos iteradores
+      en paralelo, porque los pasos de Cirq comparten el estado vivo), las
+      amplitudes y el orden de los argumentos.
+- [ ] **Valores esperados**: `simulate_expectation_values`,
+      `sample_expectation_values` y las variantes `_sweep*`, más los atributos que
+      faltan en los resultados (`bloch_vector_of`, `density_matrix_of`,
+      `get_state_containing_qubit`, `sample_measurement_ops`). Necesitan
+      `PauliString.expectation_from_state_vector` y
+      `PauliSum.expectation_from_density_matrix`, que vqubit todavía no tiene.
+      **Criterio:** esas funciones de expectativa medidas contra Cirq en una
+      sección `expectations` de `benchmarks/verify.py`, con 0 divergencias
+      inesperadas.
+- [ ] **`Simulator.sample` devuelve un `Result`, no un `DataFrame`.** Cirq
+      devuelve un `pandas.DataFrame` y acepta `params=` (un barrido); vqubit no
+      puede devolver un `DataFrame` sin depender de pandas, así que devuelve su
+      `Result` y el barrido se escribe con `run_sweep`.
+- [ ] **`simulate_moment_steps` del simulador de Clifford.** Necesita copiar el
+      `NativeTableau` en cada paso y **vcraft no expone `copy`** (`UPSTREAM.md`
+      §7); sin copia, todos los pasos compartirían el estado final. **Criterio:**
+      una foto por momento, comparada con Cirq.
+- [ ] **El conjunto de puertas de Clifford es más pequeño que el de stim.** Cirq
+      acepta `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` y `ZZ`
+      (`has_stabilizer_effect` es `True`) y el *tableau* nativo de vqubit no tiene
+      esas instrucciones, así que vqubit dice `False`; las que sí puede expresar
+      ya se aceptan con exponente entero (`X ** 3`, `CNOT ** -1`), como Cirq.
+      **Criterio:** ampliar vcraft con esas instrucciones (`UPSTREAM.md` §7) y una
+      sección `stabilizer` en `benchmarks/verify.py` que compare
+      `has_stabilizer_effect` y las unitarias simuladas con Cirq.
+- [ ] **Las clases de barrido no tienen la firma de Cirq.**
+      `vqubit.Linspace(start, stop, length)` toma dos asignaciones de parámetros y
+      `vqubit.Points(points)` una lista de asignaciones, donde Cirq usa
+      `Linspace(key, start, stop, length)` y `Points(key, points)`; las llamadas
+      de Cirq fallan con `TypeError` (nada silencioso). **Criterio:** aceptar la
+      forma de Cirq sin perder la de vqubit, con un test que ejecute las dos.
 - [ ] Tests diferenciales y de propiedades frente a `cirq-core` (Hypothesis +
       ampliación de `benchmarks/verify.py`) para puertas, canales, KAK,
       transformers, Clifford y muestreo. **Medido:** `verify.py` toca 16 de los
@@ -360,6 +414,20 @@ guarantees. It is a living document, updated as milestones land.
 > in turn uncovers **Clifford** gate equality (they compare matrices, not the
 > tableau) and the **canonical exponent** of `PhasedXZGate`, both noted on the
 > parity axis with their criterion.
+>
+> **Update (0.3, 2026-10-19, third).** The simulators speak Cirq's language now:
+> `run_sweep`, `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter`,
+> `simulate_moment_steps`, `run_batch` and `compute_amplitudes`, with
+> `param_resolver` as the second argument (`simulator.simulate(circuit,
+> resolver)`) and the results carrying `params`, `qubit_map`, `measurements` and
+> `final_state_vector`. The `sweeps` section of `benchmarks/verify.py` compares it
+> with Cirq (601 checks in total), and the work uncovered and fixed three things:
+> resolving a parameter **to zero** raised `ZeroDivisionError`,
+> `has_stabilizer_effect` **raised** instead of returning `False`, and the
+> Clifford simulator did not take integer powers (`X ** 3`). What remains on this
+> axis (expectation values, `sample` as a `DataFrame`, the sweeps with Cirq's
+> signature and the Clifford `simulate_moment_steps`, blocked by vcraft) is noted
+> with its criterion.
 
 ### Principles
 
@@ -496,10 +564,50 @@ blanket. The `permanent` divergences are explained in
       today), plus a review of every `NotImplementedError`. **Measured:** 52 in
       the source, of which 48 are legitimate abstract methods (Cirq has them too)
       and **4 are real gaps**.
-- [ ] Simulator parity: `simulate_expectation_values`, `simulate_sweep`,
-      `simulate_moment_steps`, `sample_expectation_values`, split/step
-      simulators, `SimulatorBase`/`SimulatesIntermediateState`,
-      `DensityMatrixTrialResult`.
+- [x] **Sweeps, steps and amplitudes in the simulators.** `run_sweep`,
+      `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter` and `run_batch`
+      on all three simulators; `simulate_moment_steps` (the state after each
+      moment) on the state-vector and density-matrix ones; `compute_amplitudes`
+      on the state-vector one; and `is_supported_operation` on the Clifford one.
+      `simulate` and `run` also take `param_resolver` as their **second**
+      argument now (the Cirq idiom, `simulator.simulate(circuit, resolver)`) and
+      the results carry `params`, `qubit_map`, `measurements` and
+      `final_state_vector`. **Measured:** the `sweeps` section of
+      `benchmarks/verify.py` compares 17 checks with Cirq: the state at every
+      point of the sweep, at every moment (consuming both iterators in lockstep,
+      because Cirq's steps share the live state), the amplitudes and the argument
+      order.
+- [ ] **Expectation values**: `simulate_expectation_values`,
+      `sample_expectation_values` and the `_sweep*` variants, plus the result
+      attributes vqubit is missing (`bloch_vector_of`, `density_matrix_of`,
+      `get_state_containing_qubit`, `sample_measurement_ops`). They need
+      `PauliString.expectation_from_state_vector` and
+      `PauliSum.expectation_from_density_matrix`, which vqubit does not have yet.
+      **Criterion:** those expectation functions measured against Cirq in an
+      `expectations` section of `benchmarks/verify.py`, with 0 unexpected
+      divergences.
+- [ ] **`Simulator.sample` returns a `Result`, not a `DataFrame`.** Cirq returns
+      a `pandas.DataFrame` and takes `params=` (a sweep); vqubit cannot return a
+      `DataFrame` without depending on pandas, so it returns its own `Result` and
+      the sweep case is written with `run_sweep`.
+- [ ] **`simulate_moment_steps` on the Clifford simulator.** It needs a copy of
+      the `NativeTableau` per step and **vcraft does not expose `copy`**
+      (`UPSTREAM.md` §7); without one, every step would share the final state.
+      **Criterion:** one snapshot per moment, compared with Cirq.
+- [ ] **The Clifford gate set is smaller than stim's.** Cirq accepts
+      `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` and `ZZ`
+      (`has_stabilizer_effect` is `True`) and vqubit's native tableau has no such
+      instructions, so it says `False`; the ones it can express are taken with an
+      integer exponent (`X ** 3`, `CNOT ** -1`), as in Cirq. **Criterion:**
+      extend vcraft with those instructions (`UPSTREAM.md` §7) and a `stabilizer`
+      section in `benchmarks/verify.py` comparing `has_stabilizer_effect` and the
+      simulated unitaries with Cirq.
+- [ ] **The sweep classes do not have Cirq's signature.**
+      `vqubit.Linspace(start, stop, length)` takes two parameter assignments and
+      `vqubit.Points(points)` a list of assignments, where Cirq uses
+      `Linspace(key, start, stop, length)` and `Points(key, points)`; Cirq's calls
+      raise `TypeError` (nothing silent). **Criterion:** accept Cirq's form
+      without losing vqubit's, with a test that exercises both.
 - [ ] Differential and property tests against `cirq-core` (Hypothesis + extend
       `benchmarks/verify.py`) for gates, channels, KAK, transformers, Clifford
       and sampling. **Measured:** `verify.py` touches 16 of the 607 shared names;

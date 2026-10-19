@@ -472,10 +472,10 @@ class StabilizerSampler:
 	def run(self, program: Any, repetitions: int = 1, **kwargs: Any) -> Any:
 		from ._clifford import CliffordSimulator
 
-		return CliffordSimulator(seed=self._seed).run(program, repetitions, **kwargs)
+		return CliffordSimulator(seed=self._seed).run(program, repetitions=repetitions, **kwargs)
 
 	def sample(self, program: Any, repetitions: int = 1, **kwargs: Any) -> Any:
-		return self.run(program, repetitions, **kwargs)
+		return self.run(program, repetitions=repetitions, **kwargs)
 
 	sample_expectation_values = None
 

@@ -134,6 +134,36 @@ State vectors and density matrices are always `complex128`. (Cirq's
 density-matrix simulator defaults to `complex64`, so vqubit is more precise and
 uses twice the memory for the same circuit.)
 
+## Parameter sweeps and `sample`
+
+`vq.Simulator().simulate(circuit, resolver)` and
+`vq.Simulator().run(circuit, resolver, repetitions=100)` take the
+`ParamResolver` where Cirq takes it, and `run_sweep`, `simulate_sweep`,
+`simulate_moment_steps` and `run_batch` have Cirq's signatures. Two things
+change:
+
+- **The sweep classes have a different signature.** vqubit writes
+  `vq.Linspace({"t": 0.0}, {"t": 1.0}, 4)` (two assignments to interpolate
+  between, and it handles several parameters at once) and
+  `vq.Points([{"t": 0.0}, {"t": 1.0}])`, where Cirq writes
+  `cirq.Linspace("t", 0.0, 1.0, 4)` and `cirq.Points("t", [0.0, 1.0])`.
+- **`sample` returns a `Result`, not a `DataFrame`.** Cirq returns a
+  `pandas.DataFrame` and takes `params=`; vqubit does not depend on pandas, so it
+  returns its own `Result` (just like `run`) and sweeps are written with
+  `run_sweep`.
+
+```python
+import vqubit as vq
+
+q0 = vq.LineQubit(0)
+t = vq.Parameter("t")
+circuit = vq.Circuit(vq.rx(t)(q0), vq.measure(q0, key="m"))
+
+results = vq.Simulator(seed=0).run_sweep(circuit, vq.Points([{"t": 0.0}, {"t": 0.5}]), repetitions=10)
+assert [dict(result.params)["t"] for result in results] == [0.0, 0.5]
+assert all(len(result) == 10 for result in results)
+```
+
 ## Same name, different role
 
 A handful of names exist in both libraries but mean something else. They fail

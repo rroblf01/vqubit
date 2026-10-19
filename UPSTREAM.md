@@ -15,6 +15,7 @@ project `vqubit` (zero runtime dependencies, single `abi3` wheel per platform).
 | 4 | Huge pages for the buffers (`buffer_new_*`) | 20-qubit simulation (roadmap 8) |
 | 5 | `WHEEL: Generator:` carries the project version; `audit` rejects `.pyd` | packaging hygiene |
 | 6 | Runtime dispatch (function multiversioning) for the hot kernels | SIMD from a portable wheel (roadmap 8) |
+| 7 | `NativeTableau` has no `copy()`, and `CliffordOp` is missing gates | per-step Clifford snapshots and stim's gate set (roadmap 0.3) |
 
 ---
 
@@ -172,3 +173,49 @@ the tested artifact.
 This is a "nice to have" for vqubit 1.0.0: issue 4 is much more valuable per unit
 of effort, because the 20-qubit workload is bandwidth-bound rather than
 compute-bound.
+
+---
+
+## 7. `NativeTableau` has no `copy()`, and `CliffordOp` is missing gates
+
+**Request, two related gaps in the stabilizer kernels.**
+
+**7a. No `copy()` on `NativeTableau`.** `vqubit.CliffordSimulator` wants a
+`simulate_moment_steps` that yields one snapshot per moment, the way
+`cirq.CliffordSimulator` does. Every other simulator can snapshot its state (a
+list of amplitudes, a density matrix), but a tableau cannot be copied: the type
+exposes only `apply`, `measure`, `reset`, `state_vector` and
+`stabilizer_tableau` (`vlib/vcraft_project` `NativeTableau`). Without a copy, the
+snapshots of a step-by-step simulation all alias the final state, which is worse
+than not offering the method.
+
+```python
+import vqubit_native as native
+tableau = native.NativeTableau(2)
+print([name for name in dir(tableau) if not name.startswith("_")])
+# ['apply', 'measure', 'num_qubits', 'reset', 'stabilizer_tableau', 'state_vector']
+```
+
+Expected: `NativeTableau.copy()` (or a `__copy__`), so
+`CliffordSimulator.simulate_moment_steps` can hand out independent snapshots.
+
+**7b. `CliffordOp` is missing instructions that stim has.** vqubit's Clifford gate
+set is `h, s, sdg, x, y, z, cnot, cz, swap, measure`. `cirq` (through stim) also
+treats `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` and `ZZ` as stabilizer gates,
+and vqubit reports `has_stabilizer_effect(...) is False` for them because the
+kernels cannot apply them:
+
+```python
+import cirq, vqubit as vq
+q0, q1 = cirq.LineQubit.range(2)
+print(cirq.has_stabilizer_effect(cirq.XX(q0, q1)), vq.has_stabilizer_effect(vq.XX(q0, q1)))
+# True False
+```
+
+(The ones vqubit *can* express are already accepted: `X ** 3`, `CNOT ** -1`,
+`Z ** 1.5`; only the instructions are missing.)
+
+Expected: `sx`, `sy`, `iswap`, `xx`, `yy`, `zz` (and their inverses, where stim
+has them) in `CliffordOp`, applied by `NativeTableau.apply`. With those, vqubit's
+`has_stabilizer_effect` and `CliffordSimulator` would answer like Cirq's for the
+whole stim gate set, and `benchmarks/verify.py` could compare them gate by gate.

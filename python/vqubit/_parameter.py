@@ -132,7 +132,24 @@ class _UnaryOp(_Expression):
 
 
 def _apply(op: str, left: Any, right: Any) -> Any:
-	return {"+": left + right, "-": left - right, "*": left * right, "/": left / right, "**": left**right}[op]
+	"""Evaluate one binary operation.
+
+	The operations are dispatched one at a time on purpose: building a dict of
+	all of them evaluates ``left / right`` too, which raises ``ZeroDivisionError``
+	for any expression whose other operand happens to be ``0``, so resolving a
+	parameter *to zero* used to fail.
+	"""
+	if op == "+":
+		return left + right
+	if op == "-":
+		return left - right
+	if op == "*":
+		return left * right
+	if op == "/":
+		return left / right
+	if op == "**":
+		return left**right
+	raise ValueError(f"unknown operation {op!r}")
 
 
 def _names(value: Any) -> set[str]:

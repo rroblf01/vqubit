@@ -30,11 +30,16 @@ from ._gates import (
 	XPowGate,
 	YPowGate,
 	ZPowGate,
-	is_plain_gate,
 )
 from ._linalg import vector_from_flat
+from ._ops import Operation
 from ._pauli import Pauli
 from ._qubits import LineQubit, Qid
+from ._sim import _SweepsAndBatches
+
+#: Tolerance for comparing exponents (``Z ** 0.5`` is ``S``, and ``0.1 + 0.4``
+#: has to count as ``0.5``).
+_EPS = 1e-12
 
 _INSTR_H = _native.CliffordOp.h
 _INSTR_S = _native.CliffordOp.s
@@ -48,29 +53,61 @@ _INSTR_SWAP = _native.CliffordOp.swap
 _INSTR_MEASURE = _native.CliffordOp.measure
 
 
+def _is_integer(value: Any) -> bool:
+	"""Whether ``value`` is an integer number (``True`` is not a number here)."""
+	if isinstance(value, bool) or not isinstance(value, (int, float)):
+		return False
+	return float(value).is_integer()
+
+
+def _parity_instruction(exponent: Any, instruction: Any) -> Any:
+	"""The instruction for an integral power of an involution.
+
+	``X ** 2`` is the identity (``None``, nothing to apply) and ``X ** 3`` is
+	``X``, exactly as Cirq's stabilizer simulator treats integer powers.
+	"""
+	if not _is_integer(exponent):
+		raise TypeError(f"{exponent!r} is not an integer power of a Clifford gate")
+	return instruction if int(exponent) % 2 else None
+
+
 def _instruction_code(gate: Any) -> _native.CliffordOp | None:
-	"""Return the instruction for a Clifford gate, or ``None`` for identity."""
+	"""Return the instruction for a Clifford gate, or ``None`` for an identity.
+
+	``None`` means "nothing to apply", which covers both a genuine identity
+	(``I``, ``X ** 2``) and a gate the stabilizer kernels cannot express: use
+	:func:`_is_clifford_gate` to tell the two apart.
+	"""
 	if isinstance(gate, IdentityGate):
 		return None
-	if isinstance(gate, HPowGate) and gate.exponent == 1:
-		return _INSTR_H
+	if isinstance(gate, HPowGate):
+		return _parity_instruction(gate.exponent, _INSTR_H)
+	if isinstance(gate, XPowGate):
+		return _parity_instruction(gate.exponent, _INSTR_X)
+	if isinstance(gate, YPowGate):
+		return _parity_instruction(gate.exponent, _INSTR_Y)
 	if isinstance(gate, ZPowGate):
-		if gate.exponent == 1:
+		exponent = gate.exponent
+		if not isinstance(exponent, (int, float)) or isinstance(exponent, bool):
+			raise TypeError(f"{gate!r} is not a Clifford gate")
+		# ``Z`` has period 2, so only four residues are Clifford: the identity,
+		# ``S``, ``Z`` and ``S†``.
+		reduced = float(exponent) % 2
+		if abs(reduced) < _EPS or abs(reduced - 2) < _EPS:
+			return None
+		if abs(reduced - 1) < _EPS:
 			return _INSTR_Z
-		if gate.exponent == 0.5:
+		if abs(reduced - 0.5) < _EPS:
 			return _INSTR_S
-		if gate.exponent == -0.5:
+		if abs(reduced - 1.5) < _EPS:
 			return _INSTR_SDG
-	if isinstance(gate, XPowGate) and gate.exponent in (1, -1):
-		return _INSTR_X
-	if isinstance(gate, YPowGate) and gate.exponent in (1, -1):
-		return _INSTR_Y
-	if isinstance(gate, CNOTGate) and is_plain_gate(gate):
-		return _INSTR_CNOT
-	if isinstance(gate, CZGate) and is_plain_gate(gate):
-		return _INSTR_CZ
-	if isinstance(gate, SWAPGate) and is_plain_gate(gate):
-		return _INSTR_SWAP
+		raise TypeError(f"{gate!r} is not a Clifford gate")
+	if isinstance(gate, CNOTGate):
+		return _parity_instruction(gate.exponent, _INSTR_CNOT)
+	if isinstance(gate, CZGate):
+		return _parity_instruction(gate.exponent, _INSTR_CZ)
+	if isinstance(gate, SWAPGate):
+		return _parity_instruction(gate.exponent, _INSTR_SWAP)
 	raise TypeError(f"{gate!r} is not a Clifford gate")
 
 
@@ -696,8 +733,16 @@ class CliffordState:
 class CliffordSimulationResult:
 	"""The result of :meth:`CliffordSimulator.simulate`."""
 
-	def __init__(self, state: CliffordState) -> None:
+	def __init__(self, state: CliffordState, params: Any = None) -> None:
+		from ._sim import _as_resolver
+
 		self._final_state = state
+		self._params = _as_resolver(params)
+
+	@property
+	def params(self) -> Any:
+		"""The resolver used for the simulation (empty when there was none)."""
+		return self._params
 
 	@property
 	def final_state(self) -> CliffordState:
@@ -710,18 +755,47 @@ class CliffordSimulationResult:
 		return f"vqubit.CliffordSimulationResult({self._final_state!r})"
 
 
-class CliffordSimulator:
+def _is_clifford_gate(gate: Any) -> bool:
+	"""Whether the native stabilizer kernels can apply ``gate``.
+
+	Unlike :func:`_instruction_code`, which says *which* instruction to use and
+	raises when there is none, this only answers yes or no: it is what
+	:func:`vqubit.has_stabilizer_effect` and the simulator's
+	``is_supported_operation`` need.
+	"""
+	if isinstance(gate, IdentityGate):
+		return True
+	try:
+		_instruction_code(gate)
+	except TypeError:
+		return False
+	return True
+
+
+class CliffordSimulator(_SweepsAndBatches):
 	"""A stabilizer simulator for Clifford circuits."""
 
 	def __init__(self, *, seed: int | None = None) -> None:
 		self._seed = seed
 
+	def is_supported_operation(self, operation: Operation) -> bool:
+		"""Report whether ``operation`` is a Clifford gate or a measurement.
+
+		Anything else (a ``T``, a rotation by a non-multiple of ``pi/2``, a
+		channel) is outside the stabilizer formalism, so the simulator cannot run
+		it.
+		"""
+		return isinstance(operation.gate, MeasurementGate) or _is_clifford_gate(operation.gate)
+
 	def simulate(
 		self,
 		program: Circuit,
-		*,
+		param_resolver: Any = None,
 		qubit_order: Sequence[Qid] | None = None,
 	) -> CliffordSimulationResult:
+		from ._sim import _resolve_program
+
+		program = _resolve_program(program, param_resolver)
 		qubits = self._resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		tableau = _native.NativeTableau(len(qubits))
@@ -729,27 +803,32 @@ class CliffordSimulator:
 			gate = operation.gate
 			if isinstance(gate, MeasurementGate):
 				raise ValueError("simulate() cannot run a circuit with measurements; use run()")
+			self._refuse_unsupported(operation)
 			code = _instruction_code(gate)
 			if code is None:
 				continue
 			targets = [index[q] for q in operation.qubits]
 			tableau.apply(code, targets[0], targets[1] if len(targets) > 1 else 0)
-		return CliffordSimulationResult(CliffordState(tableau, qubits))
+		return CliffordSimulationResult(CliffordState(tableau, qubits), param_resolver)
 
 	def run(
 		self,
 		program: Circuit,
+		param_resolver: Any = None,
 		repetitions: int = 1,
 		*,
 		qubit_order: Sequence[Qid] | None = None,
 		seed: int | None = None,
 	) -> Any:
-		from ._sim import Result
+		from ._sim import Result, _resolve_program
 
+		program = _resolve_program(program, param_resolver)
 		if repetitions < 1:
 			raise ValueError("repetitions must be at least 1")
 		qubits = self._resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
+		for operation in program.all_operations():
+			self._refuse_unsupported(operation)
 		instructions, measure_meta, key_sizes = _build_instructions(program, index, allow_measurements=True)
 		effective_seed = seed if seed is not None else self._seed
 		if effective_seed is None:
@@ -764,9 +843,20 @@ class CliffordSimulator:
 		for rep in range(repetitions):
 			for m, (key, position, _) in enumerate(measure_meta):
 				records[key][rep][position] = bits[rep * num_measurements + m]
-		return Result(records)
+		return Result(records, param_resolver)
 
 	sample = run
+
+	@staticmethod
+	def _refuse_unsupported(operation: Operation) -> None:
+		"""Raise unless the stabilizer kernels can apply ``operation``.
+
+		Without it a circuit would either be refused deep inside the native call
+		with a message about instruction codes, or (worse) silently skip a gate
+		the formalism cannot express. Cirq names the operation it cannot handle.
+		"""
+		if not isinstance(operation.gate, MeasurementGate) and not _is_clifford_gate(operation.gate):
+			raise TypeError(f"CliffordSimulator doesn't support {operation!r}")
 
 	@staticmethod
 	def _resolve_qubits(program: Circuit, qubit_order: Sequence[Qid] | None) -> tuple[Qid, ...]:

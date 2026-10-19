@@ -155,9 +155,10 @@ def has_stabilizer_effect(value: Any) -> bool:
 	subject = getattr(value, "gate", value)
 	if hasattr(subject, "_has_stabilizer_effect_"):
 		return bool(subject._has_stabilizer_effect_())
-	from ._clifford import _instruction_code
+	from ._clifford import _is_clifford_gate
+	from ._gates import MeasurementGate
 
-	return _instruction_code(subject) is not None
+	return isinstance(subject, MeasurementGate) or _is_clifford_gate(subject)
 
 
 # --- circuit diagram ---------------------------------------------------------

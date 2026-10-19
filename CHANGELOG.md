@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the Cirq idioms do, and `vq.rz(0.3) ** 0.5` scales the angle to `vq.rz(0.15)`.
   `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The plain
   gates themselves are the power gates now: see *Changed*.
+- **The simulator entry points Cirq code reaches for.** `run_sweep`,
+  `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter` and `run_batch` on
+  all three simulators; `simulate_moment_steps` (the state after each moment) on
+  the state-vector and density-matrix ones; `Simulator.compute_amplitudes`; and
+  `CliffordSimulator.is_supported_operation`. `simulate` and `run` take a
+  `param_resolver` now, and the sweeps come from the existing
+  `Points`/`Linspace`/`Product`/`Zip` classes. The trial and sample results carry
+  `params`, and the trial results also expose Cirq's `qubit_map`, `measurements`
+  and `final_state_vector`.
 - **A Cirq contract harness**, `benchmarks/parity.py`, run in the `cirq-parity`
   CI job: it checks names, `**`, `isinstance`, gate classes, text diagrams and
   value equality against Cirq, and keeps the accepted divergences in
@@ -40,6 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`AnyUnitaryGateFamily` takes `num_qubits` first, as Cirq does.**
   `AnyUnitaryGateFamily(2)` is now the two-qubit unitary gates, where it used to
   set the family's name to the integer `2` and accept everything.
+- **`simulate` and `run` take `param_resolver` as their second argument,** where
+  `run` used to take `repetitions`. The Cirq idiom
+  `simulator.simulate(circuit, resolver)` works now; a positional
+  `simulator.run(circuit, 100)` does not, so pass `repetitions=` (as the
+  documentation always did). A circuit whose symbols are still unresolved raises
+  `ValueError` instead of failing somewhere deeper.
+- **The Clifford simulator takes integer powers of its gates**: `X ** 0` is
+  nothing, `X ** 3` is `X` and `CNOT ** -1` is `CNOT`, as Cirq's does, and when it
+  refuses an operation it names it (`TypeError`), the way Cirq's message does.
+- **`to_resolvers(None)` is a single empty resolver and `to_resolvers([])` is
+  none at all**, both as in Cirq, which used to raise `TypeError`.
 
 - **The plain gates *are* the power gates, as in Cirq.** `vq.CZ` is now
   `CZPowGate(exponent=1)`, `vq.CNOT`/`vq.CX` are `CXPowGate`, `vq.SWAP` is
@@ -59,6 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Resolving a parameter *to zero* raised `ZeroDivisionError`.** The helper
+  evaluating a symbolic expression built a dictionary of all five operations at
+  once, so `t * 12` with `t = 0` also evaluated `t / 12`; every sweep whose first
+  point was `0.0` crashed. It dispatches on the operation now.
+- **`has_stabilizer_effect` raised `TypeError`** for anything that is not a
+  Clifford gate (`has_stabilizer_effect(vq.T(q0))`) instead of returning
+  `False`, and said `False` for the identity and for measurements where Cirq says
+  `True`.
 - **`global_shift` did not do what Cirq documents.** It was applied as a phase
   that depended on the eigenvalue (`exp(iπ·s)` on the `+1` block, `exp(-iπ·s)` on
   the `-1` one) instead of the **global phase** `exp(iπ·s·e)`, so

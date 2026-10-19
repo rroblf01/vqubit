@@ -21,6 +21,7 @@ from collections.abc import Callable
 from typing import Any
 
 import numpy as np
+import sympy
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
@@ -164,6 +165,126 @@ def check_gates(report: Report) -> None:
 			report.check("gates", name, False, f"unitary: {type(exc).__name__}: {exc}")
 			continue
 		report.check("gates", name, up_to_phase(got, expected))
+
+
+# --- sweeps, steps and amplitudes --------------------------------------------
+
+
+def measured_bits(result: Any, key: str) -> list[list[int]]:
+	"""The measurements of ``key`` as plain lists (Cirq hands back arrays)."""
+	return [[int(bit) for bit in row] for row in result.measurements[key]]
+
+
+def check_sweeps(report: Report) -> None:
+	"""Sweeps, step-by-step simulation, amplitudes and batches must match Cirq.
+
+	The sweeps themselves are written in each library's own dialect (vqubit's
+	``Points`` takes parameter assignments, Cirq's takes a key and values), so
+	the circuits and points are built in parallel and the *results* compared.
+	"""
+	q0, q1 = cirq.LineQubit.range(2)
+	v0, v1 = vq.LineQubit.range(2)
+
+	# ``X ** t`` is deterministic at both ends of the sweep, so the sampled bits
+	# can be compared exactly.
+	cirq_sweep_circuit = cirq.Circuit((cirq.X ** sympy.Symbol("t"))(q0), cirq.measure(q0, key="m"))
+	vq_sweep_circuit = vq.Circuit((vq.X ** vq.Parameter("t"))(v0), vq.measure(v0, key="m"))
+	cirq_points = (0.0, 1.0, 2.0)
+	vq_points = vq.Points([{"t": value} for value in cirq_points])
+
+	cirq_results = cirq.Simulator().run_sweep(cirq_sweep_circuit, cirq.Points("t", list(cirq_points)), repetitions=4)
+	vq_results = vq.Simulator().run_sweep(vq_sweep_circuit, vq_points, repetitions=4)
+	for point, (want, got) in enumerate(zip(cirq_results, vq_results, strict=True)):
+		report.check(
+			"sweeps",
+			f"run_sweep point {point}",
+			measured_bits(want, "m") == measured_bits(got, "m") and want.params["t"] == got.params["t"],
+			f"cirq {measured_bits(want, 'm')} vs vqubit {measured_bits(got, 'm')}",
+		)
+
+	# ``simulate_sweep`` is deterministic: compare the states at every point.
+	cirq_state_circuit = cirq.Circuit(cirq.rx(sympy.Symbol("t"))(q0), cirq.CNOT(q0, q1))
+	vq_state_circuit = vq.Circuit(vq.rx(vq.Parameter("t"))(v0), vq.CNOT(v0, v1))
+	cirq_states = cirq.Simulator().simulate_sweep(cirq_state_circuit, cirq.Points("t", [0.3, 1.1]))
+	vq_states = vq.Simulator().simulate_sweep(vq_state_circuit, vq.Points([{"t": 0.3}, {"t": 1.1}]))
+	report.check("sweeps", "simulate_sweep length", len(cirq_states) == len(vq_states) == 2)
+	for point, (want, got) in enumerate(zip(cirq_states, vq_states, strict=True)):
+		report.check(
+			"sweeps",
+			f"simulate_sweep point {point}",
+			up_to_phase(got.final_state_vector, want.final_state_vector),
+			f"params {want.params}",
+		)
+
+	# ``run_batch`` runs several circuits with their own repetitions.
+	cirq_batch = cirq.Simulator().run_batch([cirq_sweep_circuit], [cirq.Points("t", [2.0])], repetitions=[3])
+	vq_batch = vq.Simulator().run_batch([vq_sweep_circuit], [vq.Points([{"t": 2.0}])], repetitions=[3])
+	report.check(
+		"sweeps",
+		"run_batch",
+		[[measured_bits(r, "m") for r in batch] for batch in cirq_batch]
+		== [[measured_bits(r, "m") for r in batch] for batch in vq_batch],
+		f"cirq {[[measured_bits(r, 'm') for r in b] for b in cirq_batch]}",
+	)
+
+	# Step-by-step: every state of the sequence, and the density-matrix variant.
+	# The two iterators are consumed in lockstep: Cirq's step results alias the
+	# live state, so collecting them first would compare its last state three
+	# times.
+	steps_circuit = cirq.Circuit(cirq.H(q0), cirq.CNOT(q0, q1), cirq.S(q1))
+	vq_steps_circuit = vq.Circuit(vq.H(v0), vq.CNOT(v0, v1), vq.S(v1))
+	step_count = 0
+	for want, got in zip(
+		cirq.Simulator().simulate_moment_steps(steps_circuit),
+		vq.Simulator().simulate_moment_steps(vq_steps_circuit),
+		strict=True,
+	):
+		report.check(
+			"sweeps",
+			f"simulate_moment_steps {step_count}",
+			up_to_phase(got.state_vector(), want.state_vector()),
+			f"step {step_count}",
+		)
+		step_count += 1
+	report.check("sweeps", "simulate_moment_steps count", step_count == 3)
+
+	density_step_count = 0
+	for want, got in zip(
+		cirq.DensityMatrixSimulator().simulate_moment_steps(steps_circuit),
+		vq.DensityMatrixSimulator().simulate_moment_steps(vq_steps_circuit),
+		strict=True,
+	):
+		report.check(
+			"sweeps",
+			f"density matrix steps {density_step_count}",
+			bool(np.allclose(np.asarray(got.density_matrix()), np.asarray(want.density_matrix()), atol=ATOL)),
+			f"step {density_step_count}",
+		)
+		density_step_count += 1
+	report.check("sweeps", "density matrix steps count", density_step_count == 3)
+
+	# Amplitudes of every basis state, which is what VQE-style code asks for.
+	amplitude_circuit = cirq.Circuit(cirq.H(q0), cirq.CNOT(q0, q1), cirq.rz(0.3)(q1))
+	vq_amplitude_circuit = vq.Circuit(vq.H(v0), vq.CNOT(v0, v1), vq.rz(0.3)(v1))
+	bitstrings = [0, 1, 2, 3]
+	want_amplitudes = cirq.Simulator().compute_amplitudes(amplitude_circuit, bitstrings)
+	got_amplitudes = vq.Simulator().compute_amplitudes(vq_amplitude_circuit, bitstrings)
+	report.check(
+		"sweeps",
+		"compute_amplitudes",
+		bool(np.allclose(np.asarray(want_amplitudes), np.asarray(got_amplitudes), atol=ATOL)),
+		f"cirq {want_amplitudes} vs vqubit {got_amplitudes}",
+	)
+
+	# ``param_resolver`` as the second positional argument, the Cirq idiom.
+	want_resolved = cirq.Simulator().simulate(cirq_state_circuit, cirq.ParamResolver({"t": 0.4}))
+	got_resolved = vq.Simulator().simulate(vq_state_circuit, vq.ParamResolver({"t": 0.4}))
+	report.check(
+		"sweeps",
+		"simulate(circuit, resolver)",
+		up_to_phase(got_resolved.final_state_vector, want_resolved.final_state_vector),
+		"resolved simulation",
+	)
 
 
 # --- global shift --------------------------------------------------------------
@@ -433,6 +554,7 @@ def main() -> None:
 
 	sections: dict[str, Callable[[Report], None]] = {
 		"gates": check_gates,
+		"sweeps": check_sweeps,
 		"global shift": check_global_shift,
 		"channels": check_channels,
 		"circuits": check_circuits,

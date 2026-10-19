@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import random
 from collections import Counter
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 import vqubit_native as _native
@@ -24,6 +24,7 @@ from ._compat import HAS_NUMPY, is_numpy_array, native_complex_view
 from ._gates import MeasurementGate
 from ._linalg import to_flat, vector_from_flat, vector_to_flat
 from ._ops import Moment
+from ._protocols import is_parameterized, resolve_parameters
 from ._qubits import Qid
 from ._sim_abc import (
 	SimulatesAmplitudes,
@@ -63,6 +64,89 @@ def _initial_state_vector(initial_state: Any, dim: int) -> list[complex]:
 	if len(sequence) != dim:
 		raise ValueError(f"initial_state has length {len(sequence)}, expected {dim}")
 	return [complex(x) for x in sequence]
+
+
+def _as_resolver(param_resolver: Any) -> Any:
+	"""Return ``param_resolver`` as a :class:`ParamResolver` (an empty one for ``None``)."""
+	from ._parameter import ParamResolver
+
+	if param_resolver is None:
+		return ParamResolver({})
+	if isinstance(param_resolver, ParamResolver):
+		return param_resolver
+	return ParamResolver(param_resolver)
+
+
+def _resolve_program(program: Circuit, param_resolver: Any) -> Circuit:
+	"""Apply ``param_resolver`` to ``program`` and refuse to leave symbols behind.
+
+	Cirq does the same: a simulator handed a parameterized circuit without a
+	resolver raises, instead of failing later on some gate whose unitary is
+	``None``.
+	"""
+	if param_resolver is not None:
+		program = resolve_parameters(program, param_resolver)
+	if is_parameterized(program):
+		raise ValueError("the circuit still contains unsolved symbols; pass param_resolver= to fix them")
+	return program
+
+
+class _SweepsAndBatches:
+	"""The sweep and batch entry points the simulators share.
+
+	Each concrete simulator implements ``run``, ``simulate`` and (where it can)
+	``simulate_moment_steps``; everything here is written in terms of those, the
+	way Cirq's ``SimulatorBase`` is.
+	"""
+
+	#: Provided by the concrete simulators (annotated like ``_sim_abc`` does, so
+	#: their own signatures stay free to be the Cirq ones).
+	run: Any
+	simulate: Any
+
+	def run_sweep(self, program: Circuit, params: Any, repetitions: int = 1) -> list[Result]:
+		"""Run ``program`` once per point of the parameter sweep ``params``."""
+		return list(self.run_sweep_iter(program, params, repetitions))
+
+	def run_sweep_iter(self, program: Circuit, params: Any, repetitions: int = 1) -> Iterator[Result]:
+		"""Like :meth:`run_sweep`, but yielding each result as it is produced."""
+		from ._study import to_resolvers
+
+		for resolver in to_resolvers(params):
+			yield self.run(program, resolver, repetitions)
+
+	def simulate_sweep(
+		self, program: Circuit, params: Any, qubit_order: Sequence[Qid] | None = None, initial_state: Any = 0
+	) -> list[Any]:
+		"""Like :meth:`simulate`, once per point of the sweep ``params``."""
+		return list(self.simulate_sweep_iter(program, params, qubit_order, initial_state))
+
+	def simulate_sweep_iter(
+		self, program: Circuit, params: Any, qubit_order: Sequence[Qid] | None = None, initial_state: Any = 0
+	) -> Iterator[Any]:
+		"""Like :meth:`simulate_sweep`, but yielding each result as it is produced."""
+		from ._study import to_resolvers
+
+		for resolver in to_resolvers(params):
+			yield self.simulate(program, resolver, qubit_order, initial_state)
+
+	def run_batch(
+		self,
+		programs: Sequence[Circuit],
+		params_list: Sequence[Any] | None = None,
+		repetitions: int | Sequence[int] = 1,
+	) -> list[list[Result]]:
+		"""Run each circuit of ``programs``, optionally with its own sweep, as Cirq does."""
+		if params_list is None:
+			params_list = [None] * len(programs)
+		if isinstance(repetitions, int):
+			repetitions = [repetitions] * len(programs)
+		if not (len(programs) == len(params_list) == len(repetitions)):
+			raise ValueError("programs, params_list and repetitions must have the same length")
+		return [
+			self.run_sweep(program, params if params is not None else None, count)
+			for program, params, count in zip(programs, params_list, repetitions, strict=True)
+		]
 
 
 class StateVector:
@@ -115,17 +199,38 @@ def _format_complex(value: complex, decimals: int) -> str:
 class SimulationResult(SimulationTrialResultBase):
 	"""The result of :meth:`Simulator.simulate`."""
 
-	def __init__(self, qubits: Sequence[Qid], state: StateVector) -> None:
+	def __init__(self, qubits: Sequence[Qid], state: StateVector, params: Any = None) -> None:
 		self._qubits = tuple(qubits)
 		self._final_state = state
+		self._params = _as_resolver(params)
+
+	@property
+	def params(self) -> Any:
+		"""The resolver used for the simulation (empty when there was none)."""
+		return self._params
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
 		return self._qubits
 
 	@property
+	def qubit_map(self) -> dict[Qid, int]:
+		"""Which index each qubit holds in the state, as Cirq reports it."""
+		return {qubit: index for index, qubit in enumerate(self._qubits)}
+
+	@property
+	def measurements(self) -> dict[str, list[list[int]]]:
+		"""Always empty: a simulation is a circuit with no measurements."""
+		return {}
+
+	@property
 	def final_state(self) -> StateVector:
 		return self._final_state
+
+	@property
+	def final_state_vector(self) -> Any:
+		"""The state vector, under the name Cirq gives it."""
+		return self._final_state.state_vector()
 
 	def state_vector(self) -> Any:
 		return self._final_state.state_vector()
@@ -141,10 +246,21 @@ class SimulationResult(SimulationTrialResultBase):
 
 
 class Result:
-	"""Measurement results: one row of bits per repetition, per key."""
+	"""Measurement results: one row of bits per repetition, per key.
 
-	def __init__(self, measurements: dict[str, list[list[int]]]) -> None:
+	Carries the ``params`` of the run that produced it -- the resolver that fixed
+	the circuit's symbols (empty when there were none) -- as Cirq's ``Result``
+	does, which is how a caller tells the points of a sweep apart.
+	"""
+
+	def __init__(self, measurements: dict[str, list[list[int]]], params: Any = None) -> None:
 		self._measurements = {key: [list(row) for row in rows] for key, rows in measurements.items()}
+		self._params = _as_resolver(params)
+
+	@property
+	def params(self) -> Any:
+		"""The resolver used to run the circuit."""
+		return self._params
 
 	@property
 	def measurements(self) -> dict[str, list[list[int]]]:
@@ -223,7 +339,14 @@ def _outcome_of(targets: Sequence[int], positions: dict[int, int], union_outcome
 	return outcome
 
 
-class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesFinalState, SimulatesIntermediateState):
+class Simulator(
+	_SweepsAndBatches,
+	SimulatorBase,
+	SimulatesSamples,
+	SimulatesAmplitudes,
+	SimulatesFinalState,
+	SimulatesIntermediateState,
+):
 	"""A state-vector simulator.
 
 	``simulate`` evolves a circuit with no measurements and returns the final
@@ -236,10 +359,11 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 	def simulate(
 		self,
 		program: Circuit,
-		*,
+		param_resolver: Any = None,
 		qubit_order: Sequence[Qid] | None = None,
 		initial_state: Any = 0,
 	) -> SimulationResult:
+		program = _resolve_program(program, param_resolver)
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
@@ -252,18 +376,57 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 			self._apply_moment(state, moment, index, rng=None, measurements=None)
 		view = native_complex_view(state)
 		if view is not None:
-			return SimulationResult(qubits, StateVector(view, qubits, owner=state))
-		return SimulationResult(qubits, StateVector(vector_from_flat(state.amplitudes()), qubits))
+			return SimulationResult(qubits, StateVector(view, qubits, owner=state), param_resolver)
+		return SimulationResult(qubits, StateVector(vector_from_flat(state.amplitudes()), qubits), param_resolver)
+
+	def simulate_moment_steps(
+		self,
+		program: Circuit,
+		param_resolver: Any = None,
+		qubit_order: Sequence[Qid] | None = None,
+		initial_state: Any = 0,
+	) -> Iterator[Any]:
+		"""Yield the state after each moment, as Cirq's simulator does."""
+		from ._sim_step import SparseSimulatorStep
+
+		program = _resolve_program(program, param_resolver)
+		qubits = _resolve_qubits(program, qubit_order)
+		index = {q: i for i, q in enumerate(qubits)}
+		state = _native.NativeState(len(qubits))
+		if _is_basis_zero(initial_state):
+			state.set_zero_state()
+		else:
+			state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << len(qubits))))
+		for moment in program.moments:
+			self._apply_moment(state, moment, index, rng=None, measurements=None)
+			yield SparseSimulatorStep(qubits=qubits, measurements={}, state_vector=vector_from_flat(state.amplitudes()))
+
+	def compute_amplitudes(
+		self,
+		program: Circuit,
+		bitstrings: Sequence[int],
+		param_resolver: Any = None,
+		qubit_order: Sequence[Qid] | None = None,
+	) -> list[complex]:
+		"""The amplitudes of the given basis states in the final state."""
+		if is_numpy_array(bitstrings):
+			shape = getattr(bitstrings, "shape", ())
+			if len(shape) > 1:  # pragma: no cover - numpy extra
+				raise ValueError(f"bitstrings must be a 1-dimensional array, got shape {shape}")
+		state = self.simulate(program, param_resolver, qubit_order).state_vector()
+		return [complex(state[index]) for index in bitstrings]
 
 	def run(
 		self,
 		program: Circuit,
+		param_resolver: Any = None,
 		repetitions: int = 1,
 		*,
 		qubit_order: Sequence[Qid] | None = None,
 		initial_state: Any = 0,
 		seed: int | None = None,
 	) -> Result:
+		program = _resolve_program(program, param_resolver)
 		if repetitions < 1:
 			raise ValueError("repetitions must be at least 1")
 		qubits = _resolve_qubits(program, qubit_order)
@@ -290,7 +453,7 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 						raise TypeError(f"{operation.gate!r} has no unitary and cannot be simulated")
 					state.apply_gate(flat, [index[q] for q in operation.qubits])
 			if not measurements:
-				return Result(records)
+				return Result(records, param_resolver)
 			# Every measurement is terminal, so their joint distribution is the one
 			# of the union of measured qubits. Sampling each measurement separately
 			# from its own marginal would decorrelate them: two qubits of a Bell
@@ -311,19 +474,19 @@ class Simulator(SimulatorBase, SimulatesSamples, SimulatesAmplitudes, SimulatesF
 					for gate, targets in measurements:
 						bits = _outcome_of(targets, positions, int(outcome))
 						_record_bits(gate, bits, len(targets), records)
-				return Result(records)
+				return Result(records, param_resolver)
 			for _ in range(repetitions):
 				outcome = _draw_outcome(probabilities, rng)
 				for gate, targets in measurements:
 					bits = _outcome_of(targets, positions, outcome)
 					_record_bits(gate, bits, len(targets), records)
-			return Result(records)
+			return Result(records, param_resolver)
 		for _ in range(repetitions):
 			state = _native.NativeState(num_qubits)
 			state.set_amplitudes(amplitudes)
 			for moment in program.moments:
 				self._apply_moment(state, moment, index, rng=rng, measurements=records)
-		return Result(records)
+		return Result(records, param_resolver)
 
 	sample = run
 
@@ -384,13 +547,29 @@ class DensityMatrix:
 class DensityMatrixTrialResult(SimulationTrialResultBase):
 	"""The result of :meth:`DensityMatrixSimulator.simulate`."""
 
-	def __init__(self, qubits: Sequence[Qid], density: DensityMatrix) -> None:
+	def __init__(self, qubits: Sequence[Qid], density: DensityMatrix, params: Any = None) -> None:
 		self._qubits = tuple(qubits)
 		self._final_density_matrix = density
+		self._params = _as_resolver(params)
+
+	@property
+	def params(self) -> Any:
+		"""The resolver used for the simulation (empty when there was none)."""
+		return self._params
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
 		return self._qubits
+
+	@property
+	def qubit_map(self) -> dict[Qid, int]:
+		"""Which index each qubit holds in the density matrix, as Cirq reports it."""
+		return {qubit: index for index, qubit in enumerate(self._qubits)}
+
+	@property
+	def measurements(self) -> dict[str, list[list[int]]]:
+		"""Always empty: a simulation is a circuit with no measurements."""
+		return {}
 
 	@property
 	def final_density_matrix(self) -> DensityMatrix:
@@ -407,7 +586,9 @@ def _density_flat_to_nested(flat: Sequence[float], dim: int) -> list[list[comple
 	return [[complex(flat[2 * (i * dim + j)], flat[2 * (i * dim + j) + 1]) for j in range(dim)] for i in range(dim)]
 
 
-class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalState, SimulatesIntermediateState):
+class DensityMatrixSimulator(
+	_SweepsAndBatches, SimulatorBase, SimulatesSamples, SimulatesFinalState, SimulatesIntermediateState
+):
 	"""A simulator that evolves a density matrix, so it can run noisy circuits."""
 
 	def __init__(self, *, seed: int | None = None) -> None:
@@ -416,10 +597,11 @@ class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalStat
 	def simulate(
 		self,
 		program: Circuit,
-		*,
+		param_resolver: Any = None,
 		qubit_order: Sequence[Qid] | None = None,
 		initial_state: Any = 0,
 	) -> DensityMatrixTrialResult:
+		program = _resolve_program(program, param_resolver)
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
 		num_qubits = len(qubits)
@@ -435,17 +617,45 @@ class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalStat
 			matrix = DensityMatrix(view.reshape(1 << num_qubits, 1 << num_qubits), qubits, owner=density)
 		else:
 			matrix = DensityMatrix(_density_flat_to_nested(density.density_matrix(), 1 << num_qubits), qubits)
-		return DensityMatrixTrialResult(qubits, matrix)
+		return DensityMatrixTrialResult(qubits, matrix, param_resolver)
+
+	def simulate_moment_steps(
+		self,
+		program: Circuit,
+		param_resolver: Any = None,
+		qubit_order: Sequence[Qid] | None = None,
+		initial_state: Any = 0,
+	) -> Iterator[Any]:
+		"""Yield the density matrix after each moment, as Cirq's simulator does."""
+		from ._sim_step import DensityMatrixStepResult
+
+		program = _resolve_program(program, param_resolver)
+		qubits = _resolve_qubits(program, qubit_order)
+		index = {q: i for i, q in enumerate(qubits)}
+		num_qubits = len(qubits)
+		dim = 1 << num_qubits
+		density = _native.NativeDensity(num_qubits)
+		if _is_basis_zero(initial_state):
+			density.set_zero_state()
+		else:
+			density.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, dim)))
+		for moment in program.moments:
+			self._apply_moment(density, moment, index, rng=None, measurements=None)
+			yield DensityMatrixStepResult(
+				qubits=qubits, measurements={}, density_matrix=_density_flat_to_nested(density.density_matrix(), dim)
+			)
 
 	def run(
 		self,
 		program: Circuit,
+		param_resolver: Any = None,
 		repetitions: int = 1,
 		*,
 		qubit_order: Sequence[Qid] | None = None,
 		initial_state: Any = 0,
 		seed: int | None = None,
 	) -> Result:
+		program = _resolve_program(program, param_resolver)
 		if repetitions < 1:
 			raise ValueError("repetitions must be at least 1")
 		qubits = _resolve_qubits(program, qubit_order)
@@ -459,7 +669,7 @@ class DensityMatrixSimulator(SimulatorBase, SimulatesSamples, SimulatesFinalStat
 			density.set_from_amplitudes(amplitudes)
 			for moment in program.moments:
 				self._apply_moment(density, moment, index, rng=rng, measurements=records)
-		return Result(records)
+		return Result(records, param_resolver)
 
 	sample = run
 

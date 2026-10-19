@@ -39,10 +39,10 @@ a medida que avanzan los hitos.
   de ruido; optimizadores; transformers; devices; QASM/Quirk/JSON.
 - Tipado completo (`py.typed`, todas las funciones anotadas) y stub nativo.
   **28** nombres públicos (los protocolos `Supports*`) aún sin docstring.
-- **562** tests y CI verde en 3 SO × 5 versiones de Python.
+- **607** tests y CI verde en 3 SO × 5 versiones de Python.
 - Cobertura del wheel publicado: **77 %** (objetivo ≥95 %).
 - `benchmarks/verify.py`: **74/74** comprobaciones numéricas contra Cirq.
-- `benchmarks/parity.py`: **1733** comprobaciones de contrato, con 26
+- `benchmarks/parity.py`: **1733** comprobaciones de contrato, con 14
   divergencias toleradas y justificadas.
 - 0.1.0: Linux y macOS (x86-64 y ARM), sin dependencias, solo wheels.
 - 0.2.0 (2026-10-18): **Windows (`win_amd64`)**, **sdist** y wheels *stripped*,
@@ -97,13 +97,21 @@ Las divergencias `permanent` están explicadas en
 
 #### 2. Paridad de comportamiento
 
-- [ ] **Extrapolabilidad de las puertas planas.** En Cirq `cirq.CZ ** 0.5` es una
-      raíz cuadrada de CZ y `cirq.rz(x) ** 2` duplica el ángulo; aquí ambos
-      fallan. El arnés cuenta hoy **9** divergencias de `**`
-      (`CCX`, `CNOT`/`CX`, `CZ`, `I`, `ISWAP`, `SQRT_ISWAP`, `SWAP`, `TOFFOLI`),
-      **3** de las fábricas `rx`/`ry`/`rz` y **12** de `isinstance` contra las
-      clases de potencia públicas. Todas están en la lista de toleradas con
-      `plan = "0.3"`.
+- [x] (0.3) **`**` en las puertas planas y en las rotaciones.** `vq.CZ ** 0.5`
+      ya es una raíz cuadrada de CZ y `vq.rz(0.3) ** 0.5` escala el ángulo a
+      `vq.rz(0.15)`, como en Cirq; lo mismo para `CNOT`/`CX`, `SWAP`, `ISWAP`,
+      `SQRT_ISWAP`, `CCX`/`TOFFOLI`, `I`, `rx` y `ry`. `FREDKIN`/`CSWAP` siguen
+      sin admitir `**`, igual que `cirq.CSWAP`. Ese trabajo destapó además dos
+      bugs de inversa en `iSWAP` (ver `CHANGELOG.md`).
+- [ ] Que `vq.CZ` **sea** un `CZPowGate`. El comportamiento ya coincide, pero la
+      clase no: `isinstance(vq.CZ, vq.CZPowGate)` es `False`, y también
+      `vq.CZ == vq.CZPowGate()`, mientras que en Cirq ambas son `True`. Son las
+      **12** entradas que quedan en la lista de toleradas con `plan = "0.3"`.
+      Cerrarlo exige decidir entre convertir las puertas planas en las clases de
+      potencia (rompe `type()` y el diagrama, y obliga a auditar los
+      `isinstance` de QASM, Clifford, gatesets y átomos neutros) o dejarlas como
+      clases fijas que saltan a la de potencia (documentado y sin tocar el
+      resto).
 - [ ] Implementar los stubs pendientes: `decompose_clifford_tableau_to_operations`,
       `ResetChannel` multiqubit, `CliffordTableau.kron/factor/reindex` y
       `StabilizerStateChForm.apply_operation` (hoy es una cáscara que no aplica
@@ -288,10 +296,10 @@ guarantees. It is a living document, updated as milestones land.
   optimizers; transformers; devices; QASM/Quirk/JSON.
 - Complete typing (`py.typed`, every function annotated) and a native stub.
   **28** public names (the `Supports*` protocols) still lack a docstring.
-- **562** tests and green CI across 3 OSes × 5 Python versions.
+- **607** tests and green CI across 3 OSes × 5 Python versions.
 - Coverage of the published wheel: **77 %** (target ≥95 %).
 - `benchmarks/verify.py`: **74/74** numerical checks against Cirq.
-- `benchmarks/parity.py`: **1733** contract checks, 26 tolerated and justified
+- `benchmarks/parity.py`: **1733** contract checks, 14 tolerated and justified
   divergences.
 - 0.1.0: Linux and macOS (x86-64 and ARM), no dependencies, wheels only.
 - 0.2.0 (2026-10-18): **Windows (`win_amd64`)**, **sdist** and stripped wheels,
@@ -346,12 +354,21 @@ blanket. The `permanent` divergences are explained in
 
 #### 2. Behaviour parity
 
-- [ ] **Extrapolatability of the plain gates.** In Cirq `cirq.CZ ** 0.5` is a
-      square root of CZ and `cirq.rz(x) ** 2` doubles the angle; here both fail.
-      The harness currently counts **9** `**` divergences
-      (`CCX`, `CNOT`/`CX`, `CZ`, `I`, `ISWAP`, `SQRT_ISWAP`, `SWAP`, `TOFFOLI`),
-      **3** on the `rx`/`ry`/`rz` factories and **12** `isinstance` ones against
-      the public power classes. All carry `plan = "0.3"` in the tolerated list.
+- [x] (0.3) **`**` on the plain gates and the rotations.** `vq.CZ ** 0.5` is now
+      a square root of CZ and `vq.rz(0.3) ** 0.5` scales the angle to
+      `vq.rz(0.15)`, as in Cirq; likewise for `CNOT`/`CX`, `SWAP`, `ISWAP`,
+      `SQRT_ISWAP`, `CCX`/`TOFFOLI`, `I`, `rx` and `ry`. `FREDKIN`/`CSWAP` still
+      refuse `**`, exactly like `cirq.CSWAP`. That work also uncovered two
+      inverse bugs in `iSWAP` (see `CHANGELOG.md`).
+- [ ] Make `vq.CZ` **be** a `CZPowGate`. The behaviour already matches, the class
+      does not: `isinstance(vq.CZ, vq.CZPowGate)` is `False`, and so is
+      `vq.CZ == vq.CZPowGate()`, where Cirq has both `True`. These are the **12**
+      entries still carrying `plan = "0.3"` in the tolerated list. Closing it
+      means choosing between folding the plain gates into the power classes
+      (breaks `type()` and the diagram, and forces an audit of the `isinstance`
+      checks in QASM, Clifford, gatesets and neutral atoms) or keeping them as
+      fixed classes that bridge to the power gate (documented, nothing else
+      touched).
 - [ ] Implement the remaining stubs: `decompose_clifford_tableau_to_operations`,
       multi-qubit `ResetChannel`, `CliffordTableau.kron/factor/reindex` and
       `StabilizerStateChForm.apply_operation` (a shell that applies no gates

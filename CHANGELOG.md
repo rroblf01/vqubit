@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`**` on the plain gates.** `vq.CZ ** 0.5`, `vq.CNOT ** 0.5`,
+  `vq.SWAP ** 0.5`, `vq.ISWAP ** 0.5`, `vq.SQRT_ISWAP ** 0.5`, `vq.CCX ** 0.5`,
+  `vq.TOFFOLI ** 0.5` and `vq.I ** 0.5` now return the matching power gate, as
+  the Cirq idioms do, and `vq.rz(0.3) ** 0.5` scales the angle to `vq.rz(0.15)`.
+  `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The classes
+  themselves are unchanged.
+- **A Cirq contract harness**, `benchmarks/parity.py`, run in the `cirq-parity`
+  CI job: it checks names, `**`, `isinstance` and gate classes against Cirq, and
+  keeps the accepted divergences in `benchmarks/parity_tolerated.toml`, where an
+  entry that stops silencing a real divergence fails the build.
+
+### Fixed
+
+- **`vq.inverse(vq.ISWAP)` returned iSWAP, not its inverse.** The shared
+  `_FixedGate._inverse_` returned `type(self)()`, which is only correct for the
+  self-inverse gates, so `U(iSWAP) @ U(iSWAP⁻¹)` was not the identity. It now
+  returns `ISWAP_INV`; `vq.inverse(vq.SQRT_ISWAP)` returns `SQRT_ISWAP_INV`.
+
 ## [0.2.1] - 2026-10-19
 
 Correctness fixes in the state-vector simulator and the noise channels, plus

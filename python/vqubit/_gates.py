@@ -547,6 +547,10 @@ class _RotationGate(Gate):
 	def _inverse_(self) -> _RotationGate:
 		return type(self)(-self._radians)
 
+	def __pow__(self, power: float) -> _RotationGate:
+		"""Scale the angle, as ``cirq.Rz(rads) ** x`` does (``0.3 -> 0.15``)."""
+		return type(self)(self._radians * power)
+
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
 		return (self._axis_symbol,)
 
@@ -602,6 +606,10 @@ class IdentityGate(Gate):
 		return identity(1 << self._num_qubits)
 
 	def _inverse_(self) -> IdentityGate:
+		return IdentityGate(self._num_qubits)
+
+	def __pow__(self, power: float) -> IdentityGate:
+		"""The identity is its own power, as ``cirq.I ** x`` is ``cirq.I``."""
 		return IdentityGate(self._num_qubits)
 
 	def _value_equality_values_(self) -> Any:
@@ -702,7 +710,7 @@ class _FixedGate(Gate):
 	def _value_equality_values_(self) -> Any:
 		return ()
 
-	def _inverse_(self) -> _FixedGate:
+	def _inverse_(self) -> Gate:
 		return type(self)()
 
 	def __str__(self) -> str:
@@ -712,8 +720,36 @@ class _FixedGate(Gate):
 		return f"vqubit.{type(self).__name__}()"
 
 
-class CNOTGate(_FixedGate):
+class _PowerableFixedGate(_FixedGate):
+	"""A fixed gate that can be raised to a power, as in Cirq.
+
+	``vq.CZ ** 0.5`` is a :class:`CZPowGate`, exactly what ``cirq.CZ ** 0.5``
+	gives, and a power of ``1`` returns the gate itself so ``vq.CZ ** 1``
+	round-trips. A subclass only has to say *what it is*: the power gate it turns
+	into, and the exponent that represents it.
+
+	``FREDKIN``/``CSWAP`` are deliberately *not* powerable, because neither is
+	``cirq.CSWAP``.
+	"""
+
+	#: Name of the power-gate class defined in ``_gates_more`` (imported lazily:
+	#: that module imports this one).
+	_pow_gate_name = ""
+	#: The exponent of that power gate which reproduces this fixed gate.
+	_pow_base_exponent = 1.0
+
+	def __pow__(self, power: float) -> Gate:
+		from . import _gates_more
+
+		if not is_symbolic(power) and float(power) == 1.0:
+			return self
+		return getattr(_gates_more, self._pow_gate_name)(exponent=self._pow_base_exponent * power)
+
+
+class CNOTGate(_PowerableFixedGate):
 	"""The controlled-NOT gate: ``X`` on the target when the control is ``1``."""
+
+	_pow_gate_name = "CXPowGate"
 
 	@staticmethod
 	def _base_symbols() -> tuple[str, ...]:
@@ -729,8 +765,10 @@ class CNOTGate(_FixedGate):
 		]
 
 
-class CZGate(_FixedGate):
+class CZGate(_PowerableFixedGate):
 	"""The controlled-Z gate: ``Z`` on the target when the control is ``1``."""
+
+	_pow_gate_name = "CZPowGate"
 
 	@staticmethod
 	def _base_symbols() -> tuple[str, ...]:
@@ -746,8 +784,10 @@ class CZGate(_FixedGate):
 		]
 
 
-class SWAPGate(_FixedGate):
+class SWAPGate(_PowerableFixedGate):
 	"""The gate that exchanges two qubits."""
+
+	_pow_gate_name = "SwapPowGate"
 
 	@staticmethod
 	def _base_symbols() -> tuple[str, ...]:
@@ -774,8 +814,10 @@ def _swap_basis_states(num_qubits: int, swaps: Sequence[tuple[int, int]]) -> Mat
 	return matrix
 
 
-class CCXGate(_FixedGate):
+class CCXGate(_PowerableFixedGate):
 	"""The Toffoli gate: ``X`` on the target when both controls are ``1``."""
+
+	_pow_gate_name = "CCXPowGate"
 
 	@staticmethod
 	def _base_num_qubits() -> int:
@@ -916,8 +958,16 @@ class ZZPowGate(_PauliProductPowGate):
 	_symbols = ("ZZ", "ZZ")
 
 
-class ISWAPGate(_FixedGate):
+class ISWAPGate(_PowerableFixedGate):
 	"""The iSWAP gate: swap two qubits, adding an ``i`` phase to ``|01>`` and ``|10>``."""
+
+	_pow_gate_name = "ISwapPowGate"
+
+	def _inverse_(self) -> Gate:
+		"""``iSWAP`` is *not* self-inverse: its inverse is ``ISWAP_INV``."""
+		from . import _gates_more
+
+		return _gates_more.ISWAP_INV
 
 	@staticmethod
 	def _base_symbols() -> tuple[str, ...]:
@@ -1245,8 +1295,17 @@ class FSimGate(Gate):
 		return f"vqubit.FSimGate({self._theta!r}, {self._phi!r})"
 
 
-class SqrtISwapGate(_FixedGate):
+class SqrtISwapGate(_PowerableFixedGate):
 	"""The square root of the iSWAP gate."""
+
+	_pow_gate_name = "ISwapPowGate"
+	_pow_base_exponent = 0.5
+
+	def _inverse_(self) -> Gate:
+		"""The inverse of the square root is its negative power, not itself."""
+		from . import _gates_more
+
+		return _gates_more.SQRT_ISWAP_INV
 
 	@staticmethod
 	def _base_symbols() -> tuple[str, ...]:

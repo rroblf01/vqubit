@@ -55,10 +55,10 @@ moment = vq.Moment([vq.H(q0), vq.X(q1)])   # un iterable, no *operaciones
 assert len(moment) == 2
 ```
 
-## Las operaciones no admiten `**`, y las puertas planas no son extrapolables
+## Las operaciones no admiten `**`
 
-En Cirq se puede elevar cualquier cosa a una potencia: `cirq.X(q) ** 0.5` deja la
-puerta a la mitad. En vqubit `**` vive en las clases de puerta *exponenciadas*,
+En Cirq se puede elevar cualquier cosa a una potencia, operaciones incluidas:
+`cirq.X(q) ** 0.5` deja la puerta a la mitad. En vqubit `**` vive en la *puerta*,
 así que `vq.X ** 0.5` funciona, pero `vq.X(q0) ** 0.5` lanza `TypeError`. Eleva
 la puerta y luego llámala.
 
@@ -71,10 +71,35 @@ assert vq.X ** 0.5 == vq.XPowGate(exponent=0.5)
 assert (vq.X ** 0.5)(q0) == vq.XPowGate(exponent=0.5)(q0)
 ```
 
-Lo mismo ocurre con las puertas cuyo equivalente en Cirq está exponenciado:
-`vq.CZ`, `vq.CNOT`, `vq.SWAP`, `vq.ISWAP` y `vq.rz(...)` son las puertas planas
-(`CZGate`, `CNOTGate`, `SWAPGate`, `ISWAPGate`, `RzGate`) y no definen `**`. Usa
-las clases `Pow` para interpolar entre la identidad y la puerta:
+Toda puerta cuyo equivalente en Cirq está exponenciado también admite `**`, y
+devuelve la puerta de potencia correspondiente: `vq.CZ ** 0.5` es un `CZPowGate`,
+y lo mismo ocurre con `vq.CNOT`, `vq.SWAP`, `vq.ISWAP`, `vq.SQRT_ISWAP`, `vq.CCX`
+y `vq.TOFFOLI`. Las rotaciones escalan su ángulo, como `cirq.rz`.
+
+```python
+import vqubit as vq
+
+assert vq.CZ ** 0.5 == vq.CZPowGate(exponent=0.5)
+assert vq.SQRT_ISWAP ** 0.5 == vq.ISwapPowGate(exponent=0.25)
+assert vq.rz(0.3) ** 0.5 == vq.RzGate(0.15)
+assert vq.I ** 0.5 == vq.I
+```
+
+(`vq.FREDKIN` y `vq.CSWAP` no admiten `**` a propósito: `cirq.CSWAP` tampoco.)
+
+Lo que aún cambia es la *clase* de las puertas planas. En Cirq `cirq.CZ` **es** un
+`CZPowGate(exponent=1)`, así que `isinstance(cirq.CZ, cirq.CZPowGate)` es `True` y
+`cirq.CZ == cirq.CZPowGate()`. En vqubit `vq.CZ` es un `CZGate`, una clase propia
+que salta a `CZPowGate` al elevar a una potencia, así que ambas cosas son `False`:
+
+```python
+import vqubit as vq
+
+assert vq.CZ ** 0.5 == vq.CZPowGate(exponent=0.5)  # el comportamiento coincide
+assert not isinstance(vq.CZ, vq.CZPowGate)  # la clase no
+```
+
+Usa las clases `Pow` directamente cuando importe la clase:
 
 ```python
 import vqubit as vq

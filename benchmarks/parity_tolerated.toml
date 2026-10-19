@@ -1,0 +1,210 @@
+# Divergences from Cirq that vqubit accepts on purpose.
+#
+# Every entry silences one failed check from ``benchmarks/parity.py`` and must
+# say *why* (``reason``, non-empty) and *whether it is forever* (``plan``:
+# ``permanent``, or the milestone where it is expected to be fixed, e.g.
+# ``0.3``). ``name`` is the check name printed by the harness and may be a glob.
+#
+# The list cannot rot: an entry that no longer silences a real divergence makes
+# the harness fail, which is how the ``0.3`` entries below turn into a to-do
+# list that empties itself as the work lands.
+
+# --- cirq.contrib ------------------------------------------------------------
+
+
+[[tolerated]]
+check = "namespace"
+name = "contrib"
+reason = """
+cirq-core re-exports cirq.contrib, whose QASM importer needs the third-party
+`ply`, which the zero-dependency rule forbids. vqubit ships its own parser under
+vqubit.qasm instead (roadmap 0.4), so a `contrib` module will never exist.
+"""
+plan = "permanent"
+
+# --- class hierarchy ---------------------------------------------------------
+
+
+[[tolerated]]
+check = "isinstance"
+name = "*-EigenGate"
+reason = """
+In Cirq every power gate is an EigenGate. In vqubit EigenGate is the *single
+qubit* gate (its _unitary_ is 2x2 by construction) and the multi-qubit power
+gates (CZPowGate, SwapPowGate, XXPowGate, ...) derive from an internal _PowGate.
+Unitaries, `**`, diagrams and parameter resolution agree; only the class used
+for introspection differs. Documented in guide/cirq-differences.
+"""
+plan = "permanent"
+
+# --- `**` on the plain gates (roadmap 0.3) -----------------------------------
+
+
+[[tolerated]]
+check = "power"
+name = "CCX"
+reason = "vq.CCX is the fixed CCXGate; cirq.CCX is CCXPowGate(exponent=1)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "TOFFOLI"
+reason = "vq.TOFFOLI is the fixed CCXGate; cirq.TOFFOLI is CCXPowGate(exponent=1)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "CNOT"
+reason = "vq.CNOT is the fixed CNOTGate; cirq.CNOT is CXPowGate(exponent=1)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "CX"
+reason = "vq.CX is the fixed CNOTGate; cirq.CX is CXPowGate(exponent=1)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "CZ"
+reason = "vq.CZ is the fixed CZGate; cirq.CZ is CZPowGate(exponent=1)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "I"
+reason = "vq.IdentityGate defines no __pow__; cirq.I ** x returns cirq.I itself."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "ISWAP"
+reason = "vq.ISWAP is the fixed ISWAPGate; cirq.ISWAP is ISwapPowGate(exponent=1)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "SQRT_ISWAP"
+reason = "vq.SQRT_ISWAP is the fixed SqrtISwapGate; cirq.SQRT_ISWAP is ISwapPowGate(exponent=0.5)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "power"
+name = "SWAP"
+reason = "vq.SWAP is the fixed SWAPGate; cirq.SWAP is SwapPowGate(exponent=1)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "rotation"
+name = "rx"
+reason = "The rotation factory applies to RxGate: see the `power: rx` entry."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "rotation"
+name = "ry"
+reason = "The rotation factory applies to RyGate: see the `power: ry` entry."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "rotation"
+name = "rz"
+reason = "The rotation factory applies to RzGate: see the `power: rz` entry."
+plan = "0.3"
+
+# --- `isinstance` against the public power classes (roadmap 0.3) --------------
+
+
+[[tolerated]]
+check = "isinstance"
+name = "CCX<-CCXPowGate"
+reason = "vq.CCX is a CCXGate, not a CCXPowGate; cirq.CCX is a CCXPowGate."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "CCX<-CCNotPowGate"
+reason = "Alias of the previous entry (CCNotPowGate is CCXPowGate)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "TOFFOLI<-CCXPowGate"
+reason = "vq.TOFFOLI is a CCXGate; cirq.TOFFOLI is a CCXPowGate."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "TOFFOLI<-CCNotPowGate"
+reason = "Alias of the previous entry (CCNotPowGate is CCXPowGate)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "CNOT<-CXPowGate"
+reason = "vq.CNOT is a CNOTGate; cirq.CNOT is a CXPowGate."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "CNOT<-CNotPowGate"
+reason = "Alias of the previous entry (CNotPowGate is CXPowGate)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "CX<-CXPowGate"
+reason = "vq.CX is a CNOTGate; cirq.CX is a CXPowGate."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "CX<-CNotPowGate"
+reason = "Alias of the previous entry (CNotPowGate is CXPowGate)."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "CZ<-CZPowGate"
+reason = "vq.CZ is a CZGate; cirq.CZ is a CZPowGate."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "ISWAP<-ISwapPowGate"
+reason = "vq.ISWAP is an ISWAPGate; cirq.ISWAP is an ISwapPowGate."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "SQRT_ISWAP<-ISwapPowGate"
+reason = "vq.SQRT_ISWAP is a SqrtISwapGate; cirq.SQRT_ISWAP is an ISwapPowGate."
+plan = "0.3"
+
+
+[[tolerated]]
+check = "isinstance"
+name = "SWAP<-SwapPowGate"
+reason = "vq.SWAP is a SWAPGate; cirq.SWAP is a SwapPowGate."
+plan = "0.3"

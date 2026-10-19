@@ -25,10 +25,25 @@ def test_points_rejects_empty() -> None:
 		vqubit.Points([])
 
 
-def test_linspace_values_stop_before_the_end() -> None:
+def test_linspace_values_include_both_ends() -> None:
+	# Cirq's convention: the sweep starts at ``start`` and *includes* ``stop``.
 	sweep = vqubit.Linspace({"t": 0.0}, {"t": 1.0}, 4)
-	assert [resolver["t"] for resolver in sweep.param_resolvers] == [0.0, 0.25, 0.5, 0.75]
+	assert [resolver["t"] for resolver in sweep.param_resolvers] == [0.0, 1 / 3, 2 / 3, 1.0]
 	assert len(sweep) == 4
+	# And Cirq's calling form works too.
+	cirq_form = vqubit.Linspace("t", 0.0, 1.0, 4)
+	assert [resolver["t"] for resolver in cirq_form.param_resolvers] == [0.0, 1 / 3, 2 / 3, 1.0]
+	assert [resolver["t"] for resolver in vqubit.Linspace("t", 0.0, 1.0, 3).param_resolvers] == [0.0, 0.5, 1.0]
+	assert [resolver["t"] for resolver in vqubit.Linspace("t", 0.0, 1.0, 1).param_resolvers] == [0.0]
+
+
+def test_points_takes_cirq_calling_form() -> None:
+	# ``Points(key, values)`` as in Cirq, and vqubit's mapping form.
+	keyed = vqubit.Points("t", [0.0, 1.0], metadata={"who": "test"})
+	assert [resolver["t"] for resolver in keyed.param_resolvers] == [0.0, 1.0]
+	assert keyed.metadata == {"who": "test"}
+	mappings = vqubit.Points([{"t": 0.0, "s": 1.0}, {"t": 1.0, "s": 2.0}])
+	assert [dict(resolver) for resolver in mappings.param_resolvers] == [{"t": 0.0, "s": 1.0}, {"t": 1.0, "s": 2.0}]
 
 
 def test_linspace_validates() -> None:

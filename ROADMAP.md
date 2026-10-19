@@ -247,11 +247,15 @@ Las divergencias `permanent` están explicadas en
       **Medido:** la sección `expectations` de `benchmarks/verify.py` (7
       comprobaciones, con un estado **no simétrico** a propósito) y las
       expectativas en los tres simuladores; 611 comprobaciones en total.
-- [ ] **Atributos que aún faltan en los resultados**:
-      `get_state_containing_qubit` y `sample_measurement_ops`, y las variantes
-      `_async` de los simuladores (`run_async`, `run_sweep_async`,
-      `run_batch_async`). **Criterio:** implementarlos y compararlos con Cirq en
-      `benchmarks/verify.py`, como el resto de los atributos.
+- [x] **Los atributos que faltaban en los resultados.**
+      `get_state_containing_qubit` (devuelve el estado completo, como los
+      simuladores de Cirq que no parten el estado), `StepResult.sample_measurement_ops`
+      y las variantes `_async` (`run_async`, `run_sweep_async`,
+      `run_batch_async`), corrutinas finas sobre las síncronas. **Medido:** un
+      test por atributo y las tres corrutinas ejecutadas con `asyncio.run`.
+      Queda `get_state_containing_qubit` en el resultado de **matriz de
+      densidad**: necesita cargar una matriz en el estado nativo y vcraft no
+      expone `set_density_matrix` (`UPSTREAM.md` §7c).
 - [ ] **`Simulator.sample` devuelve un `Result`, no un `DataFrame`.** Cirq
       devuelve un `pandas.DataFrame` y acepta `params=` (un barrido); vqubit no
       puede devolver un `DataFrame` sin depender de pandas, así que devuelve su
@@ -268,12 +272,14 @@ Las divergencias `permanent` están explicadas en
       **Criterio:** ampliar vcraft con esas instrucciones (`UPSTREAM.md` §7) y una
       sección `stabilizer` en `benchmarks/verify.py` que compare
       `has_stabilizer_effect` y las unitarias simuladas con Cirq.
-- [ ] **Las clases de barrido no tienen la firma de Cirq.**
-      `vqubit.Linspace(start, stop, length)` toma dos asignaciones de parámetros y
-      `vqubit.Points(points)` una lista de asignaciones, donde Cirq usa
-      `Linspace(key, start, stop, length)` y `Points(key, points)`; las llamadas
-      de Cirq fallan con `TypeError` (nada silencioso). **Criterio:** aceptar la
-      forma de Cirq sin perder la de vqubit, con un test que ejecute las dos.
+- [x] **Las clases de barrido tienen ya la firma de Cirq.**
+      `vqubit.Linspace("t", 0, 1, 4)` y `vqubit.Points("t", [0.5, 2.0])` funcionan
+      con la convención de Cirq de que el `Linspace` **incluye** los dos
+      extremos (`0, 1/3, 2/3, 1`), sin perder las formas de vqubit
+      (`Linspace({"t": 0}, {"t": 1}, 4)`, `Points([{"t": 0}, {"t": 1}])`) y
+      aceptando `metadata`, como los barridos de Cirq. **Medido:** dos
+      comprobaciones nuevas en la sección `sweeps` del arnés y un test con las
+      dos formas de llamada.
 - [ ] Tests diferenciales y de propiedades frente a `cirq-core` (Hypothesis +
       ampliación de `benchmarks/verify.py`) para puertas, canales, KAK,
       transformers, Clifford y muestreo. **Medido:** `verify.py` toca 16 de los
@@ -651,11 +657,15 @@ blanket. The `permanent` divergences are explained in
       **Measured:** the `expectations` section of `benchmarks/verify.py` (7
       checks, with a deliberately **asymmetric** state) and the expectation
       values of all three simulators; 611 checks in total.
-- [ ] **Result attributes still missing**: `get_state_containing_qubit` and
-      `sample_measurement_ops`, plus the simulators' `_async` variants
-      (`run_async`, `run_sweep_async`, `run_batch_async`). **Criterion:**
-      implement them and compare them against Cirq in `benchmarks/verify.py`, as
-      the rest of the attributes are.
+- [x] **The result attributes that were missing.** `get_state_containing_qubit`
+      (it hands back the whole state, as Cirq's non-split simulators do),
+      `StepResult.sample_measurement_ops`, and the `_async` variants
+      (`run_async`, `run_sweep_async`, `run_batch_async`) as thin coroutines over
+      the synchronous ones. **Measured:** a test per attribute and the three
+      coroutines run through `asyncio.run`. `get_state_containing_qubit` on a
+      **density-matrix** result is still open: it needs to load a matrix into the
+      native state and vcraft exposes no `set_density_matrix`
+      (`UPSTREAM.md` §7c).
 - [ ] **`Simulator.sample` returns a `Result`, not a `DataFrame`.** Cirq returns
       a `pandas.DataFrame` and takes `params=` (a sweep); vqubit cannot return a
       `DataFrame` without depending on pandas, so it returns its own `Result` and
@@ -672,12 +682,13 @@ blanket. The `permanent` divergences are explained in
       extend vcraft with those instructions (`UPSTREAM.md` §7) and a `stabilizer`
       section in `benchmarks/verify.py` comparing `has_stabilizer_effect` and the
       simulated unitaries with Cirq.
-- [ ] **The sweep classes do not have Cirq's signature.**
-      `vqubit.Linspace(start, stop, length)` takes two parameter assignments and
-      `vqubit.Points(points)` a list of assignments, where Cirq uses
-      `Linspace(key, start, stop, length)` and `Points(key, points)`; Cirq's calls
-      raise `TypeError` (nothing silent). **Criterion:** accept Cirq's form
-      without losing vqubit's, with a test that exercises both.
+- [x] **The sweep classes have Cirq's signature now.** `vqubit.Linspace("t", 0, 1, 4)`
+      and `vqubit.Points("t", [0.5, 2.0])` work with Cirq's convention that a
+      `Linspace` **includes** both ends (`0, 1/3, 2/3, 1`), without losing
+      vqubit's forms (`Linspace({"t": 0}, {"t": 1}, 4)`,
+      `Points([{"t": 0}, {"t": 1}])`) and accepting `metadata`, as Cirq's sweeps
+      do. **Measured:** two new checks in the harness's `sweeps` section and a
+      test that runs both calling forms.
 - [ ] Differential and property tests against `cirq-core` (Hypothesis + extend
       `benchmarks/verify.py`) for gates, channels, KAK, transformers, Clifford
       and sampling. **Measured:** `verify.py` touches 16 of the 607 shared names;

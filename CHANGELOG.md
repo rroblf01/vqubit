@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the Cirq idioms do, and `vq.rz(0.3) ** 0.5` scales the angle to `vq.rz(0.15)`.
   `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The plain
   gates themselves are the power gates now: see *Changed*.
+- **The async entry points**, `run_async`, `run_sweep_async` and `run_batch_async`,
+  as thin coroutines over the synchronous ones (vqubit's simulation is local, so
+  there is nothing to await, but Cirq's call sites work).
+- **`get_state_containing_qubit`** on a state-vector trial result and
+  `StepResult.sample_measurement_ops`, the two result attributes that were still
+  missing.
+- **`Linspace` and `Points` take Cirq's calling form** (`Linspace("t", 0, 1, 4)`,
+  `Points("t", [0.5, 2.0])`) with Cirq's convention that a `Linspace` **includes**
+  both ends (`0, 1/3, 2/3, 1`), where vqubit's own form excluded `stop`; both keep
+  vqubit's mapping forms and carry `metadata`, as Cirq's sweeps do.
 - **A Clifford tableau decomposes into a circuit.**
   `decompose_clifford_tableau_to_operations` implements the Aaronson–Gottesman
   synthesis (the same one Cirq uses), so a tableau can be turned back into

@@ -15,7 +15,7 @@ project `vqubit` (zero runtime dependencies, single `abi3` wheel per platform).
 | 4 | Huge pages for the buffers (`buffer_new_*`) | 20-qubit simulation (roadmap 8) |
 | 5 | `WHEEL: Generator:` carries the project version; `audit` rejects `.pyd` | packaging hygiene |
 | 6 | Runtime dispatch (function multiversioning) for the hot kernels | SIMD from a portable wheel (roadmap 8) |
-| 7 | `NativeTableau` has no `copy()`, and `CliffordOp` is missing gates | per-step Clifford snapshots and stim's gate set (roadmap 0.3) |
+| 7 | `NativeTableau` has no `copy()`; `CliffordOp` is missing gates; `NativeDensity` has no `set_density_matrix` | per-step Clifford snapshots, stim's gate set, density-matrix trial states (roadmap 0.3) |
 
 ---
 
@@ -176,7 +176,7 @@ compute-bound.
 
 ---
 
-## 7. `NativeTableau` has no `copy()`, and `CliffordOp` is missing gates
+## 7. `NativeTableau` has no `copy()`, `CliffordOp` is missing gates, `NativeDensity` has no `set_density_matrix`
 
 **Request, two related gaps in the stabilizer kernels.**
 
@@ -198,6 +198,14 @@ print([name for name in dir(tableau) if not name.startswith("_")])
 
 Expected: `NativeTableau.copy()` (or a `__copy__`), so
 `CliffordSimulator.simulate_moment_steps` can hand out independent snapshots.
+
+**7c. No `set_density_matrix` on `NativeDensity`.** A density-matrix trial result
+should be able to hand back a simulation state holding it (as
+`cirq.DensityMatrixTrialResult.get_state_containing_qubit` does), but the native
+type only accepts amplitudes (`set_from_amplitudes`) or ``|0...0>``
+(`set_zero_state`), so a *mixed* state cannot be loaded into it. Expected:
+`NativeDensity.set_density_matrix(flat)` (the interleaved form
+`buffer.density_matrix()` already returns) so states round-trip in and out.
 
 **7b. `CliffordOp` is missing instructions that stim has.** vqubit's Clifford gate
 set is `h, s, sdg, x, y, z, cnot, cz, swap, measure`. `cirq` (through stim) also

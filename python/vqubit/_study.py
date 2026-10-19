@@ -144,13 +144,28 @@ def to_resolvers(value: Any) -> list[ParamResolver]:
 
 
 class Points(Sweep):
-	"""A sweep over an explicit list of parameter assignments."""
+	"""A sweep over an explicit list of parameter assignments.
 
-	def __init__(self, points: Mapping[Any, Any] | Sequence[Mapping[Any, Any]]) -> None:
-		if isinstance(points, Mapping):
-			self._points = [dict(points)]
+	Cirq's form is ``Points(key, values)`` (one parameter, a list of values);
+	vqubit also accepts a mapping or a sequence of mappings, which sweeps several
+	parameters at once.
+	"""
+
+	def __init__(
+		self,
+		key_or_points: Mapping[Any, Any] | Sequence[Mapping[Any, Any]] | Any,
+		points: Sequence[Any] | None = None,
+		*,
+		metadata: Any | None = None,
+	) -> None:
+		self.metadata = metadata
+		if points is None:
+			if isinstance(key_or_points, Mapping):
+				self._points = [dict(key_or_points)]
+			else:
+				self._points = [dict(point) for point in key_or_points]
 		else:
-			self._points = [dict(point) for point in points]
+			self._points = [{key_or_points: value} for value in points]
 		if not self._points:
 			raise ValueError("Points needs at least one parameter assignment")
 
@@ -174,28 +189,50 @@ def _resolver_dict(value: Any) -> dict[str, float]:
 
 
 class Linspace(Sweep):
-	"""A sweep of evenly spaced values for a set of parameters.
+	"""A sweep of evenly spaced values, including both ends.
 
-	Like Cirq's ``Linspace``, the values start at ``start`` and stop before
-	``stop``.
+	Cirq's form is ``Linspace(key, start, stop, length)``; vqubit also accepts
+	``Linspace(start_assignment, stop_assignment, length)``, which interpolates
+	several parameters at once between two assignments.
 	"""
 
-	def __init__(self, start: Any, stop: Any, length: int) -> None:
-		if length < 1:
-			raise ValueError("Linspace needs a length of at least 1")
-		self._start = _resolver_dict(start)
-		self._stop = _resolver_dict(stop)
+	def __init__(
+		self,
+		key: Any,
+		start: Any = None,
+		stop: Any = None,
+		length: int | None = None,
+		*,
+		metadata: Any | None = None,
+	) -> None:
+		self.metadata = metadata
+		if length is None:
+			# vqubit's form: two assignments and a length.
+			if stop is None:
+				raise TypeError("Linspace needs (key, start, stop, length) or (start, stop, length)")
+			key, start, stop, length = None, key, start, stop
+			self._start = _resolver_dict(start)
+			self._stop = _resolver_dict(stop)
+		else:
+			self._start = {str(key): float(start)}
+			self._stop = {str(key): float(stop)}
 		if self._start.keys() != self._stop.keys():
 			raise ValueError("Linspace start and stop must name the same parameters")
+		if length < 1:
+			raise ValueError("Linspace needs a length of at least 1")
 		self._length = int(length)
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		if self._length == 1:
+			return [ParamResolver(dict(self._start))]
+		# ``stop`` is included, as in Cirq: ``Linspace("t", 0, 1, 3)`` sweeps
+		# ``0, 0.5, 1`` and not ``0, 1/3, 2/3``.
+		steps = self._length - 1
 		resolvers: list[ParamResolver] = []
 		for i in range(self._length):
 			values = {
-				name: self._start[name] + (self._stop[name] - self._start[name]) * i / self._length
-				for name in self._start
+				name: self._start[name] + (self._stop[name] - self._start[name]) * i / steps for name in self._start
 			}
 			resolvers.append(ParamResolver(values))
 		return resolvers

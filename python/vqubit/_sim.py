@@ -277,6 +277,8 @@ class _SweepsAndBatches:
 	#: their own signatures stay free to be the Cirq ones).
 	run: Any
 	simulate: Any
+	run_sweep: Any
+	run_batch: Any
 
 	def run_sweep(self, program: Circuit, params: Any, repetitions: int = 1) -> list[Result]:
 		"""Run ``program`` once per point of the parameter sweep ``params``."""
@@ -321,6 +323,29 @@ class _SweepsAndBatches:
 			self.run_sweep(program, params if params is not None else None, count)
 			for program, params, count in zip(programs, params_list, repetitions, strict=True)
 		]
+
+	def run_async(self, program: Circuit, param_resolver: Any = None, repetitions: int = 1) -> Any:
+		"""The coroutine form of :meth:`run`, as Cirq's simulators offer."""
+		import asyncio
+
+		return asyncio.sleep(0, result=self.run(program, param_resolver, repetitions))
+
+	def run_sweep_async(self, program: Circuit, params: Any, repetitions: int = 1) -> Any:
+		"""The coroutine form of :meth:`run_sweep`."""
+		import asyncio
+
+		return asyncio.sleep(0, result=self.run_sweep(program, params, repetitions))
+
+	def run_batch_async(
+		self,
+		programs: Sequence[Circuit],
+		params_list: Sequence[Any] | None = None,
+		repetitions: int | Sequence[int] = 1,
+	) -> Any:
+		"""The coroutine form of :meth:`run_batch`."""
+		import asyncio
+
+		return asyncio.sleep(0, result=self.run_batch(programs, params_list, repetitions))
 
 
 class StateVector:
@@ -411,6 +436,17 @@ class SimulationResult(SimulationTrialResultBase):
 	def density_matrix_of(self, qubits: Sequence[Qid] | None = None) -> Any:
 		"""The reduced density matrix of ``qubits`` (every qubit by default)."""
 		return _reduced_density_matrix(self.final_state_vector, self.qubit_map, qubits)
+
+	def get_state_containing_qubit(self, qubit: Qid) -> Any:
+		"""A simulation state holding ``qubit``, as Cirq's non-split simulators return.
+
+		vqubit keeps one state for the whole circuit, so this is that state (with
+		the qubit in it), not a factor of it.
+		"""
+		from ._sim_step import StateVectorSimulationState
+
+		del qubit
+		return StateVectorSimulationState(qubits=self.qubits, initial_state=self.final_state_vector)
 
 	@property
 	def measurements(self) -> dict[str, list[list[int]]]:

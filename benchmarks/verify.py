@@ -433,6 +433,15 @@ def check_sweeps(report: Report) -> None:
 		f"cirq {want_amplitudes} vs vqubit {got_amplitudes}",
 	)
 
+	# The sweep classes themselves: Cirq's calling form and its convention that a
+	# ``Linspace`` includes both ends.
+	want_values = [resolver["t"] for resolver in cirq.to_resolvers(cirq.Linspace("t", 0.0, 1.0, 4))]
+	got_values = [resolver["t"] for resolver in vq.to_resolvers(vq.Linspace("t", 0.0, 1.0, 4))]
+	report.check("sweeps", "Linspace", want_values == got_values, f"cirq {want_values} vs vqubit {got_values}")
+	want_points = [resolver.param_dict for resolver in cirq.to_resolvers(cirq.Points("t", [0.5, 2.0]))]
+	got_points = [dict(resolver) for resolver in vq.to_resolvers(vq.Points("t", [0.5, 2.0]))]
+	report.check("sweeps", "Points", want_points == got_points, f"cirq {want_points} vs vqubit {got_points}")
+
 	# ``param_resolver`` as the second positional argument, the Cirq idiom.
 	want_resolved = cirq.Simulator().simulate(cirq_state_circuit, cirq.ParamResolver({"t": 0.4}))
 	got_resolved = vq.Simulator().simulate(vq_state_circuit, vq.ParamResolver({"t": 0.4}))

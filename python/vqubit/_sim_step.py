@@ -206,6 +206,30 @@ class StepResult(StepResultBase):
 		indices = [self._qubits.index(q) for q in qubits]
 		return sample_state_vector(self.state_vector(), indices, repetitions, seed=seed)
 
+	def sample_measurement_ops(
+		self, measurement_ops: Sequence[Any], repetitions: int = 1, seed: Any = None
+	) -> dict[str, list[list[int]]]:
+		"""Sample the given measurement operations on this step's state.
+
+		Each repetition starts from this step's state and applies the measurements
+		in order (so they collapse it, as a real run would), which is what Cirq's
+		step results do.
+		"""
+		prng = random.Random(seed) if not isinstance(seed, random.Random) else seed
+		records: dict[str, list[list[int]]] = {}
+		for _ in range(repetitions):
+			state = _native.NativeState(len(self._qubits))
+			state.set_amplitudes(vector_to_flat(self.state_vector()))
+			for operation in measurement_ops:
+				gate = operation.gate
+				targets = [self._qubits.index(qubit) for qubit in operation.qubits]
+				outcome = state.measure(targets, prng.random())
+				bits = [(outcome >> (len(targets) - 1 - k)) & 1 for k in range(len(targets))]
+				mask = gate.full_invert_mask
+				rows = records.setdefault(gate.key, [])
+				rows.append([bit ^ int(mask[k]) for k, bit in enumerate(bits)])
+		return records
+
 	def __repr__(self) -> str:
 		return f"vqubit.StepResult({len(self._qubits)} qubits)"
 

@@ -1,0 +1,174 @@
+# Upstream: issues to report to `vcraft`
+
+Things vqubit needs from [`rroblf01/vcraft`](https://github.com/rroblf01/vcraft).
+Each section below is a ready-to-paste issue: title, what happens, why it matters
+for vqubit, a reproduction, and the expected behaviour.
+
+Environment for every report: **vcraft 1.4.5**, Linux `x86_64`, Python 3.14/3.15,
+project `vqubit` (zero runtime dependencies, single `abi3` wheel per platform).
+
+| # | Title | Blocks |
+| - | ----- | ------ |
+| 1 | `.pyi` emits enum members as annotations, so the stub is unusable | `ty`, `mypy`, `stubtest` (roadmap 1.4, 7.3) |
+| 2 | `.pyi` writes `__init__` for classes built in `tp_new` | `stubtest` (roadmap 7.3) |
+| 3 | No way to declare optional dependencies / extras | `vqubit[vis]`, `vqubit[interop]` (roadmap 3.5) |
+| 4 | Huge pages for the buffers (`buffer_new_*`) | 20-qubit simulation (roadmap 8) |
+| 5 | `WHEEL: Generator:` carries the project version; `audit` rejects `.pyd` | packaging hygiene |
+| 6 | Runtime dispatch (function multiversioning) for the hot kernels | SIMD from a portable wheel (roadmap 8) |
+
+---
+
+## 1. The generated `.pyi` declares enum members as annotations
+
+**What happens.** For a V enum returned across the FFI boundary, the generated
+stub writes one annotated attribute per member:
+
+```python
+class CliffordOp(enum.IntEnum):
+    h: CliffordOp
+    s: CliffordOp
+    ...
+```
+
+Under the typing spec an enum member in a stub must be an assignment (`h = 0` or
+`member = value`), not an annotation. Modern `mypy` rejects the file outright:
+
+```
+error: Detected enum "vqubit_native.CliffordOp" in a type stub with zero members.
+  There is a chance this is due to a recent change in the semantics of enum
+  membership. If so, use `member = value` to mark an enum member, instead of
+  `member: type`  [misc]
+```
+
+**Why it matters.** Any project that generates a stub for a V enum cannot type
+check its own code, and `mypy.stubtest` cannot even start (see issue 2). For
+vqubit it blocks the "audit `__all__` ↔ docstrings ↔ annotations" and
+"`stubtest` over `vqubit_native.pyi`" workstreams.
+
+**Reproduction.** Build any vcraft project that returns a V enum and run mypy on
+the generated stub, or `python -m mypy.stubtest <module>`.
+
+**Expected.** `h: Final = ...`/`h = ...` — the annotation form is not a member.
+
+---
+
+## 2. The generated `.pyi` writes `__init__` for a class built in `tp_new`
+
+**What happens.** vcraft generates
+
+```python
+class NativeState:
+    num_qubits: int
+    def __init__(self, num_qubits: int) -> None: ...
+```
+
+but at runtime the constructor lives in `tp_new` (the Python class has no
+parameters in `__init__`) — which is the right implementation. The stub is what
+is wrong. `stubtest` (after working around issue 1) reports, for each such class:
+
+```
+error: vqubit_native.NativeState.__init__ is inconsistent, runtime does not have
+  parameter "num_qubits". You may need to write stubs for __new__ instead of __init__.
+error: vqubit_native.NativeState is a disjoint base at runtime, but isn't marked
+  with @disjoint_base in the stub
+```
+
+(3 classes → 6 errors.)
+
+**Why it matters.** The stub is shipped in the wheel and is the only description
+of the native API a type checker or IDE sees. As written, `NativeState(4)` is
+reported as an error by strict checkers even though it is the documented use.
+
+**Expected.** `def __new__(cls, num_qubits: int) -> NativeState: ...`, and, if the
+runtime truly is a disjoint base, the corresponding marker (or a targeted
+`# type: ignore`), so `stubtest` passes cleanly.
+
+---
+
+## 3. No way to declare optional dependencies (`extras`)
+
+**What happens.** `vcraft.toml` has `[package] dependencies`, rendered as
+`Requires-Dist`. There is no way to declare an *optional* dependency, and
+`extras` in the wheel builder means "extra files to ship", not Python extras. So
+no `Provides-Extra:` / `Requires-Dist: numpy; extra == "vis"` can be emitted.
+
+**Why it matters.** vqubit's core promise is *zero runtime dependencies*, with
+heavyweights (`numpy`, `sympy`, `matplotlib`, `cirq-core` for the interoperability
+bridge) offered as opt-in extras. Without extras we cannot publish
+`pip install vqubit[vis]` / `vqubit[interop]`, which is a documented 1.0.0
+deliverable.
+
+**Suggested shape.** Accept PEP 621's `[project.optional-dependencies]` (or a
+`[package.optional-dependencies]` table) and render one `Provides-Extra:` per
+key plus the conditional `Requires-Dist` entries; mirror the same in `sdist`.
+
+---
+
+## 4. Huge pages for the buffers (`buffer_new_*` / `buffer_new_f64`)
+
+**What happens.** Buffers are allocated with a plain `malloc`-style allocation.
+For a 20-qubit state vector (2²⁰ `complex128` = **16 MiB**) every gate application
+streams 16 MiB in and 16 MiB out. With 4 KiB pages that is ~8192 distinct page
+translations per gate, which exceeds the L2 TLB (~1.5–2k entries): every kernel
+pass thrashes the TLB, and the kernels end up at ~25 GB/s — the machine's memory
+bandwidth — so `-march` (more SIMD) does not help.
+
+**Why it matters.** This is the remaining 20-qubit gap versus Cirq. It is a
+memory-access problem, not arithmetic, so it cannot be fixed from vqubit.
+
+**Request.** Allocate the big buffers with an explicit huge-page hint behind an
+opt-in/auto threshold:
+
+- Linux: `mmap(MAP_PRIVATE | MAP_ANONYMOUS)` + `madvise(MADV_HUGEPAGE)`, with an
+  optional `MAP_HUGETLB` path when `/proc/meminfo` advertises free huge pages;
+- Windows: `VirtualAlloc(..., MEM_LARGE_PAGES)` when the privilege is available,
+  plain `VirtualAlloc` otherwise;
+- macOS: documented as best-effort (`vm_allocate` + superpage advice).
+
+A `VCRAFT_HUGEPAGES=1|0` toggle (auto by default above some size) would let us
+measure and roll back, and would keep the behaviour explicit rather than magic.
+Ideally the same threshold applies to the state, density and tableau buffers.
+
+---
+
+## 5. `WHEEL` metadata `Generator:` and `audit` on Windows
+
+**5a. `Generator:` reports the project's version, not vcraft's.**
+`vlib/vcraft_wheel/build.v:144` passes `'vcraft ${input.version}'`, where
+`input.version` is the *project* version. The built wheel for vqubit 0.2.0
+therefore contains:
+
+```
+Wheel-Version: 1.0
+Generator: vcraft 0.2.0        # should be vcraft 1.4.5 (PEP 427: the tool's version)
+```
+
+It should be the version of vcraft that generated the wheel.
+
+**5b. `vcraft audit` calls a Windows extension "not a shared object".**
+`vlib/vcraft_project/env.v:318` rejects the name unless it contains `.so`:
+
+```v
+extension := result.extension
+if !extension.contains('.so') {
+    problems << '${extension} is not a shared object'
+}
+```
+
+On Windows the extension is `.pyd`, so a perfectly valid `win_amd64` wheel is
+reported as broken. Accepting `.so`/`.pyd`/`.dylib` (or `.pyd` on Windows names)
+would fix it.
+
+---
+
+## 6. Runtime dispatch (function multiversioning) for the hot kernels
+
+**Request, lower priority.** Ship SIMD-optimised variants of the hot kernels and
+select one at load time (CPUID on x86-64, `HWCAP` on ARM), so a *portable* wheel
+gets SIMD without baking `-march` into it. Today `-march` is a documented opt-in
+for a local build, because baking it in would break portability and diverge from
+the tested artifact.
+
+This is a "nice to have" for vqubit 1.0.0: issue 4 is much more valuable per unit
+of effort, because the 20-qubit workload is bandwidth-bound rather than
+compute-bound.

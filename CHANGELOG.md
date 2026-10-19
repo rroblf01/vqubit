@@ -5,7 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-19
+
+Behaviour parity with Cirq 1.7.0: the plain gates *are* the power gates, value
+equality is periodic, the simulators take Cirq's arguments and answer its calls
+(sweeps, moment steps, expectation values, batches), the Pauli observables are
+backed by real expectation-value maths, and the four `NotImplementedError` gaps
+are closed. Two signatures change: `simulate`/`run` take `param_resolver` second
+and `Linspace`/`Points` take Cirq's calling form and endpoint convention.
 
 ### Added
 

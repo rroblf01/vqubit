@@ -1,6 +1,6 @@
 [package]
 name = "vqubit"
-version = "0.2.1"
+version = "0.3.0"
 module = "vqubit_native"
 description = "A dependency-free quantum computing framework for Python, written in V."
 license = "MIT"

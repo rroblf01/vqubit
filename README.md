@@ -55,7 +55,7 @@ qubit?" and builds up to circuits and simulation.
 
 ## Status
 
-vqubit is **alpha** (0.2.1). It exports every one of cirq-core's top-level
+vqubit is **alpha** (0.3.0). It exports every one of cirq-core's top-level
 names, and the simulators, optimizers, transformers and devices are in place;
 the call conventions that still differ are listed in
 [Differences from Cirq](https://rroblf01.github.io/vqubit/en/guide/cirq-differences/).

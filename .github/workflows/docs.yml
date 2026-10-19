@@ -1,10 +1,14 @@
 name: docs
 
+# Documentation is deployed on every push to main. A `release: published`
+# trigger used to be here too, but a release event runs with the tag as its ref
+# (e.g. refs/tags/v0.2.0), and the github-pages environment only allows
+# deployments from main, so the deploy was rejected -- while its `pages`
+# concurrency group could also cancel the good main deployment. Since a release
+# tag points at a commit already deployed from main, the trigger is redundant.
 on:
   push:
     branches: [main]
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:

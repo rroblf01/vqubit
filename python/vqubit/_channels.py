@@ -19,6 +19,7 @@ from ._linalg import Matrix, kron
 from ._parameter import ParamResolver, is_symbolic, resolve_value
 from ._qubits import Qid
 from ._value import value_equality
+from ._value_extra import validate_probability
 
 _I: Matrix = [[1 + 0j, 0j], [0j, 1 + 0j]]
 _X: Matrix = [[0j, 1 + 0j], [1 + 0j, 0j]]
@@ -73,7 +74,7 @@ class BitFlipChannel(_Channel):
 	_symbol = "BF"
 
 	def __init__(self, probability: Any) -> None:
-		self._probability = probability if is_symbolic(probability) else float(probability)
+		self._probability = probability if is_symbolic(probability) else validate_probability(probability, "p")
 
 	@property
 	def probability(self) -> Any:
@@ -107,7 +108,7 @@ class PhaseFlipChannel(_Channel):
 	_symbol = "PF"
 
 	def __init__(self, probability: Any) -> None:
-		self._probability = probability if is_symbolic(probability) else float(probability)
+		self._probability = probability if is_symbolic(probability) else validate_probability(probability, "p")
 
 	@property
 	def probability(self) -> Any:
@@ -141,7 +142,7 @@ class BitPhaseFlipChannel(_Channel):
 	_symbol = "BPF"
 
 	def __init__(self, probability: Any) -> None:
-		self._probability = probability if is_symbolic(probability) else float(probability)
+		self._probability = probability if is_symbolic(probability) else validate_probability(probability, "p")
 
 	@property
 	def probability(self) -> Any:
@@ -175,7 +176,7 @@ class DepolarizingChannel(_Channel):
 	_symbol = "D"
 
 	def __init__(self, probability: Any, num_qubits: int = 1) -> None:
-		self._probability = probability if is_symbolic(probability) else float(probability)
+		self._probability = probability if is_symbolic(probability) else validate_probability(probability, "p")
 		self._num_qubits = int(num_qubits)
 
 	def _num_qubits_(self) -> int:
@@ -219,7 +220,7 @@ class AmplitudeDampingChannel(_Channel):
 	_symbol = "AD"
 
 	def __init__(self, gamma: Any) -> None:
-		self._gamma = gamma if is_symbolic(gamma) else float(gamma)
+		self._gamma = gamma if is_symbolic(gamma) else validate_probability(gamma, "gamma")
 
 	@property
 	def gamma(self) -> Any:
@@ -256,7 +257,7 @@ class PhaseDampingChannel(_Channel):
 	_symbol = "PD"
 
 	def __init__(self, gamma: Any) -> None:
-		self._gamma = gamma if is_symbolic(gamma) else float(gamma)
+		self._gamma = gamma if is_symbolic(gamma) else validate_probability(gamma, "gamma")
 
 	@property
 	def gamma(self) -> Any:

@@ -75,3 +75,40 @@ def test_channel_is_a_gate_operation() -> None:
 	operation = vqubit.bit_flip(0.1)(q0)
 	assert operation.qubits == (q0,)
 	assert operation.gate == vqubit.bit_flip(0.1)
+
+
+def test_probabilities_outside_the_unit_interval_are_rejected() -> None:
+	for build in (
+		lambda value: vqubit.bit_flip(value),
+		lambda value: vqubit.phase_flip(value),
+		lambda value: vqubit.bit_phase_flip(value),
+		lambda value: vqubit.depolarize(value),
+		lambda value: vqubit.BitFlipChannel(value),
+		lambda value: vqubit.DepolarizingChannel(value),
+	):
+		with pytest.raises(ValueError):
+			build(1.5)
+		with pytest.raises(ValueError):
+			build(-0.5)
+
+
+def test_damping_rates_outside_the_unit_interval_are_rejected() -> None:
+	for build in (vqubit.amplitude_damp, vqubit.phase_damp, vqubit.AmplitudeDampingChannel, vqubit.PhaseDampingChannel):
+		with pytest.raises(ValueError):
+			build(1.5)
+		with pytest.raises(ValueError):
+			build(-0.5)
+
+
+def test_probabilities_at_the_ends_of_the_interval_are_accepted() -> None:
+	assert vqubit.bit_flip(0.0) == vqubit.bit_flip(0)
+	assert vqubit.bit_flip(1.0) == vqubit.bit_flip(1)
+	assert vqubit.depolarize(1.0) == vqubit.depolarize(1)
+	assert vqubit.amplitude_damp(0.0) == vqubit.amplitude_damp(0)
+
+
+def test_symbolic_probabilities_skip_the_range_check() -> None:
+	t = vqubit.Parameter("t")
+	assert vqubit.is_parameterized(vqubit.bit_flip(t))
+	assert vqubit.is_parameterized(vqubit.depolarize(t))
+	assert vqubit.is_parameterized(vqubit.amplitude_damp(t))

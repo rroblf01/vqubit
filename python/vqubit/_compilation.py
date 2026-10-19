@@ -15,6 +15,7 @@ from typing import Any
 from ._circuits import Circuit
 from ._gates import (
 	CNOT,
+	SWAP,
 	FSimGate,
 	Gate,
 	H,
@@ -565,10 +566,120 @@ def _diagonal_to_operations(diagonal: Sequence[complex], qubits: Sequence[Qid]) 
 	return operations
 
 
+def _apply_s(tableau: Any, axis: int, *, dagger: bool = False) -> None:
+	"""Conjugate one qubit of ``tableau`` by ``S`` (or ``S†``).
+
+	``S`` sends ``X`` to ``Y`` and ``Y`` to ``-X``, leaving ``Z`` alone; ``S†``
+	does the opposite, ``Y`` to ``X`` and ``X`` to ``-Y``. In the tableau's
+	``(x, z)`` bits the ``z`` bit flips wherever the ``x`` bit is set, and the row
+	picks up a sign depending on which of the two it was.
+	"""
+	for row in range(2 * tableau.n):
+		x = tableau._xs[row][axis]
+		z = tableau._zs[row][axis]
+		if x and (not z if dagger else z):
+			tableau._rs[row] ^= 1
+		tableau._zs[row][axis] = z ^ x
+
+
 def decompose_clifford_tableau_to_operations(qubits: Sequence[Qid], tableau: Any) -> list[Operation]:
-	"""Decompose a Clifford tableau into operations (best-effort)."""
-	del qubits, tableau
-	raise NotImplementedError("decompose_clifford_tableau_to_operations is not implemented")
+	"""Decompose a Clifford tableau into one- and two-qubit operations.
+
+	The procedure is the one in Theorem 8 of Aaronson and Gottesman, *Improved
+	Simulation of Stabilizer Circuits* (https://arxiv.org/abs/quant-ph/0406196),
+	row by row, as Cirq implements it. Applying the returned operations to a
+	tableau that starts in ``|0...0>`` reproduces ``tableau``.
+	"""
+	from ._clifford import CliffordTableau
+
+	if not isinstance(tableau, CliffordTableau):
+		raise TypeError(
+			f"decompose_clifford_tableau_to_operations needs a CliffordTableau, got {type(tableau).__name__}"
+		)
+	if len(qubits) != tableau.n:
+		raise ValueError("the number of qubits must match the size of the tableau")
+
+	state = tableau.copy()
+	size = state.n
+	operations: list[Operation] = []
+
+	def hadamard(axis: int) -> None:
+		state.apply_h(axis)
+		operations.append(H.on(qubits[axis]))
+
+	def pauli_x(axis: int) -> None:
+		state.apply_x(axis)
+		operations.append(X.on(qubits[axis]))
+
+	def pauli_z(axis: int) -> None:
+		state.apply_z(axis)
+		operations.append(Z.on(qubits[axis]))
+
+	def phase_dagger(axis: int) -> None:
+		# ``S†`` goes into the tableau; ``S`` is what the inverted list needs.
+		_apply_s(state, axis, dagger=True)
+		operations.append(S.on(qubits[axis]))
+
+	def cnot(control: int, target: int) -> None:
+		state.apply_cx(control, target)
+		operations.append(CNOT.on(qubits[control], qubits[target]))
+
+	def swap(first: int, second: int) -> None:
+		# Apply the three CNOTs that make a SWAP to the tableau, but record a
+		# single SWAP: recording the CNOTs too would apply it twice.
+		state.apply_cx(first, second)
+		state.apply_cx(second, first)
+		state.apply_cx(first, second)
+		operations.append(SWAP.on(qubits[first], qubits[second]))
+
+	xs, zs, rs = state._xs, state._zs, state._rs
+	for i in range(size):
+		# 1: put a 1 on the diagonal of the destabilizer block.
+		if not xs[i][i] and zs[i][i]:
+			hadamard(i)
+		if not xs[i][i]:
+			for j in range(i + 1, size):
+				if xs[i][j]:
+					swap(i, j)
+					break
+		if not xs[i][i]:
+			for j in range(i + 1, size):
+				if zs[i][j]:
+					hadamard(j)
+					swap(i, j)
+					break
+		# 2: clear the rest of that destabilizer row.
+		for j in range(i + 1, size):
+			if xs[i][j]:
+				cnot(i, j)
+		if any(zs[i][j] for j in range(i, size)):
+			if not zs[i][i]:
+				phase_dagger(i)
+			for j in range(i + 1, size):
+				if zs[i][j]:
+					cnot(j, i)
+			phase_dagger(i)
+		# 3: the matching stabilizer row.
+		for j in range(i + 1, size):
+			if zs[i + size][j]:
+				cnot(j, i)
+		if any(xs[i + size][j] for j in range(i, size)):
+			hadamard(i)
+			for j in range(i + 1, size):
+				if xs[i + size][j]:
+					cnot(i, j)
+			if zs[i + size][i]:
+				phase_dagger(i)
+			hadamard(i)
+	# 4: the signs of the two blocks.
+	for i in range(size):
+		if rs[i]:
+			pauli_z(i)
+		if rs[size + i]:
+			pauli_x(i)
+	# 5: undo the procedure, which is (AB)^-1 = B^-1 A^-1; only ``S`` is not
+	# self-inverse, and ``phase_dagger`` recorded its inverse on purpose.
+	return operations[::-1]
 
 
 class TwoQubitGateTabulationResult:

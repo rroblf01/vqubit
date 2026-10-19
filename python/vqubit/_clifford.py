@@ -677,17 +677,97 @@ class CliffordTableau:
 		return measurements
 
 	def kron(self, other: Any) -> CliffordTableau:
-		raise NotImplementedError()
+		"""Return the tensor product of this tableau with ``other``.
+
+		The two act on disjoint qubits, so the result is block diagonal: this
+		tableau's rows on the first qubits, ``other``'s on the rest, and the
+		cross terms zero. ``other`` may be a tableau or a gate with one.
+		"""
+		if not isinstance(other, CliffordTableau):
+			raise TypeError(f"kron needs a CliffordTableau, got {type(other).__name__}")
+		left, right = self.n, other.n
+		total = left + right
+		xs = [[0] * total for _ in range(2 * total)]
+		zs = [[0] * total for _ in range(2 * total)]
+		rs = [0] * (2 * total)
+		# A tableau lists its destabilizers first and its stabilizers second, so
+		# each block is interleaved rather than concatenated: rows 0..n-1 are the
+		# destabilizers of every qubit, rows n..2n-1 the stabilizers.
+		for half in (0, 1):
+			for index in range(left):
+				row = half * total + index
+				xs[row][:left] = self._xs[half * left + index]
+				zs[row][:left] = self._zs[half * left + index]
+				rs[row] = self._rs[half * left + index]
+			for index in range(right):
+				row = half * total + left + index
+				xs[row][left:] = other._xs[half * right + index]
+				zs[row][left:] = other._zs[half * right + index]
+				rs[row] = other._rs[half * right + index]
+		return CliffordTableau._from_parts(total, xs, zs, rs)
 
 	def factor(self, axes: Sequence[int], *, validate: bool = True, atol: float = 1e-7) -> Any:
-		raise NotImplementedError()
+		"""Split this tableau into the part on ``axes`` and the rest.
+
+		Only a tableau that is a tensor product can be split, so this is for the
+		states a measurement or a reset leaves behind. ``validate`` checks that
+		the two halves really recombine into this tableau, and refuses otherwise
+		(the ``atol`` is accepted for Cirq's signature; the check is exact,
+		since a tableau is made of bits).
+		"""
+		del atol
+		axes = [int(axis) for axis in axes]
+		if len(set(axes)) != len(axes) or any(not 0 <= axis < self.n for axis in axes):
+			raise ValueError(f"axes {axes} are not distinct axes of a {self.n}-qubit tableau")
+		rest = [axis for axis in range(self.n) if axis not in axes]
+		extracted = self._sub_tableau(axes)
+		remainder = self._sub_tableau(rest)
+		if validate and extracted.kron(remainder) != self.reindex(list(axes) + rest):
+			raise ValueError("the tableau is not a tensor product over the requested axes")
+		return extracted, remainder
 
 	def reindex(self, axes: Sequence[int]) -> CliffordTableau:
-		raise NotImplementedError()
+		"""Return this tableau with its qubits reordered as ``axes`` says."""
+		axes = [int(axis) for axis in axes]
+		if sorted(axes) != list(range(self.n)):
+			raise ValueError(f"axes {axes} are not a permutation of {self.n} qubits")
+		if axes == list(range(self.n)):
+			return self.copy()
+		return self._sub_tableau(axes)
+
+	def _sub_tableau(self, axes: Sequence[int]) -> CliffordTableau:
+		"""The tableau restricted to ``axes``, in that order.
+
+		Rows ``i`` and ``n + i`` belong to qubit ``i``, so keeping the rows of the
+		requested qubits and their columns gives the sub-tableau.
+		"""
+		axes = list(axes)
+		rows = list(axes) + [self.n + axis for axis in axes]
+		xs = [[self._xs[row][axis] for axis in axes] for row in rows]
+		zs = [[self._zs[row][axis] for axis in axes] for row in rows]
+		rs = [self._rs[row] for row in rows]
+		return CliffordTableau._from_parts(len(axes), xs, zs, rs)
+
+	@classmethod
+	def _from_parts(
+		cls, n: int, xs: Sequence[Sequence[int]], zs: Sequence[Sequence[int]], rs: Sequence[int]
+	) -> CliffordTableau:
+		"""Build a tableau straight from its bit tables.
+
+		The internal arrays carry one extra padding row (``2n + 1`` of them), which
+		the native kernels write into and the ``xs``/``zs``/``rs`` properties hide;
+		it is added here so the result is a tableau like any other.
+		"""
+		state = cls(n)
+		state._xs = [[int(value) for value in row] for row in xs] + [[0] * n]
+		state._zs = [[int(value) for value in row] for row in zs] + [[0] * n]
+		state._rs = [int(value) for value in rs] + [0]
+		return state
 
 	@property
 	def supports_factor(self) -> bool:
-		return False
+		"""Whether :meth:`factor` can be used, as Cirq reports it."""
+		return True
 
 	@property
 	def can_represent_mixed_states(self) -> bool:

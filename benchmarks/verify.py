@@ -167,6 +167,53 @@ def check_gates(report: Report) -> None:
 		report.check("gates", name, up_to_phase(got, expected))
 
 
+# --- stabilizers ----------------------------------------------------------------
+
+
+def check_stabilizer(report: Report) -> None:
+	"""The stabilizer helpers agree with Cirq.
+
+	The tableau is built with the same gates in both libraries and then
+	decomposed; the two decompositions must prepare the same state. (``kron``,
+	``factor`` and ``reindex`` are not compared: Cirq's tableau leaves them
+	unimplemented, and vqubit implements them, which is a documented superset.)
+	"""
+	cq = cirq.LineQubit.range(3)
+	vq_qubits = vq.LineQubit.range(3)
+	cirq_tableau = cirq.CliffordTableau(3)
+	vqubit_tableau = vq.CliffordTableau(3)
+	for kind, first, second in [("h", 0, 0), ("cx", 0, 1), ("z", 1, 0), ("cx", 1, 2), ("h", 2, 0), ("x", 2, 0)]:
+		for tableau in (cirq_tableau, vqubit_tableau):
+			if kind == "h":
+				tableau.apply_h(first)
+			elif kind == "z":
+				tableau.apply_z(first)
+			elif kind == "x":
+				tableau.apply_x(first)
+			else:
+				tableau.apply_cx(first, second)
+
+	want_ops = cirq.decompose_clifford_tableau_to_operations(cq, cirq_tableau)
+	got_ops = vq.decompose_clifford_tableau_to_operations(vq_qubits, vqubit_tableau)
+	want_state = np.asarray(cirq.Simulator(dtype=np.complex128).simulate(cirq.Circuit(want_ops)).final_state_vector)
+	got_state = np.asarray(vq.Simulator().simulate(vq.Circuit(got_ops)).state_vector())
+	report.check(
+		"stabilizer",
+		"decompose_clifford_tableau_to_operations",
+		up_to_phase(got_state, want_state),
+		f"cirq {[str(op) for op in want_ops]} vs vqubit {[str(op) for op in got_ops]}",
+	)
+	report.check(
+		"stabilizer",
+		"the decomposition only uses Clifford gates",
+		all(
+			isinstance(operation.gate, (vq.HPowGate, vq.XPowGate, vq.ZPowGate, vq.CXPowGate, vq.SwapPowGate))
+			for operation in got_ops
+		),
+		"operation kinds",
+	)
+
+
 # --- expectation values -------------------------------------------------------
 
 
@@ -459,6 +506,7 @@ def _channel_factories() -> dict[str, Callable[[Any], Any]]:
 		"generalized_amplitude_damp": lambda m: m.generalized_amplitude_damp(0.2, 0.3),
 		"asymmetric_depolarize": lambda m: m.asymmetric_depolarize(0.1, 0.2, 0.3),
 		"reset": lambda m: m.reset(m.LineQubit(0)).gate,
+		"reset qutrit": lambda m: m.ResetChannel(3),
 		"kraus": lambda m: m.KrausChannel(
 			[np.array([[1, 0], [0, np.sqrt(0.8)]]), np.array([[0, np.sqrt(0.2)], [0, 0]])]
 		),
@@ -665,6 +713,7 @@ def main() -> None:
 	sections: dict[str, Callable[[Report], None]] = {
 		"gates": check_gates,
 		"expectations": check_expectations,
+		"stabilizer": check_stabilizer,
 		"sweeps": check_sweeps,
 		"global shift": check_global_shift,
 		"channels": check_channels,

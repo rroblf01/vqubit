@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the Cirq idioms do, and `vq.rz(0.3) ** 0.5` scales the angle to `vq.rz(0.15)`.
   `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The plain
   gates themselves are the power gates now: see *Changed*.
+- **A Clifford tableau decomposes into a circuit.**
+  `decompose_clifford_tableau_to_operations` implements the Aaronson–Gottesman
+  synthesis (the same one Cirq uses), so a tableau can be turned back into
+  `H`/`X`/`Z`/`S`/`CNOT`/`SWAP` operations. `CliffordTableau` also gained
+  `kron`, `factor` and `reindex` (and `supports_factor` is `True` now), which
+  Cirq's tableau leaves unimplemented; the CH-form simulation state applies
+  operations and measures instead of raising.
+- **`ResetChannel` takes the qudit's *dimension*,** as Cirq's does
+  (`ResetChannel(2)` is a qubit, `ResetChannel(3)` a qutrit), where the argument
+  used to mean a number of qubits. Its Kraus operators work for any dimension.
 - **Expectation values.** `PauliString.expectation_from_state_vector` and
   `expectation_from_density_matrix`, and the same on `PauliSum`, with Cirq's
   `qubit_map`, `atol` and `check_preconditions`;

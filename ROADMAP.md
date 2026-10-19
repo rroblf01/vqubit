@@ -203,12 +203,20 @@ Las divergencias `permanent` están explicadas en
       axis_phase_exponent=0.75) == cirq.PhasedXZGate(1, 0.5, 0.25)`; vqubit compara
       los tres tal cual, así que son distintas. **Criterio:** la canonización de
       Cirq, con las dos puertas de arriba comparadas en un test.
-- [ ] Implementar los stubs pendientes: `decompose_clifford_tableau_to_operations`,
-      `ResetChannel` multiqubit, `CliffordTableau.kron/factor/reindex` y
-      `StabilizerStateChForm.apply_operation` (hoy es una cáscara que no aplica
-      puertas), más una revisión de todos los `NotImplementedError`. **Medido:**
-      52 en el fuente, de los cuales 48 son métodos abstractos legítimos (Cirq
-      los tiene igual) y **4 son huecos reales**.
+- [x] **Los stubs pendientes.** `decompose_clifford_tableau_to_operations` está
+      implementado (el procedimiento del teorema 8 de Aaronson–Gottesman, fila a
+      fila, como Cirq) y comparado con Cirq; `CliffordTableau.kron`, `factor` y
+      `reindex` funcionan —Cirq los deja en `NotImplementedError`, así que es un
+      superconjunto documentado, y `supports_factor` dice ahora `True`—; el
+      estado CH-form aplica operaciones y mide; y `ResetChannel` **no** era un
+      hueco de multiqubit: el argumento de Cirq es la **dimensión del qutrit**
+      (`ResetChannel(2)` es un qubit), no un número de qubits, que es lo que
+      significaba aquí. Ese último era una divergencia silenciosa de semántica y
+      se ha corregido. **Medido:** quedan **49** `NotImplementedError` en el
+      fuente y **todos** son miembros abstractos que Cirq también declara
+      abstractos: **0 huecos reales**. La sección `stabilizer` del arnés compara
+      el troceado con Cirq y la de `channels` los Kraus del reset en las
+      dimensiones 2, 3 y 4.
 - [x] **Barridos, pasos y amplitudes en los simuladores.** `run_sweep`,
       `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter` y `run_batch` en
       los tres simuladores; `simulate_moment_steps` (el estado tras cada momento)
@@ -599,12 +607,20 @@ blanket. The `permanent` divergences are explained in
       axis_phase_exponent=0.75) == cirq.PhasedXZGate(1, 0.5, 0.25)`; vqubit compares
       the three as they are, so the two differ. **Criterion:** Cirq's
       canonicalisation, with the two gates above compared in a test.
-- [ ] Implement the remaining stubs: `decompose_clifford_tableau_to_operations`,
-      multi-qubit `ResetChannel`, `CliffordTableau.kron/factor/reindex` and
-      `StabilizerStateChForm.apply_operation` (a shell that applies no gates
-      today), plus a review of every `NotImplementedError`. **Measured:** 52 in
-      the source, of which 48 are legitimate abstract methods (Cirq has them too)
-      and **4 are real gaps**.
+- [x] **The remaining stubs.** `decompose_clifford_tableau_to_operations` is
+      implemented (the procedure of Theorem 8 in Aaronson–Gottesman, row by row,
+      as Cirq does it) and compared with Cirq; `CliffordTableau.kron`, `factor`
+      and `reindex` work -- Cirq leaves them at `NotImplementedError`, so this is
+      a documented superset, and `supports_factor` now says `True`;
+      the CH-form state applies operations and measures; and `ResetChannel` was
+      **not** a multi-qubit gap: Cirq's argument is the **qudit dimension**
+      (`ResetChannel(2)` is a qubit), not a qubit count, which is what it meant
+      here. That last one was a silent semantic divergence and is fixed.
+      **Measured:** **49** `NotImplementedError`s remain in the source and every
+      one of them is an abstract member Cirq also declares abstract: **0 real
+      gaps**. The harness's `stabilizer` section compares the decomposition with
+      Cirq and the `channels` section the reset's Kraus operators in dimensions
+      2, 3 and 4.
 - [x] **Sweeps, steps and amplitudes in the simulators.** `run_sweep`,
       `run_sweep_iter`, `simulate_sweep`, `simulate_sweep_iter` and `run_batch`
       on all three simulators; `simulate_moment_steps` (the state after each

@@ -289,26 +289,37 @@ class PhaseDampingChannel(_Channel):
 
 @value_equality
 class ResetChannel(_Channel):
-	"""Resets a qubit to ``|0>``."""
+	"""Resets a qudit to ``|0>``.
+
+	``dimension`` is the size of the qudit, as in Cirq: ``2`` (the default) is a
+	qubit, ``3`` a qutrit. The channel is the ``dimension`` projections onto
+	``|0>``, so a qubit's are the two familiar matrices ``[[1,0],[0,0]]`` and
+	``[[0,1],[0,0]]``.
+	"""
 
 	_symbol = "R"
 
-	def __init__(self, num_qubits: int = 1) -> None:
-		self._num_qubits = int(num_qubits)
+	def __init__(self, dimension: int = 2) -> None:
+		if dimension < 2:
+			raise ValueError("dimension must be at least 2")
+		self._dimension = int(dimension)
 
 	def _num_qubits_(self) -> int:
-		return self._num_qubits
+		return 1
+
+	def _qid_shape_(self) -> tuple[int, ...]:
+		return (self._dimension,)
 
 	def _kraus_(self) -> list[Matrix]:
-		if self._num_qubits != 1:
-			raise NotImplementedError("ResetChannel Kraus operators are implemented for one qubit")
-		return [
-			[[1 + 0j, 0j], [0j, 0j]],
-			[[0j, 1 + 0j], [0j, 0j]],
-		]
+		operators: list[Matrix] = []
+		for column in range(self._dimension):
+			operator = [[0j] * self._dimension for _ in range(self._dimension)]
+			operator[0][column] = 1 + 0j
+			operators.append(operator)
+		return operators
 
 	def _value_equality_values_(self) -> Any:
-		return (self._num_qubits,)
+		return (self._dimension,)
 
 	def __str__(self) -> str:
 		return "reset()"
@@ -346,7 +357,7 @@ def phase_damp(gamma: Any) -> PhaseDampingChannel:
 
 def reset(qubit: Qid) -> Any:
 	"""Return an operation that resets ``qubit`` to ``|0>``."""
-	return ResetChannel(1).on(qubit)
+	return ResetChannel(2).on(qubit)
 
 
 R = reset

@@ -391,7 +391,12 @@ class StabilizerSimulationState(CliffordTableauSimulationState):
 
 @value_equality
 class StabilizerStateChForm:
-	"""A stabilizer state in CH form, stored by its state vector."""
+	"""A stabilizer state in CH form, stored by its state vector.
+
+	vqubit keeps the amplitudes directly (its native kernels are state-vector
+	first) where Cirq stores the C and H matrices; the state it represents is
+	the same, which is what the simulator and the sampling methods use.
+	"""
 
 	def __init__(self, state_vector: Sequence[complex], num_qubits: int | None = None) -> None:
 		self._state = [complex(z) for z in state_vector]
@@ -415,18 +420,51 @@ class StabilizerStateChForm:
 
 
 class StabilizerChFormSimulationState(SimulationState):
-	"""A simulation state backed by a CH-form stabilizer state."""
+	"""A simulation state backed by a CH-form stabilizer state.
+
+	vqubit's CH form stores the amplitudes (see :class:`StabilizerStateChForm`),
+	so an operation is applied the same way the state-vector state applies it.
+	"""
 
 	def __init__(self, *, qubits: Sequence[Qid], prng: random.Random | None = None, initial_state: Any = 0) -> None:
 		super().__init__(qubits, prng)
-		vector = _initial_state_vector(initial_state, 1 << len(self._qubits))
-		self._state = StabilizerStateChForm(vector, len(self._qubits))
+		self._vector = _initial_state_vector(initial_state, 1 << len(self._qubits))
+		self._state = StabilizerStateChForm(self._vector, len(self._qubits))
 
 	def state_vector(self) -> list[complex]:
 		return self._state.state_vector()
 
 	def apply_operation(self, operation: Any) -> None:
-		raise NotImplementedError("CH-form simulation does not apply gates in this build")
+		"""Apply an operation to the state, measuring if it is a measurement."""
+		gate = operation.gate
+		targets = [self._index[q] for q in operation.qubits]
+		if isinstance(gate, MeasurementGate):
+			outcome = self._measure_targets(targets)
+			self.log_of_measurement_results[gate.key] = outcome
+			return
+		matrix = gate._unitary_()
+		if matrix is None:
+			raise TypeError(f"{gate!r} has no unitary")
+		total = 1 << len(self._qubits)
+		state = _native.NativeState(len(self._qubits))
+		state.set_amplitudes(vector_to_flat(self._state.state_vector()))
+		state.apply_gate(to_flat([list(row) for row in matrix]), targets)
+		amplitudes = vector_from_flat(state.amplitudes())
+		if len(amplitudes) == total:
+			self._state = StabilizerStateChForm(amplitudes, len(self._qubits))
+
+	def measure(self, qubits: Sequence[Qid], key: str) -> int:
+		outcome = self._measure_targets([self._index[q] for q in qubits])
+		self.log_of_measurement_results[key] = outcome
+		return outcome
+
+	def _measure_targets(self, targets: Sequence[int]) -> int:
+		"""Sample the ``targets`` and collapse the stored state onto the outcome."""
+		state = _native.NativeState(len(self._qubits))
+		state.set_amplitudes(vector_to_flat(self._state.state_vector()))
+		outcome = state.measure(list(targets), self.prng.random())
+		self._state = StabilizerStateChForm(vector_from_flat(state.amplitudes()), len(self._qubits))
+		return outcome
 
 
 class SimulationProductState:

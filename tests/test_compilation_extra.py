@@ -118,6 +118,38 @@ def test_single_qubit_op_to_framed_phase_form_of_a_z_rotation_is_diagonal() -> N
 	assert abs(r - 1) > 1e-3  # the two eigenvalues differ
 
 
+def test_cphase_intervals_handle_angles_past_a_quarter_turn() -> None:
+	# theta = 2 rad puts |arcsin(sin theta)| on the sine's descending side, and
+	# the mirror interval comes first, both of which are branches of the
+	# interval computation.
+	intervals = vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(2.0, 0.0))
+	assert all(0 <= start < stop <= 2 for start, stop in intervals)
+
+
+def test_cphase_decomposition_rejects_a_parametrized_fsim() -> None:
+	with pytest.raises(ValueError, match="parametrized gate"):
+		vqubit.decompose_cphase_into_two_fsim(vqubit.CZ, fsim_gate=vqubit.FSimGate(vqubit.Parameter("t"), 0.0))
+
+
+def test_cphase_decomposition_lists_the_exponents_when_none_fit() -> None:
+	# An fSim with a large cphase cannot build this CZ: the error names the
+	# intervals that would work.
+	with pytest.raises(ValueError, match="Valid intervals"):
+		vqubit.decompose_cphase_into_two_fsim(vqubit.CZ**0.25, fsim_gate=vqubit.FSimGate(0.1, 0.05))
+
+
+def test_four_fsim_synthesis_rejects_bad_arguments() -> None:
+	q0 = vqubit.LineQubit(0)
+	with pytest.raises(ValueError, match="parameterized"):
+		vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(
+			vqubit.ISWAP, fsim_gate=vqubit.FSimGate(vqubit.Parameter("t"), 0.0)
+		)
+	with pytest.raises(ValueError, match="pair of qubits"):
+		vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(
+			vqubit.ISWAP, fsim_gate=vqubit.FSimGate(math.pi / 2, 0.0), qubits=(q0,)
+		)
+
+
 def test_decompose_multi_controlled_x_with_no_controls_is_x() -> None:
 	target = vqubit.LineQubit(0)
 	operations = vqubit.decompose_multi_controlled_x([], target)

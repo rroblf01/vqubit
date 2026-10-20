@@ -51,6 +51,36 @@ tests with coverage at 90 %.
   superposition over a subset, say) now spans the gate's full width.
 - **`CliffordTableau.from_flat`** validates the length of the flat layout.
 
+- **`ControlledGate` accepts a control-value formula.** A `SumOfProducts` or
+  `ProductOfSums` condition used to collapse to its first satisfying
+  assignment, so a gate guarded by `q0 XOR q1` fired on one branch only; every
+  satisfying assignment now fires it, and `ControlledOperation` passes the
+  formula through instead of reducing it.
+- **`CliffordTableauSimulationState` accepts identity gates.** `I` and `X ** 2`
+  were rejected as "not a Clifford gate" because they share the `None`
+  instruction code with unsupported gates.
+- **Impossible measurement outcomes are rejected** with `ValueError` instead of
+  silently returning an all-zero state: the native collapse kernel returns a
+  zero vector rather than an empty one, so the probability is now checked
+  first.
+- **Qudit shapes are rejected explicitly** by `measure_state_vector`,
+  `sample_state_vector` and the density-matrix variants, which used to treat a
+  qutrit as a qubit and truncate it.
+- **`SingleQubitCliffordGate.from_pauli` works.** It built a three-entry map and
+  handed it to `from_double_map`, which requires two, so every call raised
+  `ValueError`. `**` on a Cliffords gate no longer recurses forever on negative
+  powers, and the power is taken modulo the element's order (twelve) instead of
+  four, which was wrong for the eight elements of order three.
+- **QASM import covers more of qelib1**: `cswap`, `crz`, `cu1` and `cu3` work
+  (the last three asked for one qubit instead of two), and an indexed classical
+  assignment such as `c[0] = measure q[0];` is dispatched to the measurement
+  handler instead of being parsed as a gate.
+- **Quirk import reads a controlled `Y`, `Z` or `H`**, which `quirk_url` has
+  always exported: the control-target lookup only knew `X`.
+- **Parameter expressions print like Cirq's**: `X ** t` is drawn `X^t` instead of
+  `X^(1.0 * t)`, because the identity elements of `*`, `+` and `/` are no longer
+  left in the expression tree.
+
 ### Changed
 
 - `sub_state_vector` raises `ValueError` for a state that is not normalized,

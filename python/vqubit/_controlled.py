@@ -62,7 +62,7 @@ class ControlledOperation(Operation):
 		return ControlledGate(
 			self._sub_operation.gate,
 			num_controls=len(self._controls),
-			control_values=self._bool_control_values(),
+			control_values=self._control_values,
 		)
 
 	def _unitary_(self) -> Any:

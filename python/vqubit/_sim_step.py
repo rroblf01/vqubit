@@ -6,6 +6,7 @@ This mirrors the ``cirq.sim`` step API on top of the native buffers used by
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Sequence
 from typing import Any
@@ -35,10 +36,27 @@ def _probabilities_from_state(state: Sequence[complex], indices: Sequence[int]) 
 def _collapse_from_state(state: Sequence[complex], indices: Sequence[int], outcome: int) -> list[complex]:
 	flat = vector_to_flat([complex(z) for z in state])
 	num_qubits = len(state).bit_length() - 1
-	collapsed = _native.collapse_state(flat, list(indices), outcome, num_qubits)
-	if not collapsed:
+	# The kernel returns an all-zero vector for an impossible outcome rather
+	# than an empty one, so the probability has to be checked up front.
+	probabilities = list(_native.state_probabilities(flat, list(indices), num_qubits))
+	if not 0 <= outcome < len(probabilities) or probabilities[outcome] <= 0:
 		raise ValueError(f"outcome {outcome} has probability zero")
-	return vector_from_flat(collapsed)
+	return vector_from_flat(_native.collapse_state(flat, list(indices), outcome, num_qubits))
+
+
+def _checked_num_qubits(size: int, qid_shape: Sequence[int] | None, what: str) -> int:
+	"""Validate the shape of a state and return its number of qubits."""
+	if qid_shape is None:
+		if size == 0 or size & (size - 1):
+			raise ValueError(f"{what} has {size} amplitudes, which is not a power of two")
+		return size.bit_length() - 1
+	dims = tuple(int(dimension) for dimension in qid_shape)
+	total = math.prod(dims)
+	if total != size:
+		raise ValueError(f"{what} has {size} amplitudes, but qid_shape {dims} needs {total}")
+	if any(dimension != 2 for dimension in dims):
+		raise ValueError("the native kernels measure qubits only; qid_shape must be all twos")
+	return len(dims)
 
 
 def _draw(probabilities: Sequence[float], rng: random.Random) -> int:
@@ -60,7 +78,7 @@ def measure_state_vector(
 	seed: int | None = None,
 ) -> tuple[list[complex], int]:
 	"""Measure ``indices`` of a state vector; return the collapsed state and outcome."""
-	del qid_shape
+	_checked_num_qubits(len(state), qid_shape, "state_vector")
 	probabilities = _probabilities_from_state(state, indices)
 	outcome = _draw(probabilities, random.Random(seed))
 	collapsed = _collapse_from_state(state, indices, outcome)
@@ -78,15 +96,15 @@ def measure_density_matrix(
 	seed: int | None = None,
 ) -> tuple[list[list[complex]], int]:
 	"""Measure ``indices`` of a density matrix; return the collapsed matrix and outcome."""
-	del qid_shape
+	_checked_num_qubits(len(density_matrix), qid_shape, "density_matrix")
 	dim = len(density_matrix)
 	num_qubits = dim.bit_length() - 1
 	flat = to_flat([[complex(z) for z in row] for row in density_matrix])
 	probabilities = list(_native.density_probabilities(flat, list(indices), num_qubits))
 	outcome = _draw(probabilities, random.Random(seed))
-	collapsed_flat = _native.density_collapse(flat, list(indices), outcome, num_qubits)
-	if not collapsed_flat:
+	if not 0 <= outcome < len(probabilities) or probabilities[outcome] <= 0:
 		raise ValueError(f"outcome {outcome} has probability zero")
+	collapsed_flat = _native.density_collapse(flat, list(indices), outcome, num_qubits)
 	collapsed = [
 		[complex(collapsed_flat[2 * (i * dim + j)], collapsed_flat[2 * (i * dim + j) + 1]) for j in range(dim)]
 		for i in range(dim)
@@ -105,7 +123,7 @@ def sample_state_vector(
 	qid_shape: Sequence[int] | None = None,
 ) -> list[int]:
 	"""Sample measurement outcomes from a state vector."""
-	del qid_shape
+	_checked_num_qubits(len(state), qid_shape, "state_vector")
 	probabilities = _probabilities_from_state(state, indices)
 	rng = random.Random(seed)
 	return [_draw(probabilities, rng) for _ in range(repetitions)]
@@ -120,7 +138,7 @@ def sample_density_matrix(
 	qid_shape: Sequence[int] | None = None,
 ) -> list[int]:
 	"""Sample measurement outcomes from a density matrix."""
-	del qid_shape
+	_checked_num_qubits(len(density_matrix), qid_shape, "density_matrix")
 	dim = len(density_matrix)
 	num_qubits = dim.bit_length() - 1
 	flat = to_flat([[complex(z) for z in row] for row in density_matrix])
@@ -396,11 +414,15 @@ class CliffordTableauSimulationState(SimulationState):
 		return vector_from_flat(self._tableau.state_vector())
 
 	def apply_operation(self, operation: Any) -> None:
-		from ._clifford import _instruction_code
+		from ._clifford import _instruction_code, _is_clifford_gate
 
 		gate = operation.gate
 		code = _instruction_code(gate)
 		if code is None:
+			# ``None`` is both "the identity" (``I``, ``X ** 2``) and "the
+			# kernels cannot express it"; only the second is an error.
+			if _is_clifford_gate(gate):
+				return
 			raise TypeError(f"{gate!r} is not a Clifford gate")
 		targets = [self._index[q] for q in operation.qubits]
 		if len(targets) == 1:

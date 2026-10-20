@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import cmath
 import contextlib
+import itertools
 import math
 from collections.abc import Iterable, Sequence
 from typing import Any
 
+from ._control_values import AbstractControlValues
 from ._linalg import Matrix, identity, kron, to_flat
 from ._ops import GateOperation
 from ._parameter import ParamResolver, is_symbolic, resolve_value
@@ -1226,18 +1228,32 @@ class ControlledGate(Gate):
 		sub_gate: Gate,
 		*,
 		num_controls: int,
-		control_values: Sequence[bool | int] | None = None,
+		control_values: Sequence[bool | int] | AbstractControlValues | None = None,
 	) -> None:
 		if num_controls < 1:
 			raise ValueError("ControlledGate needs at least one control qubit")
 		if not isinstance(sub_gate, Gate):
 			raise TypeError("ControlledGate needs a Gate to control")
-		values = (True,) * num_controls if control_values is None else tuple(bool(v) for v in control_values)
-		if len(values) != num_controls:
-			raise ValueError(f"control_values has length {len(values)}, expected {num_controls}")
 		self._sub_gate = sub_gate
 		self._num_controls = num_controls
-		self._control_values = values
+		if isinstance(control_values, AbstractControlValues):
+			# A formula (an OR of AND clauses, say) can be satisfied by more
+			# than one assignment; every one of them fires the gate.
+			if len(control_values.qubits) != num_controls:
+				raise ValueError(f"control_values has {len(control_values.qubits)} qubits, expected {num_controls}")
+			assignments = tuple(
+				combo for combo in itertools.product([False, True], repeat=num_controls) if combo in control_values
+			)
+			if not assignments:
+				raise ValueError("no satisfying control assignment")
+			self._control_values: Any = control_values
+			self._assignments = assignments
+		else:
+			values = (True,) * num_controls if control_values is None else tuple(bool(v) for v in control_values)
+			if len(values) != num_controls:
+				raise ValueError(f"control_values has length {len(values)}, expected {num_controls}")
+			self._control_values = values
+			self._assignments = (values,)
 
 	@property
 	def sub_gate(self) -> Gate:
@@ -1248,7 +1264,7 @@ class ControlledGate(Gate):
 		return self._num_controls
 
 	@property
-	def control_values(self) -> tuple[bool, ...]:
+	def control_values(self) -> Sequence[bool] | AbstractControlValues:
 		return self._control_values
 
 	def _num_qubits_(self) -> int:
@@ -1262,14 +1278,15 @@ class ControlledGate(Gate):
 		block = len(sub)
 		blocks = 1 << self._num_controls
 		total = blocks * block
-		target = 0
-		for value in self._control_values:
-			target = (target << 1) | int(value)
-		offset = target * block
 		matrix = identity(total)
-		for i in range(block):
-			for j in range(block):
-				matrix[offset + i][offset + j] = sub[i][j]
+		for assignment in self._assignments:
+			target = 0
+			for value in assignment:
+				target = (target << 1) | int(value)
+			offset = target * block
+			for i in range(block):
+				for j in range(block):
+					matrix[offset + i][offset + j] = sub[i][j]
 		return matrix
 
 	def _is_parameterized_(self) -> bool:
@@ -1291,7 +1308,12 @@ class ControlledGate(Gate):
 		return ControlledGate(sub_inverse, num_controls=self._num_controls, control_values=self._control_values)
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:
-		controls = tuple("@" if value else "○" for value in self._control_values)
+		if isinstance(self._control_values, AbstractControlValues):
+			# A formula has no single open/closed circle per qubit; draw the
+			# controls closed and let the gate's own docs carry the formula.
+			controls = ("@",) * self._num_controls
+		else:
+			controls = tuple("@" if value else "○" for value in self._control_values)
 		return controls + self._sub_gate._diagram_symbols_(qubits[self._num_controls :])
 
 	def _value_equality_values_(self) -> Any:

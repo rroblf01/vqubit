@@ -382,6 +382,40 @@ Las divergencias `permanent` están explicadas en
 
 #### 9. Deuda de compilación y transformadores (abierta por la auditoría de 0.5)
 
+También, de la misma auditoría:
+
+- [ ] `CircuitFunction` descarta los momentos: el resultado se pasa a
+      `Circuit(...)`, que filtra las operaciones, así que una función que
+      devuelva `[Moment, Moment]` produce un circuito vacío; además se llama de
+      forma eager aunque la documentación diga «lazy». **Criterio:** una función
+      que devuelva momentos o operaciones produce el mismo circuito, y el
+      docstring dice la verdad.
+- [ ] `TextDiagramDrawer.vertical_line` no dibuja nada: guarda coordenadas en
+      `_vertical` y `render` nunca las lee. **Criterio:** una línea vertical
+      aparece en el diagrama renderizado.
+- [ ] `PointOptimizer.optimize_circuit` no llama a `optimization_at` ni a
+      `convert`, así que sobrescribirlos no hace nada, y re-empaqueta cada
+      momento por separado, fusionando operaciones que estaban en momentos
+      distintos. **Criterio:** los ganchos se usan y los límites de momento se
+      conservan (o se documenta que el optimizador los puede mover).
+- [ ] `transform_op_tree` ignora la transformación de operaciones cuando se da
+      una de momentos, e `iter_transformation` solo se aplica en el nivel
+      superior. **Criterio:** las dos transformaciones se aplican en el nivel que
+      les toca y los iterables anidados se reconstruyen con su tipo.
+- [ ] `GreedyQubitManager(maximize_reuse=...)` guarda la opción y no la usa: el
+      orden de asignación es el mismo con `True` y con `False`.
+      **Criterio:** con `maximize_reuse=True` se reutilizan los qubits liberados
+      antes de asignar nuevos.
+- [ ] QASM: dos medidas consecutivas en registros distintos no hacen
+      round-trip, y los índices de bit (`c[1] = measure q[0]`) se ignoran y se
+      fusionan en orden textual. **Criterio:** el export y el import conservan
+      los registros y el bit exacto de cada medida.
+- [ ] `bidiagonalize_real_matrix_pair_with_symmetric_products` no diagonaliza
+      parejas de rango deficiente (`A = [[1,1],[1,1]]`). **Criterio:** el
+      algoritmo devuelve `L A R` y `L B R` diagonales también en ese caso, o
+      lanza `ValueError` explicando la precondición.
+
+
 Cada punto tiene su test en rojo (`xfail(strict=False)`) en
 `tests/test_compilation_extra.py` / `tests/test_transformers_more.py`; al
 arreglarlo, el test pasa y hay que quitar el `xfail`.
@@ -914,6 +948,38 @@ is fixed the test passes and the `xfail` marker must be removed.
 - [ ] `ApplyUnitaryArgs.with_axes_transposed_to_start` is a no-op.
       **Criterion:** it returns a tensor with the target axes first and
       `axes == range(len(axes))`.
+
+**Also, from the same audit:**
+
+- [ ] `CircuitFunction` drops moments: the result goes through `Circuit(...)`,
+      which filters operations, so a function returning `[Moment, Moment]`
+      yields an empty circuit; it is also called eagerly although the docstring
+      says "lazily". **Criterion:** a function returning moments or operations
+      produces the same circuit, and the docstring tells the truth.
+- [ ] `TextDiagramDrawer.vertical_line` draws nothing: it records coordinates in
+      `_vertical` and `render` never reads them. **Criterion:** a vertical line
+      shows up in the rendered diagram.
+- [ ] `PointOptimizer.optimize_circuit` never calls `optimization_at` or
+      `convert`, so overriding them has no effect, and it re-packs each moment
+      separately, merging operations that were in different moments.
+      **Criterion:** the hooks are used and the moment boundaries are preserved
+      (or the docs say the optimiser may move them).
+- [ ] `transform_op_tree` ignores the operation transformation when a moment
+      transformation is supplied, and `iter_transformation` is only applied at
+      the top level. **Criterion:** both transformations apply at their own
+      level and nested iterables are rebuilt with their type.
+- [ ] `GreedyQubitManager(maximize_reuse=...)` stores the flag and never reads
+      it: the allocation order is the same for `True` and `False`.
+      **Criterion:** with `maximize_reuse=True`, freed qubits are reused before
+      new ones are allocated.
+- [ ] QASM: two adjacent measurements into different registers do not round
+      trip, and bit indices (`c[1] = measure q[0]`) are ignored and fused in
+      textual order. **Criterion:** export and import keep the registers and the
+      exact bit of each measurement.
+- [ ] `bidiagonalize_real_matrix_pair_with_symmetric_products` does not
+      diagonalise rank-deficient pairs (`A = [[1,1],[1,1]]`). **Criterion:** the
+      algorithm returns diagonal `L A R` and `L B R` in that case too, or raises
+      `ValueError` explaining the precondition.
 
 #### 8. Performance (supporting)
 

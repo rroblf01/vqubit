@@ -16,6 +16,11 @@ from ._value import value_equality
 _NUMBER = (int, float, complex)
 
 
+def _is_identity(value: Any, identity: complex) -> bool:
+	"""Whether ``value`` is the given identity element of its operation."""
+	return isinstance(value, _NUMBER) and not isinstance(value, bool) and value == identity
+
+
 class _Expression:
 	"""A node in a parameter expression tree."""
 
@@ -26,24 +31,38 @@ class _Expression:
 		raise NotImplementedError
 
 	def __add__(self, other: Any) -> _Expression:
+		# ``t + 0`` is ``t``: keeping the identity out of the tree makes
+		# ``X ** t`` print as ``X^t`` instead of ``X^(t + 0)``.
+		if _is_identity(other, 0):
+			return self
 		return _BinaryOp("+", self, other)
 
 	def __radd__(self, other: Any) -> _Expression:
+		if _is_identity(other, 0):
+			return self
 		return _BinaryOp("+", other, self)
 
 	def __sub__(self, other: Any) -> _Expression:
+		if _is_identity(other, 0):
+			return self
 		return _BinaryOp("-", self, other)
 
 	def __rsub__(self, other: Any) -> _Expression:
 		return _BinaryOp("-", other, self)
 
 	def __mul__(self, other: Any) -> _Expression:
+		if _is_identity(other, 1):
+			return self
 		return _BinaryOp("*", self, other)
 
 	def __rmul__(self, other: Any) -> _Expression:
+		if _is_identity(other, 1):
+			return self
 		return _BinaryOp("*", other, self)
 
 	def __truediv__(self, other: Any) -> _Expression:
+		if _is_identity(other, 1):
+			return self
 		return _BinaryOp("/", self, other)
 
 	def __rtruediv__(self, other: Any) -> _Expression:

@@ -176,7 +176,8 @@ class SingleQubitCliffordGate(Gate):
 			mapping = {prev_pauli: (next_pauli, True), pauli: (pauli, False), next_pauli: (prev_pauli, False)}
 		else:
 			mapping = {prev_pauli: (prev_pauli, True), pauli: (pauli, False), next_pauli: (next_pauli, True)}
-		return SingleQubitCliffordGate.from_double_map(mapping)
+		# The map is already complete, so read X and Z straight off it.
+		return SingleQubitCliffordGate.from_xz_map(mapping[Pauli.X], mapping[Pauli.Z])
 
 	@staticmethod
 	def from_quarter_turns(pauli: Pauli, quarter_turns: int) -> SingleQubitCliffordGate:
@@ -286,15 +287,26 @@ class SingleQubitCliffordGate(Gate):
 
 	def __pow__(self, power: float) -> SingleQubitCliffordGate:
 		if int(power) == power:
+			# The inverse is the adjoint unitary, which is a Clifford gate as
+			# well; taking ``self ** -1`` here would recurse forever.
+			base = self
+			if power < 0:
+				inverse = SingleQubitCliffordGate.from_unitary(_conj_t(self._unitary_()))
+				assert inverse is not None  # the adjoint of a Clifford is one
+				base = inverse
+			# Every element of the group has order 1, 2, 3 or 4, so twelve
+			# turns always come back to the identity; reducing modulo four
+			# would be wrong for the elements of order three.
 			result = SingleQubitCliffordGate.I
-			base = self if power >= 0 else self**-1
-			for _ in range(abs(int(power)) % 4):
+			for _ in range(abs(int(power)) % 12):
 				result = result.merged_with(base)
 			return result
 		if int(2 * power) == 2 * power:
 			half = self._square_root()
 			if half is not None:
-				return half ** (2 * power)
+				# ``half`` is one of the group's elements, so the integral power
+				# applies; the cast keeps the type checker happy about it.
+				return half ** int(2 * power)
 		raise NotImplementedError(f"cannot raise {self!r} to the power {power}")
 
 	def _square_root(self) -> SingleQubitCliffordGate | None:

@@ -119,7 +119,7 @@ def density_matrix(matrix: Any, *, qid_shape: Sequence[int] | None = None) -> Ma
 	return to_valid_density_matrix(matrix, shape)
 
 
-def bloch_vector_from_state_vector(state: StateVectorLike, index: int) -> tuple[float, float, float]:
+def bloch_vector_from_state_vector(state: Any, index: int) -> tuple[float, float, float]:
 	"""Return the Bloch vector ``(x, y, z)`` of qubit ``index`` of ``state``."""
 	if is_numpy_array(state):
 		import numpy as _np

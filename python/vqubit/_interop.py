@@ -220,7 +220,11 @@ def _find_controlled_target(column: list[Any], control_position: int) -> int | N
 	for position, entry in enumerate(column):
 		if position == control_position:
 			continue
-		if entry in ("X", "•") or (isinstance(entry, str) and "^" in entry and entry[0] in _AXES):
+		# A bare axis gate (``X``, ``Y``, ``Z``), a power of one, ``H`` and the
+		# ``•`` that stands for the target of a CZ are all valid targets.
+		if entry == "•" or entry == "H":
+			return position
+		if isinstance(entry, str) and entry.partition("^")[0] in _AXES:
 			return position
 	return None
 

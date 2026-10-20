@@ -160,9 +160,10 @@ jobs:
       - name: ty check
         run: .venv/bin/ty check
 
-      # The threshold is pinned to the level reached and only goes up: the 0.5
-      # milestone closes when it can be raised to 95.
+      # The threshold is pinned just below the level reached and only goes up,
+      # so a small platform difference cannot fail the build while a real
+      # regression does. The 0.5 milestone closes at 95.
       - name: coverage
         run: |
           .venv/bin/python -m coverage run --source=vqubit -m pytest -q
-          .venv/bin/python -m coverage report --fail-under=89
+          .venv/bin/python -m coverage report --fail-under=94

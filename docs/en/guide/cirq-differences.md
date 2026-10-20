@@ -105,6 +105,13 @@ assert vq.CNOT ** -1 == vq.CNOT
 assert vq.ISWAP ** -1 != vq.ISWAP
 ```
 
+Equality also requires the **same concrete class**: `vq.SqrtISwapGate()` and
+`vq.SQRT_ISWAP` (an `ISwapPowGate`) have the same matrix but are not equal,
+because `SqrtISwapGate` is a subclass vqubit adds for its `repr`. Cirq compares
+against the decorated class and would let a subclass equal its base; vqubit is
+stricter, and this is the only observable difference of that kind
+(`SqrtISwapGate` does not exist in Cirq).
+
 `vq.FREDKIN` and `vq.CSWAP` do not take fractional powers, exactly like
 `cirq.CSWAP`; they do take the two powers every gate has, `** 1` (the gate
 itself) and `** -1` (its inverse, which for CSWAP is CSWAP again).

@@ -36,6 +36,7 @@ from ._classical import ClassicallyControlledOperation, KeyCondition
 from ._gates import (
 	CCX,
 	CNOT,
+	CSWAP,
 	CZ,
 	SWAP,
 	ControlledGate,
@@ -138,6 +139,7 @@ def _plain_gates() -> dict[str, tuple[Gate, int]]:
 		"cz": (CZ, 2),
 		"swap": (SWAP, 2),
 		"ccx": (CCX, 3),
+		"cswap": (CSWAP, 3),
 		"cy": (ControlledGate(Y, num_controls=1), 2),
 		"ch": (ControlledGate(H, num_controls=1), 2),
 	}
@@ -233,7 +235,7 @@ class _Parser:
 			self._next()
 			handler()
 			return
-		if self._peek(1)[1] == "=":
+		if self._peek(1)[1] == "=" or (self._peek(1)[1] == "[" and self._peek(4)[1] == "="):
 			self._classical_measure()
 			return
 		self._gate_application()
@@ -479,7 +481,9 @@ class _Parser:
 			raise QasmParseError(f"gate {name!r} takes {arity} parameter(s), got {len(params)}", line)
 		gates = builder(params)
 		if len(gates) == 1:
-			return self._apply(gates[0], args, 1, line)
+			# A builder may return a controlled gate: ask the gate itself how
+			# many qubits it acts on instead of assuming one.
+			return self._apply(gates[0], args, gates[0].num_qubits, line)
 		# A multi-gate expansion (``u3``) applies to one qubit at a time.
 		operations: list[Operation] = []
 		for (qubit,) in self._pairs(args, 1, line):

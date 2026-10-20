@@ -38,7 +38,7 @@ def random_unitary(dim: int, rng: random.Random) -> list[list[complex]]:
 	return [[columns[j][i] for j in range(dim)] for i in range(dim)]
 
 
-def up_to_phase(actual: Sequence[Sequence[complex]], expected: Sequence[Sequence[complex]], tol: float = 1e-6) -> bool:
+def up_to_phase(actual: Any, expected: Any, tol: float = 1e-6) -> bool:
 	"""Report whether two matrices are equal up to a single global phase."""
 	phase = None
 	for i in range(len(expected)):

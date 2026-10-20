@@ -386,6 +386,14 @@ Las divergencias `permanent` están explicadas en
 | 0.9 | Congelación | gobernanza, api-diff, SemVer, *release candidate* |
 | 1.0 | Estabilidad | garantía SemVer y soporte a largo plazo |
 
+**Solo se publican la 0.3.0 y la 1.0.0.** Los hitos 0.4 a 0.9 son *checkpoints
+internos*: sus puertas se comprueban en CI igual que antes, pero no se publica una
+versión por hito. Sustituir seis releases por dos evita que el número de versión
+prometa más de lo verificado (la definición de terminado de la 1.0 exige tres
+cosas que dependen de vcraft: `stubtest` limpio, extras y el benchmark de 20
+qubits; ver `UPSTREAM.md` §1–§4), y deja el número para el momento en que el
+contrato queda congelado de verdad.
+
 ### Puertas de aceptación por hito
 
 Un hito se declara entregado cuando su puerta pasa, no cuando el trabajo parece
@@ -799,6 +807,14 @@ blanket. The `permanent` divergences are explained in
 | 0.8 | Documentation | versioned docs, Cirq migration, gallery |
 | 0.9 | Freeze | governance, api-diff, SemVer, release candidate |
 | 1.0 | Stability | SemVer guarantee and long-term support |
+
+**Only 0.3.0 and 1.0.0 are published.** The 0.4 to 0.9 milestones are *internal
+checkpoints*: their gates are still checked in CI, but no version is released per
+milestone. Replacing six releases with two keeps the version number from
+promising more than is verified (the 1.0 definition of done requires three things
+that depend on vcraft: a clean `stubtest`, extras and the 20-qubit benchmark; see
+`UPSTREAM.md` §1–§4), and leaves the number for the moment the contract is
+actually frozen.
 
 ### Acceptance gates per milestone
 

@@ -208,6 +208,7 @@ class EigenGate(Gate):
 		# ``exp(iπ global_shift exponent)``, as in Cirq.
 		phase = cmath.exp(1j * math.pi * self._global_shift * self._exponent)
 		for eigenvalue, projector in self._eigen_components():
+			coefficient: complex
 			if eigenvalue == 0:
 				coefficient = 1.0 if self._exponent == 0 else 0.0
 			else:

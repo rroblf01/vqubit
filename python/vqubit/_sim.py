@@ -277,8 +277,6 @@ class _SweepsAndBatches:
 	#: their own signatures stay free to be the Cirq ones).
 	run: Any
 	simulate: Any
-	run_sweep: Any
-	run_batch: Any
 
 	def run_sweep(self, program: Circuit, params: Any, repetitions: int = 1) -> list[Result]:
 		"""Run ``program`` once per point of the parameter sweep ``params``."""

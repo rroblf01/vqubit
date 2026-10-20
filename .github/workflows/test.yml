@@ -163,6 +163,10 @@ jobs:
       - name: ty check
         run: .venv/bin/ty check
 
+      # A second checker: mypy and ty have different blind spots.
+      - name: mypy check
+        run: .venv/bin/python -m mypy python/vqubit
+
       # The 0.5 gate: no module below 80 % and the total above 95 %. The
       # threshold only goes up from here.
       # A ratchet: new public API must be documented, and the baseline of

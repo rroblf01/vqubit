@@ -13,6 +13,7 @@ import json
 from typing import Any
 
 from ._circuits import Circuit, FrozenCircuit
+from ._control_values import ProductOfSums, SumOfProducts
 from ._gates import (
 	CCXGate,
 	CCXPowGate,
@@ -72,6 +73,12 @@ def _encode(value: Any) -> Any:
 		return {"cirq_type": "complex", "real": value.real, "imag": value.imag}
 	if isinstance(value, (list, tuple)):
 		return [_encode(item) for item in value]
+	if isinstance(value, SumOfProducts | ProductOfSums):
+		return {
+			"cirq_type": type(value).__name__,
+			"qubits": _encode(list(value.qubits)),
+			"terms": _encode([list(clause) for clause in value.terms]),
+		}
 	if isinstance(value, dict):
 		return {key: _encode(item) for key, item in value.items()}
 	if isinstance(value, Parameter):
@@ -148,7 +155,14 @@ def _encode(value: Any) -> Any:
 			"cirq_type": "ControlledGate",
 			"sub_gate": _encode(value.sub_gate),
 			"num_controls": value.num_controls,
-			"control_values": list(value.control_values),
+			"control_values": _encode(value.control_values),
+		}
+	if isinstance(value, (SumOfProducts, ProductOfSums)):
+		# A control-value formula is a list of clauses of (qubit, value) pairs.
+		return {
+			"cirq_type": type(value).__name__,
+			"qubits": _encode(list(value.qubits)),
+			"terms": _encode([list(clause) for clause in value.terms]),
 		}
 	if isinstance(value, CSWAPGate):
 		# ``CSWAP`` is the one plain multi-qubit gate that is *not* a power gate,
@@ -286,6 +300,14 @@ def _register_all() -> None:
 	_DECODERS["GridQubit"] = lambda d: GridQubit(d["row"], d["col"])
 	_DECODERS["NamedQubit"] = lambda d: NamedQubit(d["name"])
 	_DECODERS["Parameter"] = lambda d: Parameter(d["name"])
+	_DECODERS["SumOfProducts"] = lambda d: SumOfProducts(
+		[_decode(qubit) for qubit in d["qubits"]],
+		[[tuple(pair) for pair in clause] for clause in _decode(d["terms"])],
+	)
+	_DECODERS["ProductOfSums"] = lambda d: ProductOfSums(
+		[_decode(qubit) for qubit in d["qubits"]],
+		[[tuple(pair) for pair in clause] for clause in _decode(d["terms"])],
+	)
 	_DECODERS["BinaryOp"] = lambda d: _BinaryOp(d["op"], _decode(d["left"]), _decode(d["right"]))
 	_DECODERS["UnaryOp"] = lambda d: _UnaryOp(d["op"], _decode(d["operand"]))
 	_DECODERS["XPowGate"] = lambda d: XPowGate(

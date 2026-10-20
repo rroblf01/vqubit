@@ -225,7 +225,7 @@ def qid_shape(value: Any) -> tuple[int, ...]:
 	if isinstance(value, Qid):
 		return (value.dimension,)
 	if isinstance(value, Circuit):
-		return (tuple(value.all_qubits()) and tuple(qubit.dimension for qubit in sorted(value.all_qubits()))) or ()
+		return tuple(qubit.dimension for qubit in sorted(value.all_qubits()))
 	if isinstance(value, Moment):
 		return tuple(
 			qubit.dimension for qubit in sorted({qubit for operation in value.operations for qubit in operation.qubits})

@@ -173,7 +173,7 @@ def decompose_multi_controlled_rotation(
 			control_values = [True] * len(controls)
 		ancilla = _fresh_qubits([*controls, target], 1)[0]
 		flips = [X(qubit) for qubit, value in zip(controls, control_values, strict=True) if not value]
-		operations = [*flips]
+		operations: list[Operation] = [*flips]
 		operations.extend(decompose_multi_controlled_x(controls, ancilla))
 		operations.extend(_single_controlled_rotation(matrix, ancilla, target))
 		operations.extend(decompose_multi_controlled_x(controls, ancilla))
@@ -187,14 +187,14 @@ def decompose_multi_controlled_rotation(
 	a_matrix = matmul(_rot_z(alpha), _rot_y(beta / 2))
 	b_matrix = matmul(_rot_y(-beta / 2), _rot_z(-(alpha + gamma) / 2))
 	c_matrix = _rot_z((gamma - alpha) / 2)
-	operations: list[Operation] = [*pre, MatrixGate(c_matrix).on(target), CNOT(control, target)]
-	operations.append(MatrixGate(b_matrix).on(target))
-	operations.append(CNOT(control, target))
-	operations.append(MatrixGate(a_matrix).on(target))
+	standard_operations: list[Operation] = [*pre, MatrixGate(c_matrix).on(target), CNOT(control, target)]
+	standard_operations.append(MatrixGate(b_matrix).on(target))
+	standard_operations.append(CNOT(control, target))
+	standard_operations.append(MatrixGate(a_matrix).on(target))
 	if abs(phi) > 1e-12:
-		operations.append(ZPowGate(exponent=phi / math.pi).on(control))
-	operations.extend(post)
-	return operations
+		standard_operations.append(ZPowGate(exponent=phi / math.pi).on(control))
+	standard_operations.extend(post)
+	return standard_operations
 
 
 def _single_controlled_rotation(matrix: Matrix, control: Qid, target: Qid) -> list[Operation]:

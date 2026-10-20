@@ -100,6 +100,17 @@ published wheels need nothing.
 - **Citing**: [CITATION.cff](CITATION.cff) (GitHub's "Cite this repository"
   button reads it).
 
+### Acknowledgements
+
+vqubit stands on the design of [Cirq](https://quantumai.google/cirq): its gate
+model, its protocols and the shape of its API are Cirq's, and the parity harness
+compares the two name by name. The stabilizer simulator follows Aaronson and
+Gottesman, *Improved Simulation of Stabilizer Circuits*; the two-qubit
+decompositions follow Shende, Bullock and Markov (quant-ph/0308033) and the
+fSim synthesis follows arXiv:1910.11333. The native core is written in
+[V](https://vlang.io) and built with
+[vcraft](https://github.com/rroblf01/vcraft).
+
 ## License
 
 MIT. See [LICENSE](LICENSE). © Ricardo Robles Fernández.

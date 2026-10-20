@@ -17,6 +17,7 @@ import math
 from typing import Any
 
 from ._circuits import Circuit
+from ._control_values import AbstractControlValues
 from ._gates import (
 	CNOTGate,
 	ControlledGate,
@@ -40,6 +41,18 @@ _QUIRK_URL = "https://algassert.com/quirk#circuit="
 
 _AXES = {"X": XPowGate, "Y": YPowGate, "Z": ZPowGate}
 _FRACTIONS = {"½": 0.5, "¼": 0.25, "⅛": 0.125}
+
+
+def _plain_control_values(gate: Any) -> bool:
+	"""Whether a gate's controls are the plain all-ones kind.
+
+	A control-value *formula* has no "all values are true" reading, so it is not
+	a plain CNOT/CZ.
+	"""
+	values = gate.control_values
+	if isinstance(values, AbstractControlValues):
+		return False
+	return all(values)
 
 
 def _format_exponent(exponent: float) -> str:
@@ -89,7 +102,7 @@ def _two_qubit_column(gate: Any) -> tuple[str, str] | None:
 		return ("•", "•")
 	if isinstance(gate, SWAPGate) and is_plain_gate(gate):
 		return ("Swap", "Swap")
-	if isinstance(gate, ControlledGate) and gate.num_controls == 1 and all(gate.control_values):
+	if isinstance(gate, ControlledGate) and gate.num_controls == 1 and _plain_control_values(gate):
 		# A controlled power gate is a ``•`` over the power's own symbol.
 		symbol = _single_qubit_column(gate.sub_gate)
 		if symbol is not None and symbol != "Measure":

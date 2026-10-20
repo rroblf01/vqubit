@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_deprecation.py
+# hypothesis_version: 6.140.3
+
+['.', 'T', '__init__', 'deprecated', 'warn_deprecated']

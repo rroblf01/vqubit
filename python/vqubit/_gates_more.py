@@ -346,7 +346,9 @@ def qft(*qubits: Qid, without_reverse: bool = False, inverse: bool = False) -> A
 	if inverse:
 		from ._linalg import dagger
 
-		gate = MatrixGate(dagger(gate._unitary_()))
+		matrix = gate._unitary_()
+		assert matrix is not None
+		gate = MatrixGate(dagger(matrix))
 	return gate.on(*qubits)
 
 

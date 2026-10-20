@@ -429,8 +429,8 @@ class CliffordTableau:
 		xs = self._xs[:size]
 		zs = self._zs[:size]
 		ret = CliffordTableau(n)
-		new_xs = [None] * size
-		new_zs = [None] * size
+		new_xs: list[Any] = [None] * size
+		new_zs: list[Any] = [None] * size
 		top_zs = _transpose(zs[n:])
 		bottom_zs = _transpose(zs[:n])
 		bottom_xs = _transpose(xs[n:])
@@ -935,9 +935,7 @@ class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 			for operation in moment.operations:
 				gate = operation.gate
 				if isinstance(gate, MeasurementGate):
-					raise ValueError(
-						"simulate_moment_steps() cannot run a circuit with measurements; use run()"
-					)
+					raise ValueError("simulate_moment_steps() cannot run a circuit with measurements; use run()")
 				self._refuse_unsupported(operation)
 				code = _instruction_code(gate)
 				if code is None:
@@ -947,9 +945,7 @@ class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 			tableau = _native.NativeTableau(len(qubits))
 			for code, first, second in applied:
 				tableau.apply(code, first, second)
-			yield CliffordSimulatorStepResult(
-				qubits=qubits, measurements={}, state=CliffordState(tableau, qubits)
-			)
+			yield CliffordSimulatorStepResult(qubits=qubits, measurements={}, state=CliffordState(tableau, qubits))
 
 	def run(
 		self,

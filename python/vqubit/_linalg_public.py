@@ -234,10 +234,24 @@ def _is_matrix(value: Any) -> bool:
 
 
 def _as_matrix_or_vector(value: Any) -> Any:
+	result: Any
 	if is_numpy_array(value):
-		return to_nested_list(value) if value.ndim == 2 else [complex(z) for z in value]
-	if isinstance(value, (list, tuple)) and value and isinstance(value[0], (list, tuple)):
-		return to_nested_list(value)
+		# The two branches have different types, and mypy rejects the ternary.
+		if value.ndim == 2:  # noqa: SIM108
+			result = to_nested_list(value)
+		else:
+			result = [complex(z) for z in value]
+	elif isinstance(value, (list, tuple)) and value and isinstance(value[0], (list, tuple)):
+		result = to_nested_list(value)
+	else:
+		result = [complex(z) for z in value]
+	return result
+
+
+def _as_vector(value: Any) -> list[complex]:
+	"""Turn a flat sequence (or numpy vector) into a list of complex numbers."""
+	if is_numpy_array(value):
+		return [complex(z) for z in value]
 	return [complex(z) for z in value]
 
 
@@ -1054,11 +1068,11 @@ def unitary_eig(
 	if check_preconditions and not is_normal(m, atol=atol):
 		raise ValueError("Input must correspond to a normal matrix.")
 	if is_hermitian(m, atol=atol):
-		values, vectors = _hermitian_eig(m)
+		hermitian_values, hermitian_vectors = _hermitian_eig(m)
 		n = len(m)
-		return asvector(values), asarray([[vectors[j][i] for j in range(n)] for i in range(n)])
-	values, vectors = _complex_eig(m)
-	return asvector(values), asarray(vectors)
+		return asvector(hermitian_values), asarray([[hermitian_vectors[j][i] for j in range(n)] for i in range(n)])
+	complex_values, complex_vectors = _complex_eig(m)
+	return asvector(complex_values), asarray(complex_vectors)
 
 
 def map_eigenvalues(
@@ -1465,7 +1479,8 @@ def slice_for_qubits_equal_to(
 		raise ValueError("Specify exactly one of little_endian_qureg_value or big_endian_qureg_value.")
 	out_size_specified = num_qubits is not None
 	out_size = num_qubits if out_size_specified else max(target_qubit_axes, default=-1) + 1
-	result: list[Any] = [slice(None)] * out_size  # type: ignore[arg-type]
+	assert out_size is not None
+	result: list[Any] = [slice(None)] * out_size
 	if not out_size_specified:
 		result.append(Ellipsis)
 	shape = qid_shape or (2,) * out_size  # type: ignore[assignment]

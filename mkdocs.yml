@@ -74,6 +74,8 @@ plugins:
             GHZ with noise: GHZ con ruido
             Expectation values: Valores esperados
             Import and export: Importar y exportar
+            Grover's search: Búsqueda de Grover
+            Three-qubit code: Código de 3 qubits
             API reference: Referencia de la API
         - locale: en
           name: English
@@ -127,4 +129,6 @@ nav:
       - GHZ with noise: examples/ghz-noise.md
       - Expectation values: examples/expectation-values.md
       - Import and export: examples/qasm-round-trip.md
+      - Grover's search: examples/grover.md
+      - Three-qubit code: examples/stabilizers.md
   - API reference: api/index.md

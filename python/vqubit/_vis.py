@@ -283,7 +283,7 @@ class Heatmap:
 		return units
 
 	def _plot_colorbar(self, mappable: Any, ax: Any) -> Any:
-		from mpl_toolkits import axes_grid1
+		from mpl_toolkits import axes_grid1  # type: ignore[import-untyped]
 
 		colorbar_ax = axes_grid1.make_axes_locatable(ax).append_axes(
 			position=self._config["colorbar_position"],

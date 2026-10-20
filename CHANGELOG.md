@@ -193,6 +193,20 @@ tests with coverage at 95 %.
   without touching the hand-written history, and a test checks that the draft
   picks the fragment up.
 
+- **Two more gallery examples**: Grover's search on two qubits (one iteration,
+  the amplitude on the marked state, the run) and the three-qubit repetition
+  code with the stabilizer simulator (the syndrome of a bit flip, its
+  correction, and why a stabilizer state costs polynomially).
+- **`mypy` runs next to `ty`** in CI: a second checker with different blind
+  spots, clean on the library (75 modules). Fixing it turned several
+  `list[GateOperation]`-vs-`list[Operation]` annotations into the type they
+  really are, and found a control-value formula being passed to `all()` in the
+  QASM, Quirk and JSON writers.
+- **Control-value formulas round-trip through JSON**: a `ControlledGate` whose
+  controls are a `SumOfProducts`/`ProductOfSums` used to fail to encode.
+- **README acknowledgements**: Cirq's design, Aaronson–Gottesman, Shende–Bullock–
+  Markov, arXiv:1910.11333, V and vcraft.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

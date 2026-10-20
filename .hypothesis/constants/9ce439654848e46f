@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_gates_more.py
+# hypothesis_version: 6.140.3
+
+[0.0, 0.25, 1.0, 2.0, 'CCNOT', 'CCNotPowGate', 'CCXPowGate', 'CCY', 'CCYPowGate', 'CCZ', 'CCZPowGate', 'CNotPowGate', 'CXPowGate', 'CY', 'CYPowGate', 'CZPowGate', 'DiagonalGate', 'Grad', 'ISWAP_INV', 'ISwapPowGate', 'PhFSim', 'PhISwap', 'PhaseGradientGate', 'PhasedFSimGate', 'PhasedISwapPowGate', 'QFT', 'QubitPermutationGate', 'SQRT_ISWAP_INV', 'SWAP_INV', 'SwapPowGate', 'TwoQubitDiagonalGate', 'USup', 'cphase', 'diag', 'givens', 'identity_each', 'ms', 'q', 'qft', 'reset_each', 'riswap', 'rx', 'ry', 'rz', 'wait']

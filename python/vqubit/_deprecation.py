@@ -61,14 +61,14 @@ def deprecated(
 
 	def decorate(value: Any) -> Any:
 		if isinstance(value, type):
-			original_init = value.__init__
+			original_init = getattr(value, "__init__")  # noqa: B009 - mypy rejects the attribute read
 
 			@functools.wraps(original_init)
 			def __init__(self: Any, *args: Any, **kwargs: Any) -> None:
 				warnings.warn(text, DeprecationWarning, stacklevel=2)
 				original_init(self, *args, **kwargs)
 
-			value.__init__ = __init__
+			setattr(value, "__init__", __init__)  # noqa: B010 - mypy rejects the attribute write
 			return value
 
 		@functools.wraps(value)

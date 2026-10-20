@@ -138,7 +138,7 @@ def native_complex_view(obj: Any) -> Any:
 	"""Return a zero-copy numpy complex view of a native ``@[vc_buffer]`` object."""
 	if not HAS_NUMPY:
 		return None
-	view = memoryview(obj)
+	view: Any = memoryview(obj)
 	if view.format == "B":
 		view = view.cast("d")
 	return _np.frombuffer(view, dtype=_np.float64).view(_np.complex128)

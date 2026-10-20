@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_qasm.py
+# hypothesis_version: 6.140.3
+
+[-0.5, -0.25, 0.25, 0.5, '2.0', 'OPENQASM 2.0;', 'QasmArgs', 'qasm', 's', 'sdg', 't', 'tdg', 'z']

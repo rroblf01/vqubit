@@ -360,8 +360,9 @@ Las divergencias `permanent` están explicadas en
 - [x] **(0.8)** Guía «Migrar desde Cirq» (`guide/migrating-from-cirq.md`, ES y
       EN).
 - [x] **(0.8)** Galería de ejemplos: estado de Bell, GHZ con ruido, valores
-      esperados/QAOA e importar y exportar. Grover y estabilizadores/QEC siguen
-      pendientes.
+      esperados/QAOA, importar y exportar, búsqueda de Grover y el código de 3
+      qubits con estabilizadores. Cada página lleva el código, la salida real y
+      la explicación.
 - [ ] Referencia de API completa con ejemplo por símbolo (mkdocstrings): la
       referencia existe, falta el ejemplo en cada símbolo.
 
@@ -858,8 +859,9 @@ blanket. The `permanent` divergences are explained in
 - [x] **(0.8)** A "Migrating from Cirq" guide
       (`guide/migrating-from-cirq.md`, ES and EN).
 - [x] **(0.8)** An examples gallery: Bell state, GHZ with noise, expectation
-      values/QAOA, import and export. Grover and stabilizers/QEC are still
-      pending.
+      values/QAOA, import and export, Grover's search and the three-qubit code
+      with stabilizers. Each page carries the code, the real output and the
+      explanation.
 - [x] **(0.9)** The API is fully documented: **1097 of 1097 public symbols**
       have a docstring, with the ratchet in `tools/check_api_docs.py` and an
       empty baseline. A per-symbol example in the reference is still pending.

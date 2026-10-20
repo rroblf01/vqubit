@@ -14,9 +14,9 @@ import pytest
 
 import vqubit
 
-matplotlib = pytest.importorskip("matplotlib")
+matplotlib = pytest.importorskip("matplotlib", exc_type=ImportError)
 matplotlib.use("Agg")  # a headless backend: nothing is displayed
-numpy = pytest.importorskip("numpy")
+numpy = pytest.importorskip("numpy", exc_type=ImportError)
 
 from matplotlib import pyplot as plt  # noqa: E402
 

@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import pytest
 
 import vqubit
 from tests.helpers import assert_matrix_close, assert_vector_close
+
+np = pytest.importorskip("numpy", exc_type=ImportError)
 
 q0, q1 = vqubit.LineQubit.range(2)
 

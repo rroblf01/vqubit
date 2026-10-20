@@ -18,7 +18,7 @@ def test_a_fresh_tableau_is_the_zero_state() -> None:
 	assert [str(stabilizer) for stabilizer in tableau.stabilizer_pauli_strings()] == ["Z(0)", "Z(1)"]
 	assert [str(destabilizer) for destabilizer in tableau.destabilizers()] == ["XI", "IX"]
 	assert tableau._validate()
-	assert tableau.matrix().shape == (4, 4)
+	assert len(tableau.matrix()) == 4
 	assert "CliffordTableau" in repr(tableau)
 
 
@@ -88,7 +88,10 @@ def test_sampling_does_not_change_the_tableau() -> None:
 	before = tableau.copy()
 	samples = tableau.sample([0], repetitions=10, seed=1)
 	assert len(samples) == 10
-	assert all(value in (0, 1) for value in samples)
+	# Without numpy the sample is a list of one-element lists; with numpy it is
+	# a 2-D array. Either way every outcome is a bit.
+	values = [int(value) for entry in samples for value in (entry if hasattr(entry, "__len__") else [entry])]
+	assert values and all(value in (0, 1) for value in values)
 	assert tableau == before
 
 
@@ -105,7 +108,7 @@ def test_inverse_undoes_the_tableau() -> None:
 	tableau.apply_h(0)
 	tableau.apply_cx(0, 1)
 	tableau.apply_x(1)
-	assert tableau.then(tableau.inverse()).matrix().tolist() == vqubit.CliffordTableau(2).matrix().tolist()
+	assert tableau.then(tableau.inverse()) == vqubit.CliffordTableau(2)
 
 
 def test_then_composes_tableaux() -> None:

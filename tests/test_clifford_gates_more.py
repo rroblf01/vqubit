@@ -10,11 +10,12 @@ from __future__ import annotations
 import cmath
 import itertools
 
-import numpy as np
 import pytest
 
 import vqubit
 from tests.helpers import assert_matrix_close, up_to_phase
+
+np = pytest.importorskip("numpy", exc_type=ImportError)
 
 Gate = vqubit.SingleQubitCliffordGate
 P = vqubit.Pauli

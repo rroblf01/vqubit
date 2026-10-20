@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import pytest
 
 import vqubit
 from tests.helpers import assert_matrix_close
+
+np = pytest.importorskip("numpy", exc_type=ImportError)
 
 q0, q1, q2 = vqubit.LineQubit.range(3)
 
@@ -121,7 +122,7 @@ def test_state_preparation_channel() -> None:
 	result = vqubit.DensityMatrixSimulator().simulate(vqubit.Circuit(plus.on(q0)), initial_state=[1, 0])
 	assert_matrix_close(np.asarray(result.final_density_matrix.density_matrix()), [[0.5, 0.5], [0.5, 0.5]])
 	with pytest.raises((ValueError, TypeError)):
-		vqubit.StatePreparationChannel(np.eye(3))  # ty: ignore[invalid-argument-type]
+		vqubit.StatePreparationChannel(np.eye(3))
 
 
 def test_channel_validation() -> None:

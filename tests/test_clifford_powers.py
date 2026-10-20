@@ -8,10 +8,11 @@ the paths a circuit with ``S``, ``S ** 3`` or ``sqrt(X)`` goes through.
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 import vqubit
+
+np = pytest.importorskip("numpy", exc_type=ImportError)
 
 
 def stabilizers(tableau: vqubit.CliffordTableau) -> list[str]:

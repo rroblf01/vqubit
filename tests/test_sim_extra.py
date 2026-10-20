@@ -125,7 +125,7 @@ def test_density_simulator_falls_back_without_the_native_view(monkeypatch: pytes
 
 
 def test_compute_amplitudes_takes_numpy_bitstrings() -> None:
-	np = pytest.importorskip("numpy")
+	np = pytest.importorskip("numpy", exc_type=ImportError)
 	amplitudes = vqubit.Simulator().compute_amplitudes(_bell_circuit(), np.array([0, 3]))
 	assert_vector_close(amplitudes, [SQRT_HALF, SQRT_HALF])
 

@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import pytest
 
 import vqubit
 from tests.helpers import assert_matrix_close
+
+np = pytest.importorskip("numpy", exc_type=ImportError)
 
 
 def test_arithmetic_gate_base_class_is_abstract() -> None:

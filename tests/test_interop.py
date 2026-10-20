@@ -74,7 +74,7 @@ def test_the_cirq_bridge_round_trips() -> None:
 
 
 def test_the_cirq_bridge_keeps_the_unitary() -> None:
-	numpy = pytest.importorskip("numpy")
+	numpy = pytest.importorskip("numpy", exc_type=ImportError)
 	cirq = pytest.importorskip("cirq")
 	q0, q1 = vqubit.LineQubit.range(2)
 	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.CZ(q0, q1), vqubit.rz(0.3)(q1))

@@ -239,6 +239,21 @@ def quirk_url_to_circuit(url: str) -> Circuit:
 	return quirk_json_to_circuit(decoded)
 
 
+def _import_cirq() -> Any:
+	"""Cirq, imported on demand: it is optional and not a dependency.
+
+	The import is dynamic so that a type checker run without Cirq installed does
+	not report it as a missing module (the same trick ``vqubit._compat`` uses for
+	numpy and sympy).
+	"""
+	import importlib
+
+	try:
+		return importlib.import_module("cirq")
+	except ImportError as exc:  # pragma: no cover - only without cirq installed
+		raise ImportError("the cirq bridge needs cirq installed") from exc
+
+
 def to_cirq(circuit: Circuit) -> Any:
 	"""Convert a vqubit circuit to a Cirq one (Cirq must be installed).
 
@@ -247,10 +262,7 @@ def to_cirq(circuit: Circuit) -> Any:
 	"""
 	from ._json import to_json
 
-	try:
-		import cirq
-	except ImportError as exc:  # pragma: no cover - only without cirq installed
-		raise ImportError("to_cirq needs cirq installed") from exc
+	cirq = _import_cirq()
 	return cirq.read_json(json_text=to_json(circuit))
 
 
@@ -258,10 +270,7 @@ def from_cirq(circuit: Any) -> Circuit:
 	"""Convert a Cirq circuit to a vqubit one (Cirq must be installed)."""
 	from ._json import read_json
 
-	try:
-		import cirq
-	except ImportError as exc:  # pragma: no cover - only without cirq installed
-		raise ImportError("from_cirq needs cirq installed") from exc
+	cirq = _import_cirq()
 	return read_json(cirq.to_json(circuit))
 
 

@@ -9,11 +9,12 @@ its axes, and the bidiagonalization survives a rank-deficient pair.
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 import vqubit
 from tests.helpers import assert_matrix_close, up_to_phase
+
+np = pytest.importorskip("numpy", exc_type=ImportError)
 
 Q0, Q1 = vqubit.LineQubit.range(2)
 IDENTITY_4 = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]

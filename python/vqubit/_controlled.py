@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from itertools import product
 from typing import Any
 
 from ._control_values import AbstractControlValues
@@ -47,15 +46,6 @@ class ControlledOperation(Operation):
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
 		return self._controls + self._sub_operation.qubits
-
-	def _bool_control_values(self) -> tuple[bool, ...]:
-		values = self._control_values
-		if isinstance(values, AbstractControlValues):
-			for combo in product([False, True], repeat=len(self._controls)):
-				if combo in values:
-					return combo
-			raise ValueError("no satisfying control assignment")
-		return tuple(bool(v) for v in values)
 
 	@property
 	def gate(self) -> Gate:

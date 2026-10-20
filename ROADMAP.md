@@ -365,12 +365,9 @@ Las divergencias `permanent` están explicadas en
 
 - [x] (0.2.0) Ejecutar la suite en **Windows** dentro del CI: hoy son 3 SO × 5
       versiones de Python (3.11–3.15), verde.
-- [ ] Objetivo de cobertura ≥95 % con umbral en CI. **Medido hoy: 90 %**
-      (subió desde el 77 %), con los peores módulos ya en `_clifford_gates.py`
-      (71 %), `_interop.py` (73 %), `_circuits_extra.py` (52 %) y
-      `_op_tree.py` (61 %). El umbral de CI se fija al nivel alcanzado y **solo
-      sube**; criterio de cierre: `pytest --cov --cov-fail-under=95` en verde y
-      ningún módulo por debajo del 80 %.
+- [x] **(0.5)** Objetivo de cobertura ≥95 % con umbral en CI. **Medido: 95 %**
+      (desde el 77 %), con todos los módulos por encima del 80 % y el umbral de
+      CI en `--fail-under=95`, que **solo sube**.
 - [ ] `stubtest` de `mypy` sobre `vqubit_native.pyi`. **Bloqueado por vcraft**
       (`UPSTREAM.md` §1 y §2: el `.pyi` genera los enums como anotaciones y
       escribe `__init__` donde el constructor vive en `tp_new`). Con el enum
@@ -888,12 +885,9 @@ blanket. The `permanent` divergences are explained in
 
 - [x] (0.2.0) Run the suite on **Windows** in CI: today 3 OSes × 5 Python
       versions (3.11–3.15), green.
-- [ ] Coverage target ≥95 % enforced in CI. **Measured today: 90 %** (up from
-      77 %), with the worst modules now at `_clifford_gates.py` (71 %),
-      `_interop.py` (73 %), `_circuits_extra.py` (52 %) and `_op_tree.py`
-      (61 %). The CI threshold is pinned to the level reached and **only goes
-      up**; closing criterion: `pytest --cov --cov-fail-under=95` green and no
-      module below 80 %.
+- [x] **(0.5)** Coverage target ≥95 % enforced in CI. **Measured: 95 %** (up
+      from 77 %), with every module above 80 % and the CI threshold at
+      `--fail-under=95`, which **only goes up**.
 - [ ] `mypy` `stubtest` over `vqubit_native.pyi`. **Blocked by vcraft**
       (`UPSTREAM.md` §1 and §2: the `.pyi` writes enums as annotations and emits
       `__init__` where the constructor lives in `tp_new`). With the enum patched

@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 An audit of the numerical core (driven by the 0.5 coverage work) found several
 helpers that returned the wrong answer rather than an error. They are fixed
-here, each with a regression test, and the test suite grew from 690 to 1082
-tests with coverage at 90 %.
+here, each with a regression test, and the test suite grew from 690 to 1391
+tests with coverage at 95 %.
 
 ### Fixed
 
@@ -91,7 +91,8 @@ tests with coverage at 90 %.
 - New suites for the sampling collectors, the experiments, the plotting
   helpers, the stabilizer tableau, parameterized gates, Pauli operations, the
   compilation and transformer extras, the protocol helpers and the numerical
-  regressions above. Coverage of the published wheel: 79 % → 90 %.
+  regressions above. Coverage of the published wheel: 79 % → 95 %, with every
+  module above 80 % and the CI threshold raised to match.
 
 ## [0.3.0] - 2026-10-19
 

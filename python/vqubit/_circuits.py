@@ -31,16 +31,22 @@ def _coerce_ops(content: Any) -> list[Operation]:
 	"""Turn the argument of ``append``/``insert`` into a flat list of operations."""
 	if isinstance(content, Operation):
 		return [content]
+	if isinstance(content, Moment):
+		return list(content.operations)
 	if isinstance(content, (str, bytes)):
 		raise TypeError(f"cannot append {type(content).__name__} to a circuit")
 	if isinstance(content, Iterable):
 		operations: list[Operation] = []
 		for item in content:
-			if isinstance(item, (Moment, Operation)):
-				operations.append(item)  # type: ignore[arg-type]
+			if isinstance(item, Operation):
+				operations.append(item)
+			elif isinstance(item, Moment):
+				# A moment (or a circuit, which iterates as moments) unfolds into
+				# its operations instead of being silently dropped.
+				operations.extend(item.operations)
 			else:
 				raise TypeError(f"cannot append {type(item).__name__} to a circuit")
-		return [op for op in operations if isinstance(op, Operation)]
+		return operations
 	raise TypeError(f"cannot append {type(content).__name__} to a circuit")
 
 

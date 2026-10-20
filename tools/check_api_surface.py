@@ -31,10 +31,18 @@ SNAPSHOT = Path(__file__).with_name("api_snapshot.txt")
 
 
 def describe_signature(value: Any) -> str:
+	"""The signature without annotations, which render differently per version."""
 	try:
-		return str(inspect.signature(value))
+		signature = inspect.signature(value)
 	except (TypeError, ValueError):
 		return "(...)"
+	parameters = [parameter.replace(annotation=inspect.Parameter.empty) for parameter in signature.parameters.values()]
+	normalised = signature.replace(parameters=parameters, return_annotation=inspect.Signature.empty)
+	return str(normalised)
+
+
+def interpreter() -> str:
+	return f"CPython {sys.version_info.major}.{sys.version_info.minor}"
 
 
 def describe(value: Any) -> list[str]:
@@ -72,7 +80,7 @@ def surface() -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-	lines = surface()
+	lines = [f"# generated with {interpreter()}", *surface()]
 	text = "\n".join(lines) + "\n"
 	if "--write" in argv:
 		SNAPSHOT.write_text(text, encoding="utf-8")
@@ -83,6 +91,14 @@ def main(argv: list[str]) -> int:
 		return 1
 	previous = SNAPSHOT.read_text(encoding="utf-8").splitlines()
 	current = text.splitlines()
+	if previous and previous[0].startswith("# generated with"):
+		generated = previous[0].removeprefix("# generated with ").strip()
+		if generated != interpreter():
+			# The rendering of ``inspect.signature`` is interpreter-specific; the
+			# snapshot is the gate in the lint job, which runs the version it was
+			# generated with.
+			print(f"snapshot generated with {generated}, running {interpreter()}: comparison skipped")
+			return 0
 	if previous == current:
 		print(f"public API unchanged ({len(current)} lines)")
 		return 0

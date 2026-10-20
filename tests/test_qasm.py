@@ -25,12 +25,16 @@ def test_simple_circuit() -> None:
 
 
 def test_measurement_registers() -> None:
+	# The key is the classical register, verbatim, so that importing the text
+	# back gives the same key (the importer is the other half of the round trip).
 	q0, q1 = vqubit.LineQubit.range(2)
 	circuit = vqubit.Circuit(vqubit.measure(q0, q1, key="m"))
 	text = vqubit.qasm(circuit)
-	assert "creg m_m[2];" in text
-	assert "measure q[0] -> m_m[0];" in text
-	assert "measure q[1] -> m_m[1];" in text
+	assert "creg m[2];" in text
+	assert "measure q[0] -> m[0];" in text
+	assert "measure q[1] -> m[1];" in text
+	with pytest.raises(ValueError):
+		vqubit.qasm(vqubit.Circuit(vqubit.measure(q0, key="not an identifier")))
 
 
 def test_rotation_with_angle() -> None:

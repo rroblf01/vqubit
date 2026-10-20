@@ -22,6 +22,14 @@ and `Linspace`/`Points` take Cirq's calling form and endpoint convention.
   the Cirq idioms do, and `vq.rz(0.3) ** 0.5` scales the angle to `vq.rz(0.15)`.
   `vq.FREDKIN` and `vq.CSWAP` stay non-powerable, like `cirq.CSWAP`. The plain
   gates themselves are the power gates now: see *Changed*.
+- **OpenQASM 2.0 import.** `circuit_from_qasm` is a hand-written parser (no
+  `ply`, no dependencies at all) that reads what `qasm` writes -- so the two
+  round-trip -- plus the `qelib1` gate set, `pi` expressions, custom `gate`
+  definitions (expanded inline), measurements, `reset`, `barrier` and `if(c==N)`
+  conditions; a malformed program raises `QasmParseError` with the line number.
+  The measurement key is now the classical register verbatim (`creg m[2]`)
+  instead of carrying an `m_` prefix, which is what lets the round trip keep the
+  key.
 - **The async entry points**, `run_async`, `run_sweep_async` and `run_batch_async`,
   as thin coroutines over the synchronous ones (vqubit's simulation is local, so
   there is nothing to await, but Cirq's call sites work).

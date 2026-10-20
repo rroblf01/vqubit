@@ -8,11 +8,15 @@ deep import (``from cirq.interop import ...``) keeps working.
 from __future__ import annotations
 
 from . import (
+	circuit_from_qasm,
+	qasm,
 	quirk_json_to_circuit,
 	quirk_url_to_circuit,
 )
 
 __all__ = [
+	"circuit_from_qasm",
+	"qasm",
 	"quirk_json_to_circuit",
 	"quirk_url_to_circuit",
 ]

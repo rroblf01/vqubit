@@ -21,6 +21,9 @@ print(recovered == circuit)   # True
 There are compressed variants too:
 
 ```python
+import vqubit as vq
+
+circuit = vq.Circuit(vq.H(vq.LineQubit(0)))
 data = vq.to_json_gzip(circuit)          # compressed bytes
 assert vq.read_json_gzip(data) == circuit
 ```
@@ -28,6 +31,8 @@ assert vq.read_json_gzip(data) == circuit
 You can ask for a value's type name and look a class up by it:
 
 ```python
+import vqubit as vq
+
 print(vq.json_cirq_type(vq.X))             # 'XPowGate'
 print(vq.cirq_type_from_json('LineQubit')) # <class 'vqubit._qubits.LineQubit'>
 ```
@@ -49,11 +54,11 @@ It produces:
 OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[2];
-creg m_m[2];
+creg m[2];
 h q[0];
 cx q[0],q[1];
-measure q[0] -> m_m[0];
-measure q[1] -> m_m[1];
+measure q[0] -> m[0];
+measure q[1] -> m[1];
 ```
 
 Gates without a native instruction (like the Fredkin gate) are expanded through
@@ -66,6 +71,8 @@ their decomposition before being written.
 natively:
 
 ```python
+import vqubit as vq
+
 q0, q1 = vq.LineQubit.range(2)
 circuit = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1))
 print(vq.quirk_url(circuit))   # https://algassert.com/quirk#circuit=...

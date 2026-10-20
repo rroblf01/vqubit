@@ -314,8 +314,15 @@ Las divergencias `permanent` están explicadas en
 
 #### 4. Interoperabilidad
 
-- [ ] **Import** de OpenQASM 2.0 (ida y vuelta con `qasm`). El importador de
-      `cirq.contrib` depende de `ply`; el nuestro será propio, sin dependencias.
+- [x] **Import** de OpenQASM 2.0 (ida y vuelta con `qasm`). `circuit_from_qasm`
+      es un analizador recursivo propio, sin `ply` ni ninguna dependencia:
+      entiende lo que escribe `qasm` (la ida y vuelta es byte a byte idéntica,
+      con la misma clave de medida), el juego de `qelib1`, expresiones con `pi`,
+      definiciones `gate` propias (expandidas), medidas, `reset`, `barrier` y
+      `if(c==N)`, y lanza `QasmParseError` con la línea cuando el programa está
+      mal. **Medido:** la puerta del hito —"ida y vuelta QASM estable sobre el
+      corpus de pruebas, sin dependencias nuevas"— la fijan 11 tests, uno de
+      ellos el corpus de cinco circuitos (texto idéntico y unitarias iguales).
 - [ ] Puente opcional `cirq` ↔ `vqubit` (conversión de circuitos) como extra.
 - [ ] Completar la cobertura de Quirk (más puertas) y congelar el esquema JSON.
 - [ ] Documentar la salida de `numpy`/`sympy` como contrato estable.
@@ -735,8 +742,15 @@ blanket. The `permanent` divergences are explained in
 
 #### 4. Interoperability
 
-- [ ] OpenQASM 2.0 **import** (round-trip with `qasm`). Cirq's importer in
-      `cirq.contrib` depends on `ply`; ours will be its own, dependency-free.
+- [x] OpenQASM 2.0 **import** (round-trip with `qasm`). `circuit_from_qasm` is a
+      recursive-descent parser of our own, with no `ply` and no dependencies: it
+      reads what `qasm` writes (the round trip is byte-for-byte identical, with
+      the same measurement key), the `qelib1` set, `pi` expressions, custom
+      `gate` definitions (expanded), measurements, `reset`, `barrier` and
+      `if(c==N)`, and raises `QasmParseError` with the line number on a
+      malformed program. **Measured:** the milestone gate -- "QASM round-trip
+      stable over the test corpus, with no new dependencies" -- is pinned by 11
+      tests, one of them a five-circuit corpus (identical text and unitaries).
 - [ ] Optional `cirq` ↔ `vqubit` bridge (circuit conversion) as an extra.
 - [ ] Complete Quirk coverage (more gates) and freeze the JSON schema.
 - [ ] Document `numpy`/`sympy` output as a stable contract.

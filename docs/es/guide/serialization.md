@@ -22,6 +22,9 @@ print(recuperado == circuito)   # True
 También hay variantes comprimidas:
 
 ```python
+import vqubit as vq
+
+circuito = vq.Circuit(vq.H(vq.LineQubit(0)))
 datos = vq.to_json_gzip(circuito)          # bytes comprimidos
 assert vq.read_json_gzip(datos) == circuito
 ```
@@ -29,6 +32,8 @@ assert vq.read_json_gzip(datos) == circuito
 Puedes consultar el tipo de un valor y buscar la clase por su nombre:
 
 ```python
+import vqubit as vq
+
 print(vq.json_cirq_type(vq.X))             # 'XPowGate'
 print(vq.cirq_type_from_json('LineQubit')) # <class 'vqubit._qubits.LineQubit'>
 ```
@@ -50,15 +55,43 @@ Produce:
 OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[2];
-creg m_m[2];
+creg m[2];
 h q[0];
 cx q[0],q[1];
-measure q[0] -> m_m[0];
-measure q[1] -> m_m[1];
+measure q[0] -> m[0];
+measure q[1] -> m[1];
 ```
 
 Las puertas sin instrucción nativa (como la de Fredkin) se expanden con su
-descomposición antes de escribirse.
+descomposición antes de escribirse. La clave de medida es el registro clásico,
+tal cual, para que el texto se pueda volver a leer con la misma clave.
+
+Y se lee con `circuit_from_qasm`, que es un analizador propio (sin `ply` ni
+ninguna otra dependencia):
+
+```python
+import vqubit as vq
+
+circuito = vq.circuit_from_qasm("""
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg c[2];
+h q[0];
+cx q[0],q[1];
+measure q[0] -> c[0];
+measure q[1] -> c[1];
+""")
+
+print([(type(op.gate).__name__, op.qubits) for op in circuito.all_operations()])
+assert vq.qasm(circuito) == vq.qasm(vq.circuit_from_qasm(vq.qasm(circuito)))
+```
+
+Entiende el juego de puertas de `qelib1` (`u3`, `u2`, `u1`, `x`…`tdg`, `sx`,
+`rx`/`ry`/`rz`, `cx`/`cz`/`cy`/`ch`/`swap`/`ccx`, sus formas controladas),
+expresiones con `pi`, definiciones `gate` propias (que expande en línea),
+medidas, `reset`, `barrier` y las condicionales `if(c==N)`. Un programa mal
+formado lanza `vq.QasmParseError` con el número de línea.
 
 ## Quirk
 
@@ -67,6 +100,8 @@ descomposición antes de escribirse.
 forma nativa:
 
 ```python
+import vqubit as vq
+
 q0, q1 = vq.LineQubit.range(2)
 circuito = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1))
 print(vq.quirk_url(circuito))   # https://algassert.com/quirk#circuit=...

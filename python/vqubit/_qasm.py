@@ -9,6 +9,7 @@ the CNOT/Toffoli/CNOT sequence it decomposes into.
 from __future__ import annotations
 
 import math
+import re
 from typing import Any
 
 from ._circuits import Circuit
@@ -102,7 +103,7 @@ def _operation_lines(operation: Operation, qubit_ids: dict[Qid, str], indent: st
 	qubits = [qubit_ids[q] for q in operation.qubits]
 
 	if isinstance(gate, MeasurementGate):
-		register = f"m_{gate.key}"
+		register = _register_name(gate.key)
 		return [f"{indent}measure {qubits[i]} -> {register}[{i}];" for i in range(len(qubits))]
 
 	instruction = _gate_instruction(gate, qubits)
@@ -117,6 +118,20 @@ def _operation_lines(operation: Operation, qubit_ids: dict[Qid, str], indent: st
 		return lines
 
 	raise TypeError(f"{gate!r} cannot be written as OpenQASM 2.0")
+
+
+_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+
+
+def _register_name(key: str) -> str:
+	"""The classical register for a measurement key.
+
+	The key is used verbatim so that import/export round-trips, which needs it to
+	be a valid OpenQASM identifier.
+	"""
+	if not _IDENTIFIER.match(key):
+		raise ValueError(f"the measurement key {key!r} is not a valid OpenQASM identifier")
+	return key
 
 
 def _measurement_register_sizes(operations: list[Operation]) -> dict[str, int]:
@@ -148,7 +163,7 @@ def qasm(value: Any) -> str:
 		lines.extend(_HEADER)
 		lines.append(f"qreg q[{len(qubits)}];")
 		for key, size in _measurement_register_sizes(operations).items():
-			lines.append(f"creg m_{key}[{size}];")
+			lines.append(f"creg {_register_name(key)}[{size}];")
 
 	for operation in operations:
 		lines.extend(_operation_lines(operation, qubit_ids, ""))

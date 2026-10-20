@@ -432,6 +432,7 @@ from ._protocols_extra import (
 	with_rescoped_keys,
 )
 from ._qasm import QasmArgs, qasm
+from ._qasm_import import QasmParseError, circuit_from_qasm
 from ._qis import (
 	bloch_vector_from_state_vector,
 	density_matrix,
@@ -910,6 +911,7 @@ __all__ = [
 	"ProjectorSum",
 	"QasmArgs",
 	"QasmOutput",
+	"QasmParseError",
 	"Qid",
 	"QuantumFourierTransformGate",
 	"QuantumState",
@@ -1079,6 +1081,7 @@ __all__ = [
 	"chosen_angle_to_canonical_half_turns",
 	"chosen_angle_to_half_turns",
 	"circuit_diagram_info",
+	"circuit_from_qasm",
 	"circuits",
 	"cirq_type_from_json",
 	"commutes",

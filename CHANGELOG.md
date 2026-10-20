@@ -178,6 +178,21 @@ tests with coverage at 95 %.
   it that way: a new public symbol without one fails CI. Type aliases and plain
   constants are exempt, since Python has nowhere to attach a docstring.
 
+- **`vqubit.deprecated` and `vqubit.warn_deprecated`**: the mechanism the
+  deprecation cycle is written with. The decorator works on functions and
+  classes, warns with `DeprecationWarning` on every use, names the replacement
+  and the removal version, and keeps the wrapped object's name, docstring and
+  signature.
+- **A stability page** (`docs/{es,en}/guide/stability.md`): what counts as public
+  API, what each SemVer number means here, how something is deprecated and
+  removed, and the supported platforms.
+- **`tools/check_api_annotations.py`**: every public callable must be fully
+  annotated (773 of 773 are), checked in CI next to the docstring ratchet.
+- **`towncrier`** for release notes: `changelog.d/` takes one fragment per
+  change, `towncrier build --version X` writes the section into `CHANGELOG.md`
+  without touching the hand-written history, and a test checks that the draft
+  picks the fragment up.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

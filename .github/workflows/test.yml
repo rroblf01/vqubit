@@ -170,6 +170,9 @@ jobs:
       - name: public API docstrings
         run: .venv/bin/python tools/check_api_docs.py
 
+      - name: public API annotations
+        run: .venv/bin/python tools/check_api_annotations.py
+
       # A change to the public API has to be deliberate: if this fails, update
       # the snapshot and say whether the change is major, minor or a patch.
       - name: public API surface

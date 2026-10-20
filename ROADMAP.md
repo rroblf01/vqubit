@@ -137,17 +137,24 @@ Las divergencias `permanent` están explicadas en
       `import vqubit.vis` funcionan como en Cirq; solo `cirq.contrib` no existe,
       a propósito (su importador QASM necesita el tercero `ply`). Reflejado en
       `tests/test_cirq_parity.py` y en el arnés.
-- [ ] Congelar la superficie pública y declarar la política SemVer en detalle,
-      incluida la decisión sobre los nombres de las clases de potencia, ya
-      tomada: `vq.CZ` *es* un `CZPowGate`, como en Cirq (ver el eje 2).
-- [ ] Política de deprecación con **mecanismo**: un ayudante que emita
-      `DeprecationWarning`, ventana mínima, guía de migración en `CHANGELOG.md` y
-      un test que compruebe que el aviso se emite de verdad.
-- [ ] CI de compatibilidad de API (`griffe`, ya disponible en el entorno de
-      desarrollo) que falle ante cambios no intencionados.
-- [ ] Auditoría de `__all__` ↔ docstrings ↔ anotaciones; el CI falla si falta
-      cualquiera de los tres. **Medido:** 0 nombres sin anotación, **28** sin
-      docstring (todos los `Supports*`).
+- [x] **(0.9)** Superficie pública congelada y política SemVer escrita en
+      `docs/{es,en}/guide/stability.md`: qué es API pública, qué significa cada
+      número y qué plataformas se soportan. La decisión sobre las clases de
+      potencia ya estaba tomada: `vq.CZ` *es* un `CZPowGate`, como en Cirq.
+- [x] **(0.9)** Deprecación con **mecanismo**: `vqubit.deprecated` (decorador
+      para funciones y clases) y `vqubit.warn_deprecated` emiten
+      `DeprecationWarning` con el reemplazo y la versión de retirada; la ventana
+      mínima y la guía están en la página de estabilidad, y
+      `tests/test_deprecation_and_release.py` comprueba el aviso, el mensaje y
+      que se conservan nombre, docstring y firma.
+- [x] **(0.9)** CI de compatibilidad de API: `tools/check_api_surface.py` guarda
+      la firma de cada símbolo en `tools/api_snapshot.txt` y falla ante un cambio
+      sin declarar. Se hizo sin `griffe` (una dependencia menos): la
+      introspección ve lo mismo y además los miembros de clase.
+- [x] **(0.9)** Auditoría de `__all__` ↔ docstrings ↔ anotaciones, con los tres
+      en CI: `tools/check_api_docs.py` (1098 de 1098 documentados, línea base
+      vacía) y `tools/check_api_annotations.py` (773 de 773 callables públicos
+      totalmente anotados).
 
 #### 2. Paridad de comportamiento
 
@@ -367,10 +374,12 @@ Las divergencias `permanent` están explicadas en
 - [x] **(0.9)** Plantillas de issue (fallo y propuesta, con criterio de
       aceptación) y de PR (la lista completa de comprobaciones);
       `CITATION.cff`.
-- [ ] Notas de release automáticas (`towncrier`): hoy la disciplina es Keep a
-      Changelog a mano, con una sección `[Unreleased]` en cada cambio. Criterio:
-      `towncrier` genera la sección de la versión a partir de los fragmentos, sin
-      perder las entradas escritas a mano.
+- [x] **(0.9)** Notas de release automáticas (`towncrier`): cada cambio deja un
+      fragmento en `changelog.d/` (`<issue>.<tipo>.md`) y
+      `towncrier build --version X` genera la sección, sin tocar la historia
+      escrita a mano. El flujo está en `changelog.d/README.md` y en
+      `CONTRIBUTING.md`; `tests/test_deprecation_and_release.py` comprueba que el
+      borrador recoge el fragmento y no modifica `CHANGELOG.md`.
 - [ ] Autoría y agradecimientos; etiquetas de «good first issue» (requiere
       crear las etiquetas en GitHub).
 
@@ -631,17 +640,24 @@ blanket. The `permanent` divergences are explained in
       `import vqubit.vis` work as in Cirq; only `cirq.contrib` does not exist, on
       purpose (its QASM importer needs the third-party `ply`). Reflected in
       `tests/test_cirq_parity.py` and in the harness.
-- [ ] Freeze the public surface and spell out the SemVer policy, including the
+- [x] **(0.9)** Freeze the public surface and spell out the SemVer policy in
+      `docs/{es,en}/guide/stability.md`, including the
       decision on the power-class names, which is already made: `vq.CZ` *is* a
       `CZPowGate`, as in Cirq (see axis 2).
-- [ ] Deprecation policy with a **mechanism**: a helper that emits
-      `DeprecationWarning`, a minimum window, migration notes in `CHANGELOG.md`
-      and a test that the warning really fires.
-- [ ] API-compatibility CI (`griffe`, already available in the dev environment)
-      failing on unintended changes.
-- [ ] Audit `__all__` ↔ docstrings ↔ annotations; CI fails if any is missing.
-      **Measured:** 0 names without annotations, **28** without a docstring (all
-      the `Supports*`).
+- [x] **(0.9)** Deprecation with a **mechanism**: `vqubit.deprecated` (a
+      decorator for functions and classes) and `vqubit.warn_deprecated` emit a
+      `DeprecationWarning` naming the replacement and the removal version; the
+      window and the guide live in the stability page, and
+      `tests/test_deprecation_and_release.py` checks the warning, its message and
+      that name, docstring and signature survive.
+- [x] **(0.9)** API-compatibility CI: `tools/check_api_surface.py` snapshots the
+      signature of every public symbol in `tools/api_snapshot.txt` and fails on
+      an undeclared change. Done without `griffe` (one dependency less): runtime
+      introspection sees the same, plus the class members.
+- [x] **(0.9)** Audit `__all__` ↔ docstrings ↔ annotations, all three in CI:
+      `tools/check_api_docs.py` (1098 of 1098 documented, empty baseline) and
+      `tools/check_api_annotations.py` (773 of 773 public callables fully
+      annotated).
 
 #### 2. Behaviour parity
 

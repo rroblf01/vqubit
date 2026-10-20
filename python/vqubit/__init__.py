@@ -92,6 +92,7 @@ from ._compilation import (
 )
 from ._control_values import AbstractControlValues, ProductOfSums, SumOfProducts
 from ._controlled import ControlledOperation
+from ._deprecation import deprecated, warn_deprecated
 from ._devices import (
 	AQTDevice,
 	Device,
@@ -1107,6 +1108,7 @@ __all__ = [
 	"density_matrix_kronecker_product",
 	"dephase_measurements",
 	"depolarize",
+	"deprecated",
 	"devices",
 	"diagonalize_real_symmetric_and_sorted_diagonal_matrices",
 	"diagonalize_real_symmetric_matrix",
@@ -1352,6 +1354,7 @@ __all__ = [
 	"vis",
 	"von_neumann_entropy",
 	"wait",
+	"warn_deprecated",
 	"with_debug",
 	"with_key_path",
 	"with_key_path_prefix",

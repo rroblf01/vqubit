@@ -62,6 +62,12 @@ though the implementation is organised into private modules under
   English page under `docs/es` and `docs/en`.
 - **Commits** are written in English, one logical change each, with no
   co-author trailer.
+- **Every change gets a changelog fragment**: one small file in `changelog.d/`,
+  named `<issue-or-pr>.<type>.md` (`+name.<type>.md` when there is no issue).
+  `towncrier build --version X` folds them into `CHANGELOG.md`; see
+  `changelog.d/README.md` for the types. A deprecation also needs the
+  `vqubit.deprecated` decorator and a test, per
+  [the stability policy](docs/en/guide/stability.md).
 
 ## Checks
 

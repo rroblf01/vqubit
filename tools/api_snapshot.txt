@@ -891,6 +891,7 @@ density_matrix_from_state_vector: function density_matrix_from_state_vector(stat
 density_matrix_kronecker_product: function density_matrix_kronecker_product(t1, t2)
 dephase_measurements: function dephase_measurements(circuit, *, atol=1e-08)
 depolarize: function depolarize(probability, num_qubits=1)
+deprecated: function deprecated(name, *, since, replacement=None, removed_in=None)
 devices: module vqubit.devices
 diagonalize_real_symmetric_and_sorted_diagonal_matrices: function diagonalize_real_symmetric_and_sorted_diagonal_matrices(symmetric_matrix, diagonal_matrix, *, rtol=1e-05, atol=1e-08, check_preconditions=True)
 diagonalize_real_symmetric_matrix: function diagonalize_real_symmetric_matrix(matrix, *, rtol=1e-05, atol=1e-08, check_preconditions=True)
@@ -1136,6 +1137,7 @@ value_equality: function value_equality(cls=None, *, unhashable=False)
 vis: module vqubit.vis
 von_neumann_entropy: function von_neumann_entropy(density, *, base=2.0)
 wait: function wait(duration_nanos, num_qubits=1)
+warn_deprecated: function warn_deprecated(name, *, since, replacement=None, removed_in=None, stacklevel=2)
 with_debug: function with_debug(value)
 with_key_path: function with_key_path(key, path)
 with_key_path_prefix: function with_key_path_prefix(key, prefix)

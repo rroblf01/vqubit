@@ -30,6 +30,7 @@ dev = [
 	"pytest==9.1.1",
 	"coverage[toml]==7.13.4",
 	"hypothesis==6.140.3",
+	"towncrier==25.8.0",
 	"ruff==0.17.1",
 	"ty==0.0.88",
 	"build==1.6.1",
@@ -92,3 +93,54 @@ docstring-code-format = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+# Release notes: every change lands as a fragment in `changelog.d/`, and
+# `towncrier build --version X` folds them into CHANGELOG.md. The hand-written
+# sections are kept: towncrier only owns the part it generates.
+[tool.towncrier]
+name = "vqubit"
+filename = "CHANGELOG.md"
+directory = "changelog.d"
+title_format = "## [{version}] - {project_date}"
+underlines = ["", ""]
+issue_format = "https://github.com/rroblf01/vqubit/issues/{issue}"
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "docs"
+name = "Documentation"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "tests"
+name = "Tests"
+showcontent = true

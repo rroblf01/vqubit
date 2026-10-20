@@ -39,7 +39,7 @@ jobs:
         run: .venv/bin/mkdocs build --strict
 
       - name: upload the site
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site
 

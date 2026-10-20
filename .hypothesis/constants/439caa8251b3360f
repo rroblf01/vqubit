@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_qis.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1e-12, 1e-08, 1.0, 2.0, 'density_matrix', 'fidelity', 'kraus_channel', 'partial_trace', 'random_state_vector', 'state_vector', 'values', 'vectors', 'von_neumann_entropy']

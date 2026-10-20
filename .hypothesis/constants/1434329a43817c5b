@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_channels_extra.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1e-08, 1.0, 'I', 'KrausChannel', 'MixedUnitaryChannel', 'RandomGateChannel', 'StatePreparation', 'X', 'Y', 'Z', 'gamma', 'p', 'p_x', 'p_x + p_y + p_z', 'p_y', 'p_z']

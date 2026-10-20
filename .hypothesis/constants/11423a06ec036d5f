@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/transformers.py
+# hypothesis_version: 6.140.3
+
+['CZTargetGateset', 'LineInitialMapper', 'MappingManager', 'RouteCQC', 'TRANSFORMER', 'TransformerContext', 'TransformerLogger', 'align_left', 'align_right', 'defer_measurements', 'dephase_measurements', 'drop_empty_moments', 'eject_phased_paulis', 'eject_z', 'expand_composite', 'index_tags', 'is_negligible_turn', 'map_moments', 'map_operations', 'merge_moments', 'merge_operations', 'remove_tags', 'stratified_circuit', 'toggle_tags', 'transformer', 'unroll_circuit_op']

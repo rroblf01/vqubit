@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_transformers.py
+# hypothesis_version: 6.140.3
+
+[1e-08, 'align_left', 'align_right', 'drop_empty_moments', 'expand_composite', 'map_moments', 'map_operations', 'stratified_circuit', 'toggle_tags']

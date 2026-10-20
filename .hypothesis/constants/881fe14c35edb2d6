@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_experiments.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1000, '0', '1', 'linear_xeb_fidelity', 'log_xeb_fidelity', 'm', 'xeb_fidelity']

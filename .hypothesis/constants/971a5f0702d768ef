@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_sim_step.py
+# hypothesis_version: 6.140.3
+
+[0.0, 'CliffordTrialResult', 'SimulationState', 'SparseSimulatorStep', 'StabilizerSampler', 'StateVectorMixin', 'StepResult', 'XYZ', 'density_matrix', 'final_density_matrix', 'final_state_vector', 'measure_state_vector', 'sample_state_vector', 'sample_sweep', 'state_vector']

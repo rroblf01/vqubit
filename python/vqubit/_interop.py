@@ -140,9 +140,13 @@ def quirk_url(circuit: Circuit) -> str:
 	return _QUIRK_URL + encoded
 
 
-def _gate_from_entry(entry: str) -> Any:
+def _gate_from_entry(entry: Any) -> Any:
 	"""The gate a Quirk column entry names, or ``None`` for a wire."""
-	if entry in (1, "-"):
+	if not isinstance(entry, str):
+		# Quirk marks a wire with ``1`` or ``"-"``; anything else that is not a
+		# string is not a gate either, and the caller reports it.
+		return None
+	if entry == "-":
 		return None
 	if entry == "H":
 		return HPowGate(exponent=1)
@@ -155,8 +159,19 @@ def _gate_from_entry(entry: str) -> Any:
 def quirk_json_to_circuit(json_data: Any) -> Circuit:
 	"""Build a circuit from a Quirk circuit JSON document."""
 	data = json.loads(json_data) if isinstance(json_data, str) else json_data
+	if not isinstance(data, dict) or not isinstance(data.get("cols"), list):
+		raise ValueError("a Quirk circuit is a JSON object with a 'cols' list")
 	cols = data["cols"]
-	names = data.get("qubits") or [f"q{i}" for i in range(len(cols[0]))]
+	if not all(isinstance(column, list) for column in cols):
+		raise ValueError("every Quirk column must be a list of entries")
+	width = len(cols[0]) if cols else 0
+	names = data.get("qubits") or [f"q{index}" for index in range(width)]
+	if not isinstance(names, list) or any(not isinstance(name, str) for name in names):
+		raise ValueError("the 'qubits' entry of a Quirk circuit must be a list of names")
+	if len(names) < width:
+		raise ValueError("the 'qubits' list is shorter than the circuit's columns")
+	if any(len(column) != width for column in cols):
+		raise ValueError("every Quirk column must have one entry per qubit")
 	qubits = [NamedQubit(name) for name in names]
 
 	operations: list[Operation] = []
@@ -237,6 +252,8 @@ def _measure(qubits: list[Qid]) -> Operation:
 
 def quirk_url_to_circuit(url: str) -> Circuit:
 	"""Build a circuit from a Quirk URL."""
+	if not isinstance(url, str) or "circuit=" not in url:
+		raise ValueError("a Quirk URL contains a 'circuit=' payload")
 	payload = url.split("circuit=", 1)[1]
 	payload += "=" * (-len(payload) % 4)
 	decoded = base64.urlsafe_b64decode(payload).decode()

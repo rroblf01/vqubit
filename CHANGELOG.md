@@ -81,6 +81,23 @@ tests with coverage at 95 %.
   `X^(1.0 * t)`, because the identity elements of `*`, `+` and `/` are no longer
   left in the expression tree.
 
+- **The Quirk and JSON importers only raise `ValueError`.** A malformed
+  document used to leak a `KeyError` (`'cols'`, `'qubits'`, a missing field of a
+  named type), an `AttributeError` (an entry that is not a string) or an
+  `IndexError` (a URL without `circuit=`, an empty `cols`). They now validate
+  the document's shape and wrap the rest in `ValueError`, which is what the
+  fuzzers in `tests/test_fuzz_parsers.py` pin down.
+- **`PauliString`'s constructor accepts a mapping keyed by any qid type.**
+  `dict[LineQubit, Pauli]` did not match `Mapping[Qid, …]` under an invariant
+  key type, so a literal raised a type error in strict checkers.
+
+### Tests (0.5)
+
+- Property tests with Hypothesis for the algebraic laws (powers, rotation sums,
+  unitarity, the circuit unitary against the simulator, QASM/JSON round trips,
+  Pauli multiplication and expectation values, sweep lengths) and
+  deterministic fuzzers for the three parsers.
+
 ### Changed
 
 - `sub_state_vector` raises `ValueError` for a state that is not normalized,

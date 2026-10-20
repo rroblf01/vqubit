@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/sim.py
+# hypothesis_version: 6.140.3
+
+['CIRCUIT_LIKE', 'CliffordSimulator', 'CliffordState', 'CliffordTrialResult', 'SimulatesAmplitudes', 'SimulatesFinalState', 'SimulatesSamples', 'SimulationState', 'SimulationStateBase', 'Simulator', 'SimulatorBase', 'SparseSimulatorStep', 'StabilizerSampler', 'StateVectorMixin', 'StepResult', 'StepResultBase', 'final_density_matrix', 'final_state_vector', 'measure_state_vector', 'sample', 'sample_state_vector', 'sample_sweep']

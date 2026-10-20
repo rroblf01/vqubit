@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/interop.py
+# hypothesis_version: 6.140.3
+
+['circuit_from_qasm', 'from_cirq', 'qasm', 'quirk_url', 'quirk_url_to_circuit', 'to_cirq']

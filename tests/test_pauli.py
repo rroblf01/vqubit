@@ -88,7 +88,7 @@ def test_pauli_string_validates_types() -> None:
 	with pytest.raises(TypeError):
 		vqubit.PauliString({vqubit.LineQubit(0): vqubit.H})
 	with pytest.raises(TypeError):
-		vqubit.PauliString({0: vqubit.Pauli.X})  # ty: ignore[invalid-argument-type]
+		vqubit.PauliString({0: vqubit.Pauli.X})
 
 
 def test_pauli_string_value_equality() -> None:

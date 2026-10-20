@@ -258,8 +258,17 @@ def _decode(data: Any) -> Any:
 
 
 def read_json(text: str) -> Any:
-	"""Rebuild a value from its JSON representation."""
-	return _decode(json.loads(text))
+	"""Rebuild a value from its JSON representation.
+
+	A document that is not a vqubit value raises ``ValueError`` (of which
+	``json.JSONDecodeError`` is a subclass) instead of leaking a ``KeyError``
+	from an incomplete object.
+	"""
+	document = json.loads(text)
+	try:
+		return _decode(document)
+	except (AttributeError, IndexError, KeyError, TypeError) as error:
+		raise ValueError(f"malformed vqubit JSON: {error}") from error
 
 
 def read_json_gzip(data: bytes) -> Any:

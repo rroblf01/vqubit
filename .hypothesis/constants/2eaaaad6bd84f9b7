@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/qis.py
+# hypothesis_version: 6.140.3
+
+['CliffordTableau', 'QUANTUM_STATE_LIKE', 'QuantumState', 'STATE_VECTOR_LIKE', 'StabilizerState', 'choi_to_kraus', 'density_matrix', 'dirac_notation', 'eye_tensor', 'fidelity', 'kraus_to_choi', 'one_hot', 'operation_to_choi', 'quantum_state', 'validate_indices', 'validate_qid_shape', 'von_neumann_entropy']

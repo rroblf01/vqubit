@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_pauli.py
+# hypothesis_version: 6.140.3
+
+[1e-07, 0.0001, 0.5, ' + ', '*', '0', 'I', 'TKey', 'X', 'Y', 'Z', 'ravel']

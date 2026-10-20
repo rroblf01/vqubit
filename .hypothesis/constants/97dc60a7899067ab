@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_clifford.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1e-12, 1e-07, 0.5, 1.5, '+ ', '- ', 'I', 'I ', 'X', 'X ', 'Y', 'Y ', 'Z', 'Z ']

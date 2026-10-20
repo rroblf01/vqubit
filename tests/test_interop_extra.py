@@ -186,7 +186,7 @@ def test_quirk_round_trips_a_controlled_y() -> None:
 def test_quirk_json_rejects_malformed_documents() -> None:
 	with pytest.raises(json.JSONDecodeError):
 		vqubit.quirk_json_to_circuit("not json")
-	with pytest.raises(KeyError):
+	with pytest.raises(ValueError, match="'cols'"):
 		vqubit.quirk_json_to_circuit({"qubits": ["q0"]})
 
 
@@ -245,7 +245,9 @@ def test_json_rejects_malformed_text_and_unknown_types() -> None:
 		vqubit.read_json("{")
 	with pytest.raises(ValueError, match="no decoder registered"):
 		vqubit.read_json('{"cirq_type": "Nope"}')
-	with pytest.raises(KeyError):
+	# A document that names a type but lacks its fields is a malformed document,
+	# not a KeyError leaking out of the decoder.
+	with pytest.raises(ValueError, match="malformed vqubit JSON"):
 		vqubit.read_json('{"cirq_type": "LineQubit"}')
 
 

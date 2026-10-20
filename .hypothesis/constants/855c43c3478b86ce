@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_compat.py
+# hypothesis_version: 6.140.3
+
+['B', 'HAS_NUMPY', 'HAS_SYMPY', '__cirq_debug__', 'asarray', 'asvector', 'd', 'flat_from_matrix', 'flat_from_vector', 'is_numpy_array', 'matrix_from_flat', 'native_complex_view', 'numpy', 'sympy', 'to_nested_list', 'vector_from_flat']

@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_work.py
+# hypothesis_version: 6.140.3
+
+[1000000, 'CircuitSampleJob', 'Collector', 'PauliSumCollector', 'ZerosSampler', 'inf', 'out']

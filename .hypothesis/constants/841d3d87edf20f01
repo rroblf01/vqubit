@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_qubit_manager.py
+# hypothesis_version: 6.140.3
+
+['BorrowableQubit', 'CleanQubit', 'GreedyQubitManager', 'QubitManager', 'SimpleQubitManager']

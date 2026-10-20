@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_engine.py
+# hypothesis_version: 6.140.3
+
+['Engine', 'get_engine', 'param_resolvers', 'sampler']

@@ -372,8 +372,14 @@ Las divergencias `permanent` están explicadas en
       (`UPSTREAM.md` §1 y §2: el `.pyi` genera los enums como anotaciones y
       escribe `__init__` donde el constructor vive en `tp_new`). Con el enum
       parcheado a mano, hoy quedan 6 errores.
-- [ ] Tests de propiedades (`hypothesis`) y *fuzzers* de los parsers
-      QASM/Quirk/JSON.
+- [x] **(0.5)** Tests de propiedades (`hypothesis`) y *fuzzers* de los parsers
+      QASM/Quirk/JSON: `tests/test_properties.py` (leyes algebraicas: potencias,
+      rotaciones, unitariedad, unitario del circuito contra el simulador,
+      round-trip QASM/JSON, álgebra de Pauli, barridos) y
+      `tests/test_fuzz_parsers.py` (mutaciones deterministas; los parsers solo
+      lanzan `QasmParseError`/`ValueError`). Los *fuzzers* destaparon y se
+      arreglaron los `KeyError`/`AttributeError`/`IndexError` que se escapaban
+      de los importadores de Quirk y JSON.
 - [ ] `mypy`/`pyright` en modo estricto junto a `ty`; escaneo semanal de
       dependencias y seguridad.
 
@@ -892,8 +898,14 @@ blanket. The `permanent` divergences are explained in
       (`UPSTREAM.md` §1 and §2: the `.pyi` writes enums as annotations and emits
       `__init__` where the constructor lives in `tp_new`). With the enum patched
       by hand, 6 errors remain today.
-- [ ] Property tests (`hypothesis`) and *fuzzers* for the QASM/Quirk/JSON
-      parsers.
+- [x] **(0.5)** Property tests (`hypothesis`) and *fuzzers* for the
+      QASM/Quirk/JSON parsers: `tests/test_properties.py` (algebraic laws:
+      powers, rotations, unitarity, the circuit unitary against the simulator,
+      QASM/JSON round trips, Pauli algebra, sweeps) and
+      `tests/test_fuzz_parsers.py` (deterministic mutations; the parsers only
+      raise `QasmParseError`/`ValueError`). The fuzzers found — and the fix
+      removed — the `KeyError`/`AttributeError`/`IndexError` that leaked out of
+      the Quirk and JSON importers.
 - [ ] `mypy`/`pyright` in strict mode alongside `ty`; weekly dependency and
       security scanning.
 

@@ -173,7 +173,7 @@ class PauliString:
 
 	def __init__(
 		self,
-		qubit_pauli_map: Mapping[Qid, PauliLike] | Iterable[tuple[Qid, PauliLike]] | None = None,
+		qubit_pauli_map: Mapping[Any, PauliLike] | Iterable[tuple[Any, PauliLike]] | None = None,
 		coefficient: complex = 1,
 	) -> None:
 		items = dict(qubit_pauli_map) if qubit_pauli_map is not None else {}

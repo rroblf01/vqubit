@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/vis.py
+# hypothesis_version: 6.140.3
+
+['Heatmap', 'get_state_histogram', 'integrated_histogram', 'plot_density_matrix', 'plot_state_histogram', 'relative_luminance']

@@ -13,7 +13,7 @@ stream and reshapes the results, so the whole run happens in one native call.
 from __future__ import annotations
 
 import random
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Any
 
 import vqubit_native as _native
@@ -910,6 +910,46 @@ class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 			targets = [index[q] for q in operation.qubits]
 			tableau.apply(code, targets[0], targets[1] if len(targets) > 1 else 0)
 		return CliffordSimulationResult(CliffordState(tableau, qubits), param_resolver)
+
+	def simulate_moment_steps(
+		self,
+		program: Circuit,
+		param_resolver: Any = None,
+		qubit_order: Sequence[Qid] | None = None,
+	) -> Iterator[Any]:
+		"""Yield the stabilizer state after each moment of a Clifford circuit.
+
+		Cirq yields one result per moment. Each result here is rebuilt from the
+		operations applied so far, because the native tableau has no ``copy``
+		(``UPSTREAM.md`` §7a); that is quadratic in the number of moments, which
+		is fine for the step-by-step inspection this method is for.
+		"""
+		from ._sim import _resolve_program
+		from ._sim_step import CliffordSimulatorStepResult
+
+		program = _resolve_program(program, param_resolver)
+		qubits = self._resolve_qubits(program, qubit_order)
+		index = {q: i for i, q in enumerate(qubits)}
+		applied: list[tuple[Any, int, int]] = []
+		for moment in program.moments:
+			for operation in moment.operations:
+				gate = operation.gate
+				if isinstance(gate, MeasurementGate):
+					raise ValueError(
+						"simulate_moment_steps() cannot run a circuit with measurements; use run()"
+					)
+				self._refuse_unsupported(operation)
+				code = _instruction_code(gate)
+				if code is None:
+					continue
+				targets = [index[q] for q in operation.qubits]
+				applied.append((code, targets[0], targets[1] if len(targets) > 1 else 0))
+			tableau = _native.NativeTableau(len(qubits))
+			for code, first, second in applied:
+				tableau.apply(code, first, second)
+			yield CliffordSimulatorStepResult(
+				qubits=qubits, measurements={}, state=CliffordState(tableau, qubits)
+			)
 
 	def run(
 		self,

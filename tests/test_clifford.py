@@ -81,3 +81,25 @@ def test_repetitions_must_be_positive() -> None:
 	q0 = vqubit.LineQubit(0)
 	with pytest.raises(ValueError):
 		vqubit.CliffordSimulator().run(vqubit.Circuit(vqubit.measure(q0)), repetitions=0)
+
+
+def test_simulate_moment_steps_yields_the_state_after_each_moment() -> None:
+	q0, q1 = vqubit.LineQubit.range(2)
+	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.CNOT(q0, q1), vqubit.X(q1))
+	steps = list(vqubit.CliffordSimulator().simulate_moment_steps(circuit))
+	assert len(steps) == 3
+	# Each step is the state of the circuit up to that moment.
+	for index, step in enumerate(steps):
+		prefix = vqubit.Circuit(list(circuit.moments)[: index + 1])
+		expected = vqubit.CliffordSimulator().simulate(prefix, qubit_order=(q0, q1)).final_state
+		assert all(
+			abs(got - want) < 1e-9 for got, want in zip(step.state_vector(), expected.state_vector(), strict=True)
+		)
+		assert step.clifford_state.stabilizers() == expected.stabilizers()
+	# The Bell moment is stabilized by XX and ZZ.
+	assert sorted(str(stabilizer) for stabilizer in steps[1].clifford_state.stabilizers()) == [
+		"X(0)*X(1)",
+		"Z(0)*Z(1)",
+	]
+	with pytest.raises(ValueError, match="with measurements"):
+		list(vqubit.CliffordSimulator().simulate_moment_steps(vqubit.Circuit(vqubit.measure(q0, key="m"))))

@@ -178,6 +178,11 @@ compute-bound.
 
 ## 7. `NativeTableau` has no `copy()`, `CliffordOp` is missing gates, `NativeDensity` has no `set_density_matrix`
 
+> **Update (0.9):** the missing `copy()` is no longer a blocker.
+> `CliffordSimulator.simulate_moment_steps` rebuilds the tableau per moment by
+> replaying the operations seen so far (O(moments²) rather than O(moments)); a
+> `copy()` would make that linear and is still the right fix upstream.
+
 **Request, two related gaps in the stabilizer kernels.**
 
 **7a. No `copy()` on `NativeTableau`.** `vqubit.CliffordSimulator` wants a

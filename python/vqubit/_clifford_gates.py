@@ -430,7 +430,17 @@ class CliffordGate(Gate):
 		return CliffordGate(unitary=result, num_qubits=self._num_qubits)
 
 	def _value_equality_values_(self) -> Any:
-		return (tuple(tuple(row) for row in self._unitary_matrix), self._num_qubits)
+		# A Clifford gate is defined up to a global phase, and a matrix computed
+		# by multiplying two others carries floating-point noise (``CZSWAP ** 3``
+		# against ``CZSWAP``). Normalise the phase away and round, so equal gates
+		# compare equal, which is what comparing Cirq's tableaux amounts to.
+		flat = [complex(entry) for row in self._unitary_matrix for entry in row]
+		pivot = next((entry for entry in flat if abs(entry) > 1e-9), 1 + 0j)
+		phase = pivot / abs(pivot)
+		return (
+			tuple((round((entry / phase).real, 9), round((entry / phase).imag, 9)) for entry in flat),
+			self._num_qubits,
+		)
 
 	def __str__(self) -> str:
 		return f"CliffordGate({self._num_qubits}q)"

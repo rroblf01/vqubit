@@ -364,7 +364,10 @@ def check_diagram(report: Report) -> None:
 #: ``equality`` section skips them instead of pretending to check them. Recorded
 #: in ``ROADMAP.md``: until it is closed, ``vq.CZSWAP ** 3 != vq.CZSWAP`` where
 #: Cirq says they are equal.
-EQUALITY_EXEMPT = frozenset({"CZSWAP", "CXSWAP"})
+#: Empty: the Clifford gates compare their matrix up to a global phase now, so
+#: they answer the power question as Cirq does. The harness test pins the set,
+#: so a new exemption has to be a deliberate edit.
+EQUALITY_EXEMPT: frozenset[str] = frozenset()
 
 #: Powers to use for the equality check: two whole turns, one more (which the
 #: period folds back) and the inverse (which does not fold for every gate).

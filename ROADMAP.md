@@ -266,10 +266,12 @@ Las divergencias `permanent` están explicadas en
       devuelve un `pandas.DataFrame` y acepta `params=` (un barrido); vqubit no
       puede devolver un `DataFrame` sin depender de pandas, así que devuelve su
       `Result` y el barrido se escribe con `run_sweep`.
-- [ ] **`simulate_moment_steps` del simulador de Clifford.** Necesita copiar el
-      `NativeTableau` en cada paso y **vcraft no expone `copy`** (`UPSTREAM.md`
-      §7); sin copia, todos los pasos compartirían el estado final. **Criterio:**
-      una foto por momento, comparada con Cirq.
+- [x] **(0.9)** **`simulate_moment_steps` del simulador de Clifford.** Como
+      vcraft no expone `NativeTableau.copy` (`UPSTREAM.md` §7a), cada paso se
+      reconstruye reaplicando las operaciones vistas hasta ese momento: es
+      O(momentos²) en vez de O(momentos), aceptable para inspección paso a paso y
+      documentado. **Medido:** una foto por momento, igual a simular el prefijo
+      (`tests/test_clifford.py`). La copia nativa solo lo haría lineal.
 - [ ] **El conjunto de puertas de Clifford es más pequeño que el de stim.** Cirq
       acepta `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` y `ZZ`
       (`has_stabilizer_effect` es `True`) y el *tableau* nativo de vqubit no tiene
@@ -754,10 +756,12 @@ blanket. The `permanent` divergences are explained in
       a `pandas.DataFrame` and takes `params=` (a sweep); vqubit cannot return a
       `DataFrame` without depending on pandas, so it returns its own `Result` and
       the sweep case is written with `run_sweep`.
-- [ ] **`simulate_moment_steps` on the Clifford simulator.** It needs a copy of
-      the `NativeTableau` per step and **vcraft does not expose `copy`**
-      (`UPSTREAM.md` §7); without one, every step would share the final state.
-      **Criterion:** one snapshot per moment, compared with Cirq.
+- [x] **(0.9)** **`simulate_moment_steps` on the Clifford simulator.** vcraft
+      does not expose `NativeTableau.copy` (`UPSTREAM.md` §7a), so each step is
+      rebuilt by replaying the operations seen so far: O(moments²) instead of
+      O(moments), fine for step-by-step inspection and documented. **Measured:**
+      one snapshot per moment, equal to simulating the prefix
+      (`tests/test_clifford.py`). A native copy would only make it linear.
 - [ ] **The Clifford gate set is smaller than stim's.** Cirq accepts
       `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` and `ZZ`
       (`has_stabilizer_effect` is `True`) and vqubit's native tableau has no such

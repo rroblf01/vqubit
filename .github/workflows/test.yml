@@ -128,6 +128,9 @@ jobs:
       - name: run the parity harness self-tests
         run: pytest tests/test_parity_harness.py
 
+      - name: compare the answers with Cirq on a grid
+        run: pytest tests/test_differential_cirq.py
+
   lint:
     name: lint and type check
     needs: build

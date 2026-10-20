@@ -133,6 +133,7 @@ CliffordSimulator: class CliffordSimulator(*, seed=None)
     method run(self, program, param_resolver=None, repetitions=1, *, qubit_order=None, seed=None)
     method sample(self, program, param_resolver=None, repetitions=1, *, qubit_order=None, seed=None)
     method simulate(self, program, param_resolver=None, qubit_order=None)
+    method simulate_moment_steps(self, program, param_resolver=None, qubit_order=None)
 CliffordSimulatorStepResult: class CliffordSimulatorStepResult(*, qubits, measurements, state)
     property clifford_state
     property state

@@ -800,8 +800,50 @@ class PhasedXZGate(Gate):
 			axis_phase_exponent=resolve_value(self._axis_phase_exponent, resolver),
 		)
 
+	def _canonical(self) -> PhasedXZGate:
+		"""The canonical exponents, as Cirq's ``PhasedXZGate._canonical`` finds them.
+
+		The X exponent is folded into ``[0, 1]`` (a negative one flips the axis
+		phase), a 180-degree X absorbs the Z rotation into the axis, and the Z
+		and axis exponents are folded into ``(-1, 1]``.
+		"""
+		x = self._x_exponent
+		z = self._z_exponent
+		a = self._axis_phase_exponent
+		if not is_symbolic(x):
+			if x < 0:
+				x = -x
+				a = a + 1
+			x = x % 2
+			if x == 0:
+				a = 0
+			elif x > 1.0:
+				x = 2 - x
+				a = a + 1
+		if x == 1 and z != 0:
+			a = a + z / 2
+			z = 0.0
+		if not is_symbolic(z):
+			z = z % 2
+			if z > 1.0:
+				z -= 2
+		if not is_symbolic(a):
+			a = a % 2
+			if a > 1.0:
+				a -= 2
+		return PhasedXZGate(x_exponent=x, z_exponent=z, axis_phase_exponent=a)
+
 	def _value_equality_values_(self) -> Any:
-		return (self._x_exponent, self._z_exponent, self._axis_phase_exponent)
+		if self._is_parameterized_():
+			return (self._x_exponent, self._z_exponent, self._axis_phase_exponent)
+		# Equality uses the canonical exponents modulo their period, so the many
+		# ways of writing the same gate compare equal (as in Cirq).
+		canonical = self._canonical()
+		return (
+			PeriodicValue(canonical._x_exponent, 2),
+			PeriodicValue(canonical._z_exponent, 2),
+			PeriodicValue(canonical._axis_phase_exponent, 2),
+		)
 
 	def _inverse_(self) -> PhasedXZGate:
 		# (Z^z PhX(x, a))^-1 = Z^-z PhX(-x, a + z).

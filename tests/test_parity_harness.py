@@ -51,15 +51,18 @@ def test_the_diagram_section_covers_the_plain_gates(parity: Any) -> None:
 def test_the_equality_section_covers_the_power_gates(parity: Any) -> None:
 	"""``gate ** k == gate`` must be compared, and the exemptions pinned.
 
-	``CZSWAP``/``CXSWAP`` are exempt because their value equality is the
-	tableau-versus-matrix contract (see ``ROADMAP.md``); pin the set so the
-	exemption cannot grow or rot unnoticed.
+	There are no exemptions: every shared gate answers the power question as
+	Cirq does. Pinning the empty set keeps a future exemption from growing
+	unnoticed.
 	"""
-	assert frozenset({"CZSWAP", "CXSWAP"}) == parity.EQUALITY_EXEMPT
+	# Every gate is now compared, the two Clifford gates included.
+	assert frozenset() == parity.EQUALITY_EXEMPT
 	checked = {name for name, _ok, _detail in parity.build_report().sections["equality"]}
 	for name in ("X**3", "CNOT**-1", "ISWAP**-1", "CZ**3", "SWAP**-1"):
 		assert name in checked, f"{name} is not compared with Cirq"
-	assert not any(name.startswith(("CZSWAP", "CXSWAP")) for name in checked)
+	# The two Clifford gates are compared like any other now.
+	assert any(name.startswith("CZSWAP") for name in checked)
+	assert any(name.startswith("CXSWAP") for name in checked)
 
 
 def test_an_allowance_without_a_reason_is_refused(parity: Any, tmp_path: Any) -> None:

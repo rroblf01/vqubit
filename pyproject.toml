@@ -17,6 +17,13 @@ mypy_path = "python"
 files = ["python/vqubit"]
 strict = false
 
+[[tool.mypy.overrides]]
+# The stub vcraft generates writes the enum members as annotations, which mypy
+# rejects as an enum with no members (UPSTREAM.md section 1). `ty` checks the
+# same stub, so nothing goes untyped overall.
+module = ["vqubit_native"]
+ignore_errors = true
+
 [tool.ty.environment]
 extra-paths = ["./python"]
 

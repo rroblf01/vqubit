@@ -504,7 +504,14 @@ class Result:
 		return len(next(iter(self._measurements.values()), []))
 
 	def histogram(self, key: str = "", fold_func: Callable[[list[int]], Any] | None = None) -> Counter:
-		"""Count how often each outcome appears for ``key``."""
+		"""Count how often each outcome appears for ``key``.
+
+		>>> import vqubit
+		>>> q0 = vqubit.LineQubit(0)
+		>>> circuit = vqubit.Circuit(vqubit.X(q0), vqubit.measure(q0, key="m"))
+		>>> vqubit.Simulator().run(circuit, repetitions=3).histogram(key="m")
+		Counter({1: 3})
+		"""
 		if not key:
 			if len(self._measurements) != 1:
 				raise ValueError("histogram needs a key when there is not exactly one measurement")
@@ -615,7 +622,14 @@ class Simulator(
 		qubit_order: Sequence[Qid] | None = None,
 		initial_state: Any = 0,
 	) -> SimulationResult:
-		"""Simulate a circuit and return its final state."""
+		"""Simulate a circuit and return its final state.
+
+		>>> import vqubit
+		>>> q0 = vqubit.LineQubit(0)
+		>>> result = vqubit.Simulator().simulate(vqubit.Circuit(vqubit.H(q0)))
+		>>> [round(float(abs(z)), 3) for z in result.state_vector()]
+		[0.707, 0.707]
+		"""
 		program = _resolve_program(program, param_resolver)
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}

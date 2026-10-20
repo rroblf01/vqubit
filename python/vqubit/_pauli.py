@@ -169,7 +169,16 @@ def _as_pauli(value: PauliLike) -> Pauli:
 
 @value_equality
 class PauliString:
-	"""A Pauli on each of a set of qubits, with a complex coefficient."""
+	"""A Pauli on each of a set of qubits, with a complex coefficient.
+
+	>>> import vqubit
+	>>> q0 = vqubit.LineQubit(0)
+	>>> string = vqubit.PauliString({q0: vqubit.Pauli.X})
+	>>> str(string)
+	'X(0)'
+	>>> string.expectation_from_state_vector([1, 0], {q0: 0})
+	0j
+	"""
 
 	def __init__(
 		self,

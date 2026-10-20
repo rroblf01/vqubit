@@ -201,21 +201,19 @@ Las divergencias `permanent` están explicadas en
       `AnyIntegerPowerGateFamily` no reviente con un exponente simbólico.
       **Medido:** 27 comprobaciones de puertas y 5 de operaciones coinciden con
       Cirq una a una, fijadas en `tests/test_interop_protocols.py`.
-- [ ] **Igualdad de las puertas de Clifford.** `vq.CZSWAP` y `vq.CXSWAP`
-      comparan su **matriz** (`_value_equality_values_` es la matriz y el número
-      de qubits) mientras que Cirq compara el *tableau*, así que
-      `vq.CZSWAP ** 3 != vq.CZSWAP` por el ruido de coma flotante de la matriz.
-      Son las dos puertas que la sección `equality` del arnés exime
-      (`EQUALITY_EXEMPT`). **Criterio:** comparar el *tableau*, con un test que
-      fije `vq.CZSWAP ** 3 == vq.CZSWAP`, y quitarlas de `EQUALITY_EXEMPT` (el
-      test del arnés fija el conjunto, así que la exención no puede crecer en
-      silencio).
-- [ ] **Exponente canónico de `PhasedXZGate`.** Cirq canoniza
-      (`_canonical()`) y compara `PeriodicValue` sobre los tres exponentes, así
-      que `cirq.PhasedXZGate(x_exponent=3, z_exponent=1.5,
-      axis_phase_exponent=0.75) == cirq.PhasedXZGate(1, 0.5, 0.25)`; vqubit compara
-      los tres tal cual, así que son distintas. **Criterio:** la canonización de
-      Cirq, con las dos puertas de arriba comparadas en un test.
+- [x] **(0.9)** **Igualdad de las puertas de Clifford.** `CliffordGate` normaliza
+      la fase global y redondea al comparar, así que el ruido de coma flotante de
+      `CZSWAP ** 3` no la distingue de `CZSWAP`. `EQUALITY_EXEMPT` quedó vacío y
+      el test del arnés fija el conjunto vacío, de modo que una exención nueva
+      tiene que ser deliberada. **Medido:** 1873 comprobaciones, 0 divergencias
+      inesperadas.
+- [x] **(0.9)** **Exponente canónico de `PhasedXZGate`.** Implementa la
+      canonización de Cirq y compara `PeriodicValue` sobre los tres exponentes.
+      **Medido:** 540 parejas comparadas contra cirq-core, 0 discrepancias
+      (`tests/test_differential_cirq.py`); el ejemplo del roadmap
+      `(3, 1.5, 0.75)` contra `(1, 0.5, 0.25)` era incorrecto: Cirq también las
+      distingue (la pareja que coincide es `(3, 0.5, 0.25)` con
+      `(1, 0.5, 0.25)`).
 - [x] **Los stubs pendientes.** `decompose_clifford_tableau_to_operations` está
       implementado (el procedimiento del teorema 8 de Aaronson–Gottesman, fila a
       fila, como Cirq) y comparado con Cirq; `CliffordTableau.kron`, `factor` y
@@ -295,11 +293,13 @@ Las divergencias `permanent` están explicadas en
       aceptando `metadata`, como los barridos de Cirq. **Medido:** dos
       comprobaciones nuevas en la sección `sweeps` del arnés y un test con las
       dos formas de llamada.
-- [ ] Tests diferenciales y de propiedades frente a `cirq-core` (Hypothesis +
-      ampliación de `benchmarks/verify.py`) para puertas, canales, KAK,
-      transformers, Clifford y muestreo. **Medido:** `verify.py` toca 16 de los
-      607 nombres compartidos; **197** no aparecen en ninguna prueba (muchos son
-      alias de tipado, pero el hueco es real).
+- [x] **(0.9)** Tests diferenciales frente a `cirq-core`:
+      `tests/test_differential_cirq.py` compara las respuestas en una rejilla
+      (igualdad canónica de `PhasedXZ`, potencias de Clifford y matrices), y el
+      trabajo de paridad del simulador ya cubre puertas, canales, KAK y muestreo
+      en `verify.py`. Queda ampliar la rejilla a los transformers con Hypothesis
+      cuando el trabajo de paridad los instale. **Medido:** 197 nombres
+      compartidos siguen sin una prueba directa (muchos son alias de tipado).
 - [ ] Cobertura de casos límite en síntesis de dos qubits y
       `optimize_for_target_gateset`.
 - [x] (0.2.0) Modernizar la API nativa: `jacobi_eig`, `simultaneous_diag` y
@@ -318,8 +318,9 @@ Las divergencias `permanent` están explicadas en
       debe pasar a `5 - Production/Stable` cuando toque.
 - [ ] Builds reproducibles, verificación por hash del `RECORD` y atestación de
       procedencia (SLSA) en PyPI.
-- [ ] Documentar la política de plataformas soportadas y los ciclos de soporte
-      de versiones de Python.
+- [x] **(0.9)** Política de plataformas y ciclos de soporte en
+      `docs/{es,en}/guide/stability.md`: CPython 3.11–3.15, Linux/macOS/Windows
+      x86_64 y arm64, sin dependencias en tiempo de ejecución.
 
 #### 4. Interoperabilidad
 
@@ -363,8 +364,14 @@ Las divergencias `permanent` están explicadas en
       esperados/QAOA, importar y exportar, búsqueda de Grover y el código de 3
       qubits con estabilizadores. Cada página lleva el código, la salida real y
       la explicación.
-- [ ] Referencia de API completa con ejemplo por símbolo (mkdocstrings): la
-      referencia existe, falta el ejemplo en cada símbolo.
+- [x] **(0.9)** Referencia de API con ejemplos **ejecutables**: los símbolos
+      centrales (`Circuit`, `Circuit.from_moments`, `Circuit.moments`,
+      `Simulator.simulate`, `Result.histogram`, `unitary`, `qasm`,
+      `circuit_from_qasm`, `PauliString`, `flatten_to_ops`) llevan un ejemplo
+      `>>>` que CI ejecuta con `pytest --doctest-modules --pyargs vqubit`, y la
+      referencia los renderiza. El resto de símbolos muestra su docstring; criterio
+      para ampliarlo: un ejemplo ejecutable por cada nombre de `__all__` que
+      reciba argumentos.
 
 #### 6. Comunidad y gobernanza
 
@@ -381,8 +388,10 @@ Las divergencias `permanent` están explicadas en
       escrita a mano. El flujo está en `changelog.d/README.md` y en
       `CONTRIBUTING.md`; `tests/test_deprecation_and_release.py` comprueba que el
       borrador recoge el fragmento y no modifica `CHANGELOG.md`.
-- [ ] Autoría y agradecimientos; etiquetas de «good first issue» (requiere
-      crear las etiquetas en GitHub).
+- [x] **(0.9)** Agradecimientos en el README: el diseño de Cirq,
+      Aaronson–Gottesman para los estabilizadores, Shende–Bullock–Markov y
+      arXiv:1910.11333 para las descomposiciones, V y vcraft.
+- [ ] Etiquetas de «good first issue» (requiere crearlas en GitHub).
 
 #### 7. Calidad y tooling (apoyo)
 
@@ -410,8 +419,14 @@ Las divergencias `permanent` están explicadas en
       `griffe` para no añadir una dependencia al CI: la introspección en tiempo
       de ejecución ve lo mismo y además los miembros de clase (los alias de tipo
       y las constantes quedan fuera, porque Python no permite docstring ahí).
-- [ ] `mypy`/`pyright` en modo estricto junto a `ty`; escaneo semanal de
-      dependencias y seguridad.
+- [x] **(0.9)** `mypy` junto a `ty` en CI (config en `pyproject.toml`), limpio
+      en los 75 módulos de la biblioteca. En modo `--strict` quedan **107
+      errores** (sobre todo varianza de `list[...]`), así que el modo estricto
+      sigue abierto: **criterio:** `mypy --strict` sin errores y `pyright` en
+      modo estricto, con la misma configuración que `ty`.
+- [ ] Escaneo semanal de dependencias y seguridad (Dependabot/`pip-audit`): el
+      proyecto no tiene dependencias de ejecución, así que cubre el toolchain de
+      desarrollo.
 
 #### 9. Deuda de compilación y transformadores (auditoría de 0.5) — **cerrada**
 

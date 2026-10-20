@@ -627,6 +627,11 @@ def circuit_from_qasm(source: str) -> Circuit:
 	See the module docstring for the conventions (qubits, measurement keys and
 	the ``u3`` family). Raises :class:`QasmParseError`, with the line number, on
 	a malformed or unsupported program.
+
+	>>> import vqubit
+	>>> circuit = vqubit.circuit_from_qasm("OPENQASM 2.0;qreg q[1];x q[0];")
+	>>> len(list(circuit.all_operations()))
+	1
 	"""
 	if not isinstance(source, str):
 		raise TypeError(f"circuit_from_qasm needs the QASM text, got {type(source).__name__}")

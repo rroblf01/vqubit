@@ -207,6 +207,13 @@ tests with coverage at 95 %.
 - **README acknowledgements**: Cirq's design, Aaronson–Gottesman, Shende–Bullock–
   Markov, arXiv:1910.11333, V and vcraft.
 
+- **Runnable examples in the reference**: ten core symbols (`Circuit`,
+  `Circuit.from_moments`, `Circuit.moments`, `Simulator.simulate`,
+  `Result.histogram`, `unitary`, `qasm`, `circuit_from_qasm`, `PauliString`,
+  `flatten_to_ops`) carry a `>>>` example that CI executes with
+  `pytest --doctest-modules --pyargs vqubit`, so the documentation cannot drift
+  from the code.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

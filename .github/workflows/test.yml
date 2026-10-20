@@ -177,6 +177,10 @@ jobs:
       - name: public API annotations
         run: .venv/bin/python tools/check_api_annotations.py
 
+      # The examples in the docstrings are real code: run them.
+      - name: docstring examples
+        run: .venv/bin/python -m pytest -q --doctest-modules --pyargs vqubit
+
       # A change to the public API has to be deliberate: if this fails, update
       # the snapshot and say whether the change is major, minor or a patch.
       - name: public API surface

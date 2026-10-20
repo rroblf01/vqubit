@@ -40,6 +40,13 @@ def unitary(value: Any) -> Matrix:
 	it is in the order of ``operation.qubits``. For a circuit, it is the full
 	matrix over the sorted circuit qubits. When numpy is installed the result is
 	a ``numpy.ndarray``.
+
+	>>> import vqubit
+	>>> round(float(abs(vqubit.unitary(vqubit.H)[0][0])), 3)
+	0.707
+	>>> q0 = vqubit.LineQubit(0)
+	>>> round(float(abs(vqubit.unitary(vqubit.Circuit(vqubit.H(q0)))[0][0])), 3)
+	0.707
 	"""
 	if isinstance(value, Circuit):
 		return asarray(_circuit_unitary(value))

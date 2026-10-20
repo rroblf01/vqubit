@@ -60,7 +60,16 @@ class AbstractCircuit:
 
 
 class Circuit(AbstractCircuit):
-	"""A mutable, time-ordered sequence of moments."""
+	"""A mutable, time-ordered sequence of moments.
+
+	>>> from vqubit import CNOT, H, LineQubit
+	>>> q0, q1 = LineQubit.range(2)
+	>>> circuit = Circuit(H(q0), CNOT(q0, q1))
+	>>> len(circuit)
+	2
+	>>> len(circuit.all_qubits())
+	2
+	"""
 
 	def __init__(self, *contents: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> None:
 		self._moments: list[Moment] = []
@@ -123,6 +132,11 @@ class Circuit(AbstractCircuit):
 		``Circuit.from_moments(m1, m2)`` is Cirq's calling form; a single
 		iterable of moments is accepted too, since that is what the transformers
 		in this library build.
+
+		>>> from vqubit import H, LineQubit
+		>>> q0, q1 = LineQubit.range(2)
+		>>> len(Circuit.from_moments(Moment([H(q0)]), Moment([H(q1)])))
+		2
 		"""
 		if len(moments) == 1 and not isinstance(moments[0], Moment):
 			moments = tuple(moments[0])
@@ -139,7 +153,12 @@ class Circuit(AbstractCircuit):
 
 	@property
 	def moments(self) -> tuple[Moment, ...]:
-		"""The moments of the circuit, in time order."""
+		"""The moments of the circuit, in time order.
+
+		>>> from vqubit import H, LineQubit
+		>>> len(Circuit(H(LineQubit(0))).moments)
+		1
+		"""
 		return tuple(self._moments)
 
 	def all_operations(self) -> Iterator[Operation]:

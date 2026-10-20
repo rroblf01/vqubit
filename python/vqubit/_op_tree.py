@@ -22,7 +22,13 @@ def _is_iterable_tree(value: Any) -> bool:
 
 
 def flatten_to_ops(op_tree: Any) -> list[Operation]:
-	"""Flatten an op tree into a list of operations."""
+	"""Flatten an op tree into a list of operations.
+
+	>>> import vqubit
+	>>> q0 = vqubit.LineQubit(0)
+	>>> len(flatten_to_ops([vqubit.X(q0), [vqubit.Y(q0), vqubit.Z(q0)]]))
+	3
+	"""
 	return list(_iter_ops(op_tree))
 
 

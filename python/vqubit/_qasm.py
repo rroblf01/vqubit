@@ -157,7 +157,13 @@ def _measurement_register_sizes(operations: list[Operation]) -> dict[str, int]:
 
 
 def qasm(value: Any) -> str:
-	"""Return the OpenQASM 2.0 representation of ``value``."""
+	"""Return the OpenQASM 2.0 representation of ``value``.
+
+	>>> import vqubit
+	>>> q0 = vqubit.LineQubit(0)
+	>>> vqubit.qasm(vqubit.Circuit(vqubit.X(q0))).splitlines()[-1]
+	'x q[0];'
+	"""
 	if isinstance(value, Circuit):
 		operations = list(value.all_operations())
 		qubits = value.all_qubits()

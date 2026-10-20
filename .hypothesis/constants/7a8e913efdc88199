@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_linalg_public.py
+# hypothesis_version: 6.140.3
+
+[-1.0, -0.25, 0.0, 1e-300, 1e-15, 1e-13, 1e-12, 1e-09, 1e-08, 1e-07, 1e-06, 1e-05, 0.25, 0.5, 1.0, 400, 3000, 'CONTROL_TAG', 'I', 'KakDecomposition', 'PAULI_BASIS', 'X', 'Y', 'Z', 'a', 'all_near_zero', 'all_near_zero_mod', 'axis_angle', 'b', 'block_diag', 'dot', 'extract_right_diag', 'g_im', 'g_re', 'is_cptp', 'is_diagonal', 'is_hermitian', 'is_normal', 'is_orthogonal', 'is_special_unitary', 'is_unitary', 'kak_decomposition', 'kak_vector', 'kron', 'kron_bases', 'kron_with_controls', 'map_eigenvalues', 'match_global_phase', 'matrix_commutes', 'nan', 'num_cnots_required', 'so4_to_magic_su2s', 'sub_state_vector', 'to_special', 'unitary_eig', 'values', 'vectors']

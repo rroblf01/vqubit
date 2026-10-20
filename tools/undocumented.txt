@@ -6,7 +6,6 @@ AbstractInitialMapper.initial_mapping
 AbstractInitialMapper.map_operations
 AbstractInitialMapper.update_mapping
 AmplitudeDampingChannel.gamma
-ApplyUnitaryArgs.with_axes_transposed_to_start
 AsymmetricDepolarizingChannel.p_x
 AsymmetricDepolarizingChannel.p_y
 AsymmetricDepolarizingChannel.p_z

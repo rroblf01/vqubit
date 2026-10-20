@@ -95,7 +95,10 @@ def single_qubit_op_to_framed_phase_form(
 	"""
 	from ._linalg_public import unitary_eig
 
-	values, vectors = unitary_eig(matrix, atol=atol)
+	nested = to_nested_list(matrix)
+	if len(nested) != 2 or any(len(row) != 2 for row in nested):
+		raise ValueError(f"Expected a 2x2 matrix, got shape {len(nested)}x{len(nested[0]) if nested else 0}.")
+	values, vectors = unitary_eig(nested, atol=atol)
 	# ``unitary_eig`` returns the eigenvectors as columns, so ``U`` is V^dagger.
 	u = [[complex(vectors[row][column]).conjugate() for row in range(2)] for column in range(2)]
 	relative_phase = complex(values[1]) / complex(values[0])
@@ -369,6 +372,13 @@ def _zz_interaction_ms(theta: float, q0: Qid, q1: Qid) -> list[Operation]:
 	return [H(q0), H(q1), MSGate(rads=-theta).on(q0, q1), H(q0), H(q1)]
 
 
+def _diagonal_gate_of(matrix: Sequence[Sequence[complex]]) -> Any:
+	"""A ``DiagonalGate`` applying the phases on the diagonal of ``matrix``."""
+	from ._gates_more import DiagonalGate
+
+	return DiagonalGate([cmath.phase(complex(matrix[i][i])) for i in range(len(matrix))])
+
+
 def two_qubit_matrix_to_diagonal_and_cz_operations(
 	q0: Qid,
 	q1: Qid,
@@ -377,17 +387,37 @@ def two_qubit_matrix_to_diagonal_and_cz_operations(
 	atol: float = 1e-8,
 	clean_operations: bool = True,
 ) -> tuple[Any, list[Operation]]:
-	"""Return ``(diagonal_gate, operations)`` implementing the two-qubit unitary."""
-	from ._gates_more import DiagonalGate
+	"""Return ``(diagonal, operations)`` with ``mat ≈ Circuit(operations) @ diagonal``.
 
-	decomposition = kak_decomposition(mat, atol=atol)
-	ops = two_qubit_matrix_to_cz_operations(
-		q0, q1, mat, allow_partial_czs, atol=atol, clean_operations=clean_operations
+	The product holds up to a global phase, as in Cirq. A unitary that needs
+	three CNOTs is rewritten as ``mat @ D`` (which needs two) followed by the
+	diagonal ``D^-1``, so the CZ decomposition is cheaper;
+	a unitary that already needs two or fewer keeps an identity diagonal, and a
+	diagonal unitary needs no operations at all. This is
+	``cirq.two_qubit_matrix_to_diagonal_and_cz_operations``.
+	"""
+	from ._linalg_public import extract_right_diag, is_diagonal, is_unitary, num_cnots_required
+
+	nested = to_nested_list(mat)
+	cols = len(nested[0]) if nested else 0
+	if len(nested) != 4 or cols != 4:
+		raise ValueError(f"Expected a 4x4 unitary, got shape {len(nested)}x{cols}.")
+	if not is_unitary(nested, atol=max(atol, 1e-8)):
+		raise ValueError("Expected a 4x4 unitary matrix.")
+	if is_diagonal(nested, atol=atol):
+		return _diagonal_gate_of(nested), []
+	if num_cnots_required(nested, atol=atol) == 3:
+		right = extract_right_diag(nested, atol=atol)
+		two_cnot = matmul(nested, right)
+		operations = two_qubit_matrix_to_cz_operations(
+			q0, q1, two_cnot, allow_partial_czs, atol=atol, clean_operations=clean_operations
+		)
+		# ``mat = ops @ right``, so the diagonal returned is ``right^-1``.
+		return _diagonal_gate_of(_dag(right)), operations
+	operations = two_qubit_matrix_to_cz_operations(
+		q0, q1, nested, allow_partial_czs, atol=atol, clean_operations=clean_operations
 	)
-	dim = len(to_nested_list(mat))
-	diagonal = DiagonalGate([0] * dim)
-	_ = decomposition
-	return diagonal, ops
+	return _diagonal_gate_of([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]), operations
 
 
 def two_qubit_matrix_to_cz_isometry(
@@ -399,7 +429,12 @@ def two_qubit_matrix_to_cz_isometry(
 	clean_operations: bool = True,
 ) -> list[Operation]:
 	"""Decompose a two-qubit isometry into single-qubit gates and CZs."""
-	full = _complete_isometry(to_nested_list(mat))
+	nested = to_nested_list(mat)
+	# A two-qubit isometry is 4 rows of one to four orthonormal columns.
+	cols = len(nested[0]) if nested else 0
+	if len(nested) != 4 or not 1 <= cols <= 4 or any(len(row) != cols for row in nested):
+		raise ValueError(f"Expected a 4xN isometry (1 <= N <= 4), got shape {len(nested)}x{cols}.")
+	full = _complete_isometry(nested)
 	from ._kak import two_qubit_matrix_to_cz_operations
 
 	return two_qubit_matrix_to_cz_operations(
@@ -751,7 +786,7 @@ def prepare_two_qubit_state_using_cz(
 ) -> list[Operation]:
 	"""Prepare a two-qubit state using CZs."""
 	del kwargs
-	matrix = _state_to_unitary(gate)
+	matrix = _state_to_unitary(gate, atol=atol)
 	return two_qubit_matrix_to_cz_operations(qubits[0], qubits[1], matrix, atol=atol)
 
 
@@ -760,7 +795,7 @@ def prepare_two_qubit_state_using_iswap(
 ) -> list[Operation]:
 	"""Prepare a two-qubit state using iSWAPs."""
 	del kwargs
-	matrix = _state_to_unitary(gate)
+	matrix = _state_to_unitary(gate, atol=atol)
 	return two_qubit_matrix_to_sqrt_iswap_operations(matrix, qubits=(qubits[0], qubits[1]), atol=atol)
 
 
@@ -771,9 +806,16 @@ def prepare_two_qubit_state_using_sqrt_iswap(
 	return prepare_two_qubit_state_using_iswap(gate, qubits, atol=atol, **kwargs)
 
 
-def _state_to_unitary(state: Any) -> Matrix:
+def _state_to_unitary(state: Any, *, atol: float = 1e-8) -> Matrix:
 	vector = [complex(z) for z in state]
 	dim = len(vector)
+	if dim != 4:
+		raise ValueError(f"Expected a two-qubit state with 4 amplitudes, got {dim}.")
+	norm = math.sqrt(sum(abs(z) ** 2 for z in vector))
+	if abs(norm - 1.0) > max(atol, 1e-6):
+		raise ValueError(f"Expected a normalized state, got norm {norm}.")
+	if dim != 4:
+		raise ValueError
 	first = vector
 	rest: list[list[complex]] = [first]
 	for index in range(dim):

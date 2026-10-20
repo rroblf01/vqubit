@@ -763,7 +763,9 @@ def diagonalize_real_symmetric_and_sorted_diagonal_matrices(
 	return asarray(p)
 
 
-def _real_svd(mat: Any) -> tuple[Matrix, list[float], Matrix]:
+def _real_svd(mat: Any) -> tuple[list[list[Any]], list[float], list[list[Any]]]:
+	# The matrices reach here as complex numbers with a zero imaginary part.
+	mat = [[float(complex(entry).real) for entry in row] for row in mat]
 	m = len(mat)
 	n = len(mat[0]) if m else 0
 	if m == 0 or n == 0:
@@ -773,14 +775,23 @@ def _real_svd(mat: Any) -> tuple[Matrix, list[float], Matrix]:
 	pairs = sorted(zip(vals, vecs, strict=True), key=lambda p: -p[0])
 	s = [math.sqrt(max(v, 0.0)) for v, _ in pairs]
 	v_mat = [[pairs[j][1][i] for j in range(n)] for i in range(n)]
-	u_mat = _zeros(m, n)
+	# Build the left singular vectors one column at a time. A zero singular value
+	# (a rank-deficient matrix) gets any unit vector orthogonal to the previous
+	# ones, so the result stays an orthonormal basis.
+	columns: list[list[float]] = []
 	for j in range(n):
 		if s[j] > 1e-12:
-			col = [sum(mat[i][k] * v_mat[k][j] for k in range(n)) / s[j] for i in range(m)]
+			column = [sum(mat[i][k] * v_mat[k][j] for k in range(n)) / s[j] for i in range(m)]
 		else:
-			col = [1.0 if i == j else 0.0 for i in range(m)]
-		for i in range(m):
-			u_mat[i][j] = col[i]
+			column = [value.real for value in _first_orthogonal_direction(columns, m)]
+			columns.append(column)
+			continue
+		for previous in columns:
+			projection = sum(column[i] * previous[i] for i in range(m))
+			column = [column[i] - projection * previous[i] for i in range(m)]
+		norm = math.sqrt(sum(value * value for value in column))
+		columns.append([value / norm for value in column] if norm > 1e-300 else column)
+	u_mat = [[columns[j][i] for j in range(n)] for i in range(m)]
 	return u_mat, s, [[v_mat[j][i] for j in range(n)] for i in range(n)]
 
 
@@ -795,10 +806,17 @@ def bidiagonalize_real_matrix_pair_with_symmetric_products(
 	"""Return orthogonal ``(L, R)`` making both matrices diagonal."""
 	a = to_nested_list(mat1)
 	b = to_nested_list(mat2)
-	if check_preconditions and (
-		any(z.imag != 0 for row in a for z in row) or any(z.imag != 0 for row in b for z in row)
-	):
-		raise ValueError("mat1 and mat2 must be real.")
+	if check_preconditions:
+		if any(z.imag != 0 for row in a for z in row):
+			raise ValueError("mat1 must be real.")
+		if any(z.imag != 0 for row in b for z in row):
+			raise ValueError("mat2 must be real.")
+		if len(a) != len(a[0]) or len(a) != len(b) or any(len(row) != len(b) for row in b):
+			raise ValueError("mat1 and mat2 must be square matrices of the same size.")
+		if not _allclose(_mm(a, _transpose(b)), _transpose(_mm(a, _transpose(b))), rtol, atol):
+			raise ValueError("mat1 @ mat2.T must be symmetric.")
+		if not _allclose(_mm(_transpose(a), b), _transpose(_mm(_transpose(a), b)), rtol, atol):
+			raise ValueError("mat1.T @ mat2 must be symmetric.")
 	base_left, s, base_right = _real_svd([[z.real for z in row] for row in a])
 	rank = len(s)
 	while rank > 0 and s[rank - 1] <= atol:
@@ -1015,7 +1033,7 @@ def _complex_eig(
 	return values, [[basis[j][i] for j in range(n)] for i in range(n)]
 
 
-def _first_orthogonal_direction(basis: Sequence[Vector], n: int) -> Vector:
+def _first_orthogonal_direction(basis: Sequence[Any], n: int) -> Vector:
 	"""A unit vector orthogonal to ``basis`` (the standard basis, then Gram-Schmidt)."""
 	for index in range(n):
 		candidate = [0j] * n
@@ -1067,7 +1085,10 @@ def kron_factor_4x4_to_2x2s(
 	matrix: Sequence[Sequence[complex]], rtol: float = 1e-5, atol: float = 1e-8
 ) -> tuple[complex, Matrix, Matrix]:
 	"""Split a 4x4 matrix ``U = g * kron(A, B)`` into ``g``, ``A`` and ``B``."""
-	result = _native.kron_factor(_la.to_flat(matrix))
+	nested = to_nested_list(matrix)
+	if len(nested) != 4 or any(len(row) != 4 for row in nested):
+		raise ValueError(f"Expected a 4x4 matrix, got shape {len(nested)}x{len(nested[0]) if nested else 0}.")
+	result = _native.kron_factor(_la.to_flat(nested))
 	global_phase = complex(result["g_re"], result["g_im"])
 	f1 = _la.from_flat(result["a"], 2)
 	f2 = _la.from_flat(result["b"], 2)
@@ -1395,6 +1416,33 @@ def num_cnots_required(u: Sequence[Sequence[complex]], atol: float = 1e-8) -> in
 	return 3
 
 
+def extract_right_diag(u: Sequence[Sequence[complex]], atol: float = 1e-8) -> Matrix:
+	"""A diagonal unitary ``D`` so that ``u @ D`` needs only two CNOTs.
+
+	This is ``cirq.extract_right_diag`` (Proposition V.2 of
+	quant-ph/0308033): it only makes sense for a unitary that needs three
+	CNOTs, which is what the two-qubit diagonal-plus-CZ decomposition uses.
+	"""
+	m = to_nested_list(u)
+	if len(m) != 4 or any(len(row) != 4 for row in m):
+		raise ValueError(f"Expected unitary of shape (4,4), got {len(m)}x{len(m[0]) if m else 0}.")
+	yy: Matrix = [
+		[0j, 0j, 0j, -1 + 0j],
+		[0j, 0j, 1 + 0j, 0j],
+		[0j, 1 + 0j, 0j, 0j],
+		[-1 + 0j, 0j, 0j, 0j],
+	]
+	special = to_nested_list(to_special(m))
+	transposed = _transpose(special)
+	gamma = _mm(_mm(_mm(transposed, yy), special), yy)
+	diagonal = [gamma[i][i] for i in range(4)]
+	k = (diagonal[0] + diagonal[3] - diagonal[1] - diagonal[2]).real
+	psi = math.atan2(sum(diagonal).imag, k)
+	f = cmath.exp(1j * psi)
+	del atol
+	return [[1 + 0j, 0j, 0j, 0j], [0j, f, 0j, 0j], [0j, 0j, f, 0j], [0j, 0j, 0j, 1 + 0j]]
+
+
 def slice_for_qubits_equal_to(
 	target_qubit_axes: Sequence[int],
 	little_endian_qureg_value: int = 0,
@@ -1455,6 +1503,7 @@ __all__ = [
 	"diagonalize_real_symmetric_matrix",
 	"dot",
 	"expand_matrix_in_orthogonal_basis",
+	"extract_right_diag",
 	"hilbert_schmidt_inner_product",
 	"is_cptp",
 	"is_diagonal",

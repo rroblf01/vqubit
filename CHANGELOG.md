@@ -150,6 +150,29 @@ tests with coverage at 95 %.
 - **QASM: consecutive measurements into different registers** become one
   measurement per register instead of an error.
 
+- **The decomposition helpers validate their input.** A wrong-shaped or
+  non-unitary matrix used to panic inside the V core (`RuntimeError`) or be
+  accepted silently; `kron_factor_4x4_to_2x2s`, `two_qubit_matrix_to_cz_isometry`,
+  the single-qubit decomposers and `prepare_two_qubit_state_using_*` now raise
+  `ValueError` naming the argument.
+- **`two_qubit_matrix_to_diagonal_and_cz_operations` extracts the real
+  diagonal.** It always returned an identity `DiagonalGate`; a three-CNOT
+  unitary now comes back as `mat ≈ Circuit(ops) @ D` with two CNOTs, a diagonal
+  unitary needs no operations, and the product is checked in the tests.
+- **`extract_right_diag` and `num_cnots_required` work together** as in Cirq:
+  the new `extract_right_diag` takes a three-CNOT unitary to two.
+- **The QASM importer honours the bit of each measurement**: `measure q[0] ->
+  c[1]; measure q[1] -> c[0]` now puts qubit 1 in bit 0 instead of fusing in
+  textual order.
+- **`ApplyUnitaryArgs.with_axes_transposed_to_start` really transposes** the
+  target axes (numpy and nested lists) and renumbers them, instead of returning
+  itself.
+- **`bidiagonalize_real_matrix_pair_with_symmetric_products` survives a
+  rank-deficient pair**: the SVD completed a zero singular value with a vector
+  that was not orthogonal to the others, so `L` was not orthogonal and the
+  products were not diagonal. It also checks Cirq's preconditions (`mat1` and
+  `mat2` real, `mat1 @ mat2.T` and `mat1.T @ mat2` symmetric).
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

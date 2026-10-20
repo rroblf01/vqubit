@@ -150,6 +150,30 @@ def test_four_fsim_synthesis_rejects_bad_arguments() -> None:
 		)
 
 
+def test_two_qubit_matrix_to_diagonal_and_cz_extracts_the_diagonal() -> None:
+	q0, q1 = vqubit.LineQubit.range(2)
+	identity = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+
+	def rebuilt(matrix: list[list[complex]]) -> list[list[complex]]:
+		diagonal, operations = vqubit.two_qubit_matrix_to_diagonal_and_cz_operations(q0, q1, matrix)
+		ops_matrix = vqubit.unitary(vqubit.Circuit(operations)) if operations else identity
+		return vqubit.linalg.dot(ops_matrix, vqubit.unitary(diagonal))
+
+	for gate in (vqubit.CNOT, vqubit.SWAP, vqubit.ISWAP, vqubit.SWAP**0.5):
+		assert up_to_phase(rebuilt(vqubit.unitary(gate)), vqubit.unitary(gate)), gate
+
+	# A three-CNOT unitary comes back with a non-trivial diagonal part, which is
+	# the whole point of the decomposition.
+	diagonal, _operations = vqubit.two_qubit_matrix_to_diagonal_and_cz_operations(q0, q1, vqubit.unitary(vqubit.SWAP))
+	assert any(abs(angle) > 1e-6 for angle in diagonal.diag_angles_radians)
+
+	# A diagonal unitary needs no operations at all: the diagonal is the gate.
+	diagonal_gate = vqubit.DiagonalGate([0.1, 0.2, 0.3, 0.4])
+	diagonal, operations = vqubit.two_qubit_matrix_to_diagonal_and_cz_operations(q0, q1, vqubit.unitary(diagonal_gate))
+	assert operations == []
+	assert up_to_phase(vqubit.unitary(diagonal), vqubit.unitary(diagonal_gate))
+
+
 def test_decompose_multi_controlled_x_with_no_controls_is_x() -> None:
 	target = vqubit.LineQubit(0)
 	operations = vqubit.decompose_multi_controlled_x([], target)
@@ -305,8 +329,9 @@ def test_two_qubit_matrix_to_diagonal_and_cz_operations(allow_partial_czs: bool)
 		q0, q1, matrix, allow_partial_czs=allow_partial_czs
 	)
 	assert diagonal.num_qubits == 2
-	_assert_implements(operations, matrix)
-	combined = vqubit.dot(vqubit.unitary(diagonal), vqubit.unitary(vqubit.Circuit(operations)))
+	# The contract is ``matrix ≈ Circuit(operations) @ diagonal``: the diagonal
+	# is now the real one, so the operations alone do not implement the matrix.
+	combined = vqubit.dot(vqubit.unitary(vqubit.Circuit(operations)), vqubit.unitary(diagonal))
 	assert vqubit.linalg.allclose_up_to_global_phase(combined, matrix, atol=1e-5)
 
 

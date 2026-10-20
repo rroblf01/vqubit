@@ -159,7 +159,7 @@ class _Parser:
 		self._cregs: dict[str, int] = {}
 		self._gates: dict[str, tuple[list[str], list[str], list[Token]]] = {}
 		self._opaque: set[str] = set()
-		self._pending_measurements: list[tuple[str, Qid]] = []
+		self._pending_measurements: list[tuple[str, int | None, Qid]] = []
 		self._operations: list[Operation] = []
 		self._scope_qubits: dict[str, Any] = {}
 		self._scope_params: dict[str, Any] = {}
@@ -524,19 +524,19 @@ class _Parser:
 	def _measure(self) -> None:
 		qubits = self._qubit_arg()
 		self._expect("->")
-		key, _index = self._creg_arg()
+		key, index = self._creg_arg()
 		self._expect(";")
-		for qubit in qubits:
-			self._pending_measurements.append((key, qubit))
+		for position, qubit in enumerate(qubits):
+			self._pending_measurements.append((key, None if index is None else index + position, qubit))
 
 	def _classical_measure(self) -> None:
-		key, _index = self._creg_arg()
+		key, index = self._creg_arg()
 		self._expect("=")
 		self._expect("measure")
 		qubits = self._qubit_arg()
 		self._expect(";")
-		for qubit in qubits:
-			self._pending_measurements.append((key, qubit))
+		for position, qubit in enumerate(qubits):
+			self._pending_measurements.append((key, None if index is None else index + position, qubit))
 
 	def _reset(self) -> None:
 		qubits = self._qubit_arg()
@@ -580,14 +580,29 @@ class _Parser:
 		if not self._pending_measurements:
 			return
 		pending, self._pending_measurements = self._pending_measurements, []
-		run: list[tuple[str, Qid]] = []
-		for key, qubit in pending:
+		run: list[tuple[str, int | None, Qid]] = []
+		for key, index, qubit in pending:
 			if run and key != run[-1][0]:
-				self._operations.append(measure(*(q for _key, q in run), key=run[0][0]))
+				self._flush_run(run)
 				run = []
-			run.append((key, qubit))
+			run.append((key, index, qubit))
 		if run:
-			self._operations.append(measure(*(q for _key, q in run), key=run[0][0]))
+			self._flush_run(run)
+
+	def _flush_run(self, run: Sequence[tuple[str, int | None, Qid]]) -> None:
+		"""Emit one measurement for a run, honouring the bit each qubit goes to.
+
+		When every measurement names its bit, the qubits are ordered by bit so
+		``measure q[0] -> c[1]; measure q[1] -> c[0]`` puts qubit 1 in bit 0. A
+		register with a hole (only bit 2 of ``c[3]`` measured, say) cannot be
+		represented by a single measurement gate, so its qubits keep the
+		relative order of their bits and the missing one is simply absent.
+		"""
+		key = run[0][0]
+		entries: list[tuple[int | None, Qid]] = [(index, qubit) for _key, index, qubit in run]
+		if all(index is not None for index, _qubit in entries):
+			entries.sort(key=lambda entry: entry[0] if entry[0] is not None else 0)
+		self._operations.append(measure(*(qubit for _index, qubit in entries), key=key))
 
 
 def _rx(angle: Any) -> Gate:

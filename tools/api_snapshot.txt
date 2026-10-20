@@ -912,6 +912,7 @@ estimate_single_qubit_readout_errors: function estimate_single_qubit_readout_err
 expand_composite: function expand_composite(circuit)
 expand_matrix_in_orthogonal_basis: function expand_matrix_in_orthogonal_basis(m, basis)
 experiments: module vqubit.experiments
+extract_right_diag: function extract_right_diag(u, atol=1e-08)
 eye_tensor: function eye_tensor(shape, *, dtype=None, split_index=None)
 fidelity: function fidelity(state1, state2)
 final_density_matrix: function final_density_matrix(result)

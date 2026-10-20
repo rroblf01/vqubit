@@ -5,10 +5,12 @@ JSON helpers, key paths and the ``Supports*`` protocol classes.
 from __future__ import annotations
 
 import dataclasses
+import itertools
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Protocol, runtime_checkable
 
+from ._compat import is_numpy_array
 from ._linalg import Matrix
 from ._measurement_key import MeasurementKey
 from ._parameter import Parameter, ParamResolver, is_symbolic
@@ -33,7 +35,44 @@ class ApplyUnitaryArgs:
 		return tuple(index)
 
 	def with_axes_transposed_to_start(self) -> ApplyUnitaryArgs:
-		return self
+		"""Move the target axes to the front, as Cirq's helper does.
+
+		The returned arguments see a tensor whose first ``len(axes)`` dimensions
+		are the ones the gate acts on, with ``axes`` renumbered to match, which
+		is what a gate that expects the subspace first needs.
+		"""
+		if not self.axes:
+			return self
+		from ._linalg_public import _flatten, _shape_of, _strides, _unflatten
+
+		shape = _shape_of(self.target_tensor)
+		if len(set(self.axes)) != len(self.axes) or any(not 0 <= axis < len(shape) for axis in self.axes):
+			raise ValueError(f"axes {self.axes} are not axes of a {len(shape)}-dimensional tensor")
+		order = list(self.axes) + [axis for axis in range(len(shape)) if axis not in self.axes]
+		if order == list(range(len(shape))):
+			return self
+
+		def transpose(tensor: Any) -> Any:
+			if is_numpy_array(tensor):
+				return tensor.transpose(order)
+			flat, old_shape = _flatten(tensor)
+			new_shape = [old_shape[axis] for axis in order]
+			old_strides, new_strides = _strides(old_shape), _strides(new_shape)
+			out = [0j] * len(flat)
+			for new_index in itertools.product(*[range(size) for size in new_shape]):
+				old_index = [0] * len(old_shape)
+				for position, axis in enumerate(order):
+					old_index[axis] = new_index[position]
+				out[sum(i * s for i, s in zip(new_index, new_strides, strict=True))] = flat[
+					sum(i * s for i, s in zip(old_index, old_strides, strict=True))
+				]
+			return _unflatten(out, tuple(new_shape))
+
+		return ApplyUnitaryArgs(
+			transpose(self.target_tensor),
+			transpose(self.available_buffer),
+			list(range(len(self.axes))),
+		)
 
 
 class ApplyChannelArgs:

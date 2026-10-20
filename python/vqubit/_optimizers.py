@@ -22,6 +22,12 @@ _DEFAULT_ATOL = 1e-8
 
 def _zyz_angles(matrix: Sequence[Sequence[complex]], atol: float = _DEFAULT_ATOL) -> tuple[float, float, float]:
 	"""Return ``(alpha, beta, gamma)`` with ``U = Rz(a) Ry(b) Rz(c)`` up to phase."""
+	if len(matrix) != 2 or any(len(row) != 2 for row in matrix):
+		raise ValueError(f"Expected a 2x2 matrix, got shape {len(matrix)}x{len(matrix[0]) if matrix else 0}.")
+	from ._linalg_public import is_unitary
+
+	if not is_unitary(matrix, atol=max(atol, 1e-8)):
+		raise ValueError("Expected a 2x2 unitary matrix.")
 	u00 = complex(matrix[0][0])
 	u01 = complex(matrix[0][1])
 	u10 = complex(matrix[1][0])

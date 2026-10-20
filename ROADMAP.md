@@ -401,37 +401,21 @@ Las divergencias `permanent` están explicadas en
 - [ ] `mypy`/`pyright` en modo estricto junto a `ty`; escaneo semanal de
       dependencias y seguridad.
 
-#### 9. Deuda de compilación y transformadores (auditoría de 0.5)
+#### 9. Deuda de compilación y transformadores (auditoría de 0.5) — **cerrada**
 
-**Cerrado** en su mayor parte: la forma de fase enmarcada, la descomposición
-de `CZ` en dos fSim, la síntesis de cuatro fSim, los intervalos de exponentes,
-las etiquetas en `merge_operations`, `dephase_measurements` (conserva las
-medidas sueltas), `defer_measurements` (una medida por clave),
-`unitary(circuit)` con `CircuitOperation`, `from_moments`/`merge_moments`
-(los límites de momento se respetan), `transform_op_tree` (las dos
+Todo lo que la auditoría destapó está arreglado y con test: las cuatro
+descomposiciones analíticas (forma de fase enmarcada, `CZ` en dos fSim, síntesis
+en cuatro fSim, intervalos de exponentes), `merge_operations` con etiquetas,
+`dephase_measurements` (conserva las medidas sueltas), `defer_measurements` (una
+medida por clave), `unitary(circuit)` con `CircuitOperation`,
+`from_moments`/`merge_moments` (límites de momento), `transform_op_tree` (las dos
 transformaciones y los iterables anidados), los ganchos de `PointOptimizer`,
-`CircuitFunction` con momentos, `GreedyQubitManager(maximize_reuse)` (FIFO/LIFO)
-y las medidas consecutivas en registros distintos del importador QASM.
-
-Queda abierto:
-
-- [ ] La validación de las descomposiciones es débil: algunas matrices de forma
-      incorrecta revientan dentro del núcleo V (`RuntimeError`) en vez de dar
-      `ValueError`. **Criterio:** cada helper público valida forma y unitariedad
-      y lanza `ValueError` con el argumento nombrado.
-- [ ] `two_qubit_matrix_to_diagonal_and_cz_operations` siempre devuelve un
-      `DiagonalGate` identidad. **Criterio:** extrae la parte diagonal real
-      (el producto sigue implementando la matriz).
-- [ ] Los índices de bit de la medida QASM (`c[1] = measure q[0]`) se ignoran y
-      se fusionan en orden textual. **Criterio:** el bit exacto de cada medida
-      se conserva.
-- [ ] `ApplyUnitaryArgs.with_axes_transposed_to_start` es un no-op.
-      **Criterio:** devuelve un tensor con los ejes objetivo al principio y
-      `axes == range(len(axes))`.
-- [ ] `bidiagonalize_real_matrix_pair_with_symmetric_products` no diagonaliza
-      parejas de rango deficiente (`A = [[1,1],[1,1]]`). **Criterio:** devuelve
-      `L A R` y `L B R` diagonales también en ese caso, o lanza `ValueError`
-      explicando la precondición.
+`CircuitFunction` con momentos, `GreedyQubitManager(maximize_reuse)` (FIFO/LIFO),
+las medidas consecutivas en registros distintos y el bit exacto de cada medida
+QASM, `ApplyUnitaryArgs.with_axes_transposed_to_start`, la diagonalización de
+parejas de rango deficiente (el SVD completaba mal la base) y la validación de
+forma/unitariedad de los helpers de descomposición (ya lanzan `ValueError` en vez
+de reventar en el núcleo V).
 
 #### 8. Rendimiento (apoyo)
 
@@ -894,35 +878,21 @@ blanket. The `permanent` divergences are explained in
 - [ ] `mypy`/`pyright` in strict mode alongside `ty`; weekly dependency and
       security scanning.
 
-#### 9. Compilation and transformer debt (0.5 audit)
+#### 9. Compilation and transformer debt (0.5 audit) — **closed**
 
-**Mostly closed**: the framed phase form, the two-fSim decomposition of `CZ`,
-the four-fSim synthesis, the exponent intervals, the tags in `merge_operations`,
-`dephase_measurements` (plain measurements survive), `defer_measurements` (one
-measurement per key), `unitary(circuit)` with `CircuitOperation`,
-`from_moments`/`merge_moments` (moment boundaries are kept), `transform_op_tree`
-(both transformations and nested iterables), the `PointOptimizer` hooks,
-`CircuitFunction` with moments, `GreedyQubitManager(maximize_reuse)` (FIFO/LIFO)
-and consecutive measurements into different registers in the QASM importer.
-
-Still open:
-
-- [ ] Decomposition validation is weak: some wrong-shaped matrices blow up
-      inside the V core (`RuntimeError`) instead of raising `ValueError`.
-      **Criterion:** every public helper validates shape and unitarity and
-      raises `ValueError` naming the argument.
-- [ ] `two_qubit_matrix_to_diagonal_and_cz_operations` always returns an
-      identity `DiagonalGate`. **Criterion:** it extracts the actual diagonal
-      part (the product still implements the matrix).
-- [ ] QASM measurement bit indices (`c[1] = measure q[0]`) are ignored and fused
-      in textual order. **Criterion:** each measurement keeps its exact bit.
-- [ ] `ApplyUnitaryArgs.with_axes_transposed_to_start` is a no-op.
-      **Criterion:** it returns a tensor with the target axes first and
-      `axes == range(len(axes))`.
-- [ ] `bidiagonalize_real_matrix_pair_with_symmetric_products` does not
-      diagonalise rank-deficient pairs (`A = [[1,1],[1,1]]`). **Criterion:** it
-      returns diagonal `L A R` and `L B R` in that case too, or raises
-      `ValueError` explaining the precondition.
+Everything the audit found is fixed and covered by a test: the four analytical
+decompositions (framed phase form, `CZ` into two fSims, four-fSim synthesis,
+exponent intervals), `merge_operations` with tags, `dephase_measurements` (plain
+measurements survive), `defer_measurements` (one measurement per key),
+`unitary(circuit)` with `CircuitOperation`, `from_moments`/`merge_moments`
+(moment boundaries), `transform_op_tree` (both transformations and nested
+iterables), the `PointOptimizer` hooks, `CircuitFunction` with moments,
+`GreedyQubitManager(maximize_reuse)` (FIFO/LIFO), consecutive measurements into
+different registers and the exact bit of each QASM measurement,
+`ApplyUnitaryArgs.with_axes_transposed_to_start`, the diagonalization of
+rank-deficient pairs (the SVD completed the basis wrongly) and the
+shape/unitarity validation of the decomposition helpers (they now raise
+`ValueError` instead of panicking in the V core).
 
 #### 8. Performance (supporting)
 

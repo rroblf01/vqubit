@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_qasm_import.py
+# hypothesis_version: 6.140.3
+
+[-0.5, -0.25, 0.25, 0.5, '&&', '(', ')', '*', '+', ',', '-', '->', '/', '2.0', ';', '=', '==', 'CX', 'OPENQASM', 'QasmParseError', 'U', '[', ']', '^', 'barrier', 'ccx', 'ch', 'circuit_from_qasm', 'comment', 'creg', 'crz', 'cswap', 'cu1', 'cu3', 'cx', 'cy', 'cz', 'eof', 'gate', 'h', 'id', 'if', 'include', 'measure', 'name', 'newline', 'number', 'opaque', 'pi', 'qreg', 'reset', 'rx', 'ry', 'rz', 's', 'sdg', 'space', 'string', 'swap', 'sx', 'sxdg', 't', 'tdg', 'u0', 'u1', 'u2', 'u3', 'unterminated barrier', 'x', 'y', 'z', '{', '}']

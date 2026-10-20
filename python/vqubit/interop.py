@@ -9,14 +9,20 @@ from __future__ import annotations
 
 from . import (
 	circuit_from_qasm,
+	from_cirq,
 	qasm,
 	quirk_json_to_circuit,
+	quirk_url,
 	quirk_url_to_circuit,
+	to_cirq,
 )
 
 __all__ = [
 	"circuit_from_qasm",
+	"from_cirq",
 	"qasm",
 	"quirk_json_to_circuit",
+	"quirk_url",
 	"quirk_url_to_circuit",
+	"to_cirq",
 ]

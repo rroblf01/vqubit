@@ -107,8 +107,31 @@ circuito = vq.Circuit(vq.H(q0), vq.CNOT(q0, q1))
 print(vq.quirk_url(circuito))   # https://algassert.com/quirk#circuit=...
 ```
 
+Quirk escribe las rotaciones como potencias (`X^t`, con `t = rads/π`), así que
+`Rx`/`Ry`/`Rz` van y vuelven con esa forma, y una medida va como `Measure` con
+la clave `m`. La ida y vuelta conserva la unitaria de todo lo que Quirk sabe
+representar; una puerta que no (por ejemplo `iSWAP`) lanza `TypeError`.
+
 El objeto `QasmArgs` transporta el contexto (nombres de qubits, precisión y
 argumentos libres) que recibe el escritor QASM de una puerta.
+
+## El contrato de `numpy` y `sympy`
+
+vqubit no depende de `numpy`, pero lo usa cuando está instalado, y ese contrato
+es estable:
+
+- **Entrada**: `state_vector=`, `density_matrix=`, matrices para `MatrixGate` y
+  `unitary=`, y parámetros en general aceptan tanto listas de Python como
+  arrays de `numpy`.
+- **Salida**: si `numpy` está instalado, `state_vector()`,
+  `density_matrix()`, `final_state_vector`, `density_matrix_of()`, `unitary()`
+  y las matrices de los canales son arrays de `numpy` con `dtype`
+  `complex128`; sin `numpy` son listas anidadas de `complex` y el resto de la
+  API no cambia.
+- **Simbólico**: los parámetros son `vq.Parameter` (o `vq.symbol("t")`), no
+  `sympy.Symbol`: un símbolo de `sympy` **no** se acepta en una puerta (falla
+  con `TypeError`, en vez de convertirlo en silencio). Un `sympy.Symbol` sí
+  vale como clave de un `vq.ParamResolver`, porque se reduce a su nombre.
 
 ## Siguientes pasos
 

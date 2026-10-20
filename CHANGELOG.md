@@ -30,6 +30,15 @@ and `Linspace`/`Points` take Cirq's calling form and endpoint convention.
   The measurement key is now the classical register verbatim (`creg m[2]`)
   instead of carrying an `m_` prefix, which is what lets the round trip keep the
   key.
+- **An optional Cirq bridge.** `to_cirq` and `from_cirq` convert circuits both
+  ways through the JSON format the two libraries share; Cirq has to be installed
+  (`ImportError` otherwise), since it is not a dependency.
+- **Quirk covers more.** Measurements are written as `Measure`, rotations as
+  powers (`X^t`, with `t = rads/π`), and arbitrary `X`/`Y`/`Z` powers and their
+  controlled versions round-trip; `iSWAP` and friends still raise `TypeError`.
+  The JSON also writes rotations as Cirq's `Rx`/`Ry`/`Rz` with `rads` (they used
+  to be `RxGate`/`RyGate`/`RzGate`), so Cirq can read them and the bridge keeps
+  the class, and it writes `Exponent`… whatever the library writes.
 - **The async entry points**, `run_async`, `run_sweep_async` and `run_batch_async`,
   as thin coroutines over the synchronous ones (vqubit's simulation is local, so
   there is nothing to await, but Cirq's call sites work).

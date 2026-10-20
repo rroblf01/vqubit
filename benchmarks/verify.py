@@ -167,6 +167,47 @@ def check_gates(report: Report) -> None:
 		report.check("gates", name, up_to_phase(got, expected))
 
 
+# --- interop: the cirq bridge -------------------------------------------------
+
+
+def check_bridge(report: Report) -> None:
+	"""A circuit must survive the trip to Cirq and back, and keep its unitary."""
+	cq0, cq1 = cirq.LineQubit.range(2)
+	vq0, vq1 = vq.LineQubit.range(2)
+	circuit_c = cirq.Circuit(cirq.H(cq0), cirq.CZ(cq0, cq1), cirq.rz(0.3)(cq1), cirq.measure(cq0, key="m"))
+	circuit_v = vq.Circuit(vq.H(vq0), vq.CZ(vq0, vq1), vq.rz(0.3)(vq1), vq.measure(vq0, key="m"))
+
+	# vqubit -> Cirq -> vqubit keeps the circuit, and both unitaries agree.
+	back = vq.from_cirq(vq.to_cirq(circuit_v))
+	report.check(
+		"interop",
+		"vqubit -> cirq -> vqubit",
+		back == circuit_v,
+		f"back is {back!r}",
+	)
+	without_measurements = vq.Circuit(
+		*[operation for operation in circuit_v.all_operations() if not vq.is_measurement(operation)]
+	)
+	report.check(
+		"interop",
+		"the bridge keeps the unitary",
+		up_to_phase(
+			vq.unitary(without_measurements),
+			cirq.unitary(cirq.Circuit(*[op for op in circuit_c.all_operations() if not cirq.is_measurement(op)])),
+		),
+		"unitaries of the two circuits",
+	)
+
+	# Cirq -> vqubit -> Cirq keeps the circuit that Cirq wrote.
+	round_trip = vq.to_cirq(vq.from_cirq(circuit_c))
+	report.check(
+		"interop",
+		"cirq -> vqubit -> cirq",
+		cirq.to_json(round_trip) == cirq.to_json(circuit_c),
+		"the JSON the two sides write",
+	)
+
+
 # --- stabilizers ----------------------------------------------------------------
 
 
@@ -723,6 +764,7 @@ def main() -> None:
 		"gates": check_gates,
 		"expectations": check_expectations,
 		"stabilizer": check_stabilizer,
+		"interop": check_bridge,
 		"sweeps": check_sweeps,
 		"global shift": check_global_shift,
 		"channels": check_channels,

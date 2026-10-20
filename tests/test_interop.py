@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 
 import pytest
 
@@ -47,7 +48,35 @@ def test_quirk_url_handles_controls_spanning_qubits() -> None:
 	assert _decode(vqubit.quirk_url(circuit))["cols"] == [["•", "H", "X"]]
 
 
-def test_quirk_url_rejects_unknown_gate() -> None:
+def test_quirk_url_writes_rotations_as_powers() -> None:
+	# Quirk has no ``rx``; a rotation about X is ``X^t``, with ``t = rads/pi``.
 	q0 = vqubit.LineQubit(0)
+	url = vqubit.quirk_url(vqubit.Circuit(vqubit.Rx(math.pi / 2)(q0)))
+	assert _decode(url)["cols"] == [["X^0.5"]]
+
+
+def test_quirk_url_rejects_unknown_gate() -> None:
+	q0, q1 = vqubit.LineQubit.range(2)
 	with pytest.raises(TypeError):
-		vqubit.quirk_url(vqubit.Circuit(vqubit.Rx(0.3)(q0)))
+		vqubit.quirk_url(vqubit.Circuit(vqubit.ISWAP(q0, q1)))
+	with pytest.raises(TypeError):
+		vqubit.quirk_url(vqubit.Circuit(vqubit.CCX(q0, q1, vqubit.LineQubit(2))))
+
+
+def test_the_cirq_bridge_round_trips() -> None:
+	"""A circuit goes to Cirq and back unchanged, through the shared JSON."""
+	cirq = pytest.importorskip("cirq")
+	q0, q1 = vqubit.LineQubit.range(2)
+	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.CNOT(q0, q1), vqubit.measure(q0, q1, key="m"))
+	converted = vqubit.to_cirq(circuit)
+	assert isinstance(converted, cirq.Circuit)
+	assert vqubit.from_cirq(converted) == circuit
+
+
+def test_the_cirq_bridge_keeps_the_unitary() -> None:
+	numpy = pytest.importorskip("numpy")
+	cirq = pytest.importorskip("cirq")
+	q0, q1 = vqubit.LineQubit.range(2)
+	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.CZ(q0, q1), vqubit.rz(0.3)(q1))
+	converted = vqubit.to_cirq(circuit)
+	assert numpy.allclose(numpy.asarray(cirq.unitary(converted)), numpy.asarray(vqubit.unitary(circuit)), atol=1e-9)

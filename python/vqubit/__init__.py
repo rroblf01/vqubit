@@ -240,7 +240,7 @@ from ._gates_more import (
 	wait,
 )
 from ._gateset import AnyIntegerPowerGateFamily, AnyUnitaryGateFamily, GateFamily, Gateset, ParallelGateFamily
-from ._interop import quirk_json_to_circuit, quirk_url, quirk_url_to_circuit
+from ._interop import from_cirq, quirk_json_to_circuit, quirk_url, quirk_url_to_circuit, to_cirq
 from ._json import cirq_type_from_json, json_cirq_type, read_json, read_json_gzip, to_json, to_json_gzip
 from ._kak import two_qubit_matrix_to_cz_operations, two_qubit_matrix_to_operations
 from ._linalg_public import (
@@ -1139,6 +1139,7 @@ __all__ = [
 	"flatten_with_params",
 	"flatten_with_sweep",
 	"freeze_op_tree",
+	"from_cirq",
 	"generalized_amplitude_damp",
 	"get_engine",
 	"get_placements",
@@ -1311,6 +1312,7 @@ __all__ = [
 	"targeted_left_multiply",
 	"testing",
 	"three_qubit_matrix_to_operations",
+	"to_cirq",
 	"to_json",
 	"to_json_gzip",
 	"to_resolvers",

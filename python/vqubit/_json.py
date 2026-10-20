@@ -114,8 +114,12 @@ def _encode(value: Any) -> Any:
 			"exponent": _encode(value.exponent),
 			"global_shift": _encode(getattr(value, "global_shift", 0.0)),
 		}
-	if isinstance(value, (RxGate, RyGate, RzGate)):
-		return {"cirq_type": type(value).__name__, "radians": _encode(value.radians)}
+	if isinstance(value, RxGate):
+		return {"cirq_type": "Rx", "rads": _encode(value.radians)}
+	if isinstance(value, RyGate):
+		return {"cirq_type": "Ry", "rads": _encode(value.radians)}
+	if isinstance(value, RzGate):
+		return {"cirq_type": "Rz", "rads": _encode(value.radians)}
 	if isinstance(value, PhasedXPowGate):
 		return {
 			"cirq_type": "PhasedXPowGate",
@@ -178,6 +182,10 @@ _TYPES: dict[str, Any] = {
 	"XXPowGate": XXPowGate,
 	"YYPowGate": YYPowGate,
 	"ZZPowGate": ZZPowGate,
+	"Rx": RxGate,
+	"Ry": RyGate,
+	"Rz": RzGate,
+	# Legacy names from before vqubit matched Cirq's ``Rx``/``Ry``/``Rz``.
 	"RxGate": RxGate,
 	"RyGate": RyGate,
 	"RzGate": RzGate,
@@ -286,6 +294,10 @@ def _register_all() -> None:
 	_DECODERS["XXPowGate"] = lambda d: XXPowGate(exponent=_decode(d["exponent"]))
 	_DECODERS["YYPowGate"] = lambda d: YYPowGate(exponent=_decode(d["exponent"]))
 	_DECODERS["ZZPowGate"] = lambda d: ZZPowGate(exponent=_decode(d["exponent"]))
+	_DECODERS["Rx"] = lambda d: RxGate(_decode(d["rads"]))
+	_DECODERS["Ry"] = lambda d: RyGate(_decode(d["rads"]))
+	_DECODERS["Rz"] = lambda d: RzGate(_decode(d["rads"]))
+	# Legacy names from before vqubit matched Cirq's ``Rx``/``Ry``/``Rz``.
 	_DECODERS["RxGate"] = lambda d: RxGate(_decode(d["radians"]))
 	_DECODERS["RyGate"] = lambda d: RyGate(_decode(d["radians"]))
 	_DECODERS["RzGate"] = lambda d: RzGate(_decode(d["radians"]))

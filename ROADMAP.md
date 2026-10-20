@@ -323,9 +323,24 @@ Las divergencias `permanent` están explicadas en
       mal. **Medido:** la puerta del hito —"ida y vuelta QASM estable sobre el
       corpus de pruebas, sin dependencias nuevas"— la fijan 11 tests, uno de
       ellos el corpus de cinco circuitos (texto idéntico y unitarias iguales).
-- [ ] Puente opcional `cirq` ↔ `vqubit` (conversión de circuitos) como extra.
-- [ ] Completar la cobertura de Quirk (más puertas) y congelar el esquema JSON.
-- [ ] Documentar la salida de `numpy`/`sympy` como contrato estable.
+- [x] Puente opcional `cirq` ↔ `vqubit`: `to_cirq` y `from_cirq` convierten en
+      los dos sentidos por el JSON compartido (Cirq tiene que estar instalado;
+      sin él, `ImportError`). Para que la conversión conserve la clase, el JSON
+      escribe las rotaciones como `Rx`/`Ry`/`Rz` de Cirq, con `rads`. **Medido:**
+      dos tests (ida y vuelta, y unitarias) y tres comprobaciones en la sección
+      `interop` del arnés.
+- [x] Completar la cobertura de Quirk y congelar el esquema JSON. Quirk escribe
+      medidas (`Measure`), rotaciones como potencias (`X^t`) y potencias
+      arbitrarias con sus versiones controladas; lo que no sabe representar
+      (`iSWAP`) lanza `TypeError`. El JSON escribe las rotaciones como
+      `Rx`/`Ry`/`Rz` con `rads` de Cirq, y sigue leyendo los nombres antiguos.
+      **Medido:** tests de ida y vuelta de las dos cosas.
+- [x] Documentar la salida de `numpy`/`sympy` como contrato estable: la página
+      de serialización fija qué se acepta y qué se devuelve (arrays `complex128`
+      con `numpy`, listas anidadas sin él) y que los parámetros son `Parameter`,
+      no `sympy.Symbol` (que sí vale como clave de un `ParamResolver`); la
+      página de diferencias lo explica con un ejemplo. **Medido:** los bloques
+      de las dos páginas se ejecutan.
 
 #### 5. Documentación
 
@@ -751,9 +766,24 @@ blanket. The `permanent` divergences are explained in
       malformed program. **Measured:** the milestone gate -- "QASM round-trip
       stable over the test corpus, with no new dependencies" -- is pinned by 11
       tests, one of them a five-circuit corpus (identical text and unitaries).
-- [ ] Optional `cirq` ↔ `vqubit` bridge (circuit conversion) as an extra.
-- [ ] Complete Quirk coverage (more gates) and freeze the JSON schema.
-- [ ] Document `numpy`/`sympy` output as a stable contract.
+- [x] Optional `cirq` ↔ `vqubit` bridge: `to_cirq` and `from_cirq` convert both
+      ways through the JSON the two libraries share (Cirq must be installed;
+      `ImportError` otherwise). So that the conversion keeps the class, the JSON
+      writes rotations as Cirq's `Rx`/`Ry`/`Rz` with `rads`. **Measured:** two
+      tests (round trip and unitaries) and three checks in the harness's
+      `interop` section.
+- [x] Complete Quirk coverage and freeze the JSON schema. Quirk writes
+      measurements (`Measure`), rotations as powers (`X^t`) and arbitrary powers
+      with their controlled versions; what it cannot represent (`iSWAP`) raises
+      `TypeError`. The JSON writes rotations as Cirq's `Rx`/`Ry`/`Rz` with
+      `rads` and still reads the old names. **Measured:** round-trip tests for
+      both.
+- [x] Document the `numpy`/`sympy` output as a stable contract: the
+      serialization chapter fixes what is accepted and returned (`complex128`
+      arrays with `numpy`, nested lists without it) and that parameters are
+      `Parameter`, not `sympy.Symbol` (which does work as a `ParamResolver` key);
+      the differences page explains it with an example. **Measured:** the code
+      blocks of both pages run.
 
 #### 5. Documentation
 

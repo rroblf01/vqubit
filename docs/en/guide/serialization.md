@@ -81,6 +81,23 @@ print(vq.quirk_url(circuit))   # https://algassert.com/quirk#circuit=...
 The `QasmArgs` object carries the context (qubit names, precision and free
 arguments) that a gate's QASM writer receives.
 
+## The `numpy` and `sympy` contract
+
+vqubit does not depend on `numpy`, but uses it when it is installed, and that
+contract is stable:
+
+- **Input**: `state_vector=`, `density_matrix=`, matrices for `MatrixGate` and
+  `unitary=`, and parameters in general accept Python lists as well as `numpy`
+  arrays.
+- **Output**: with `numpy` installed, `state_vector()`, `density_matrix()`,
+  `final_state_vector`, `density_matrix_of()`, `unitary()` and the channel
+  matrices are `numpy` arrays with dtype `complex128`; without it they are
+  nested lists of `complex` and the rest of the API is unchanged.
+- **Symbolic**: parameters are `vq.Parameter` (or `vq.symbol("t")`), not
+  `sympy.Symbol`: a `sympy` symbol is **not** accepted by a gate (it raises
+  `TypeError` instead of converting silently). A `sympy.Symbol` does work as a
+  key of a `vq.ParamResolver`, because it reduces to its name.
+
 ## Next steps
 
 - Run your circuits on local [devices](devices.md).

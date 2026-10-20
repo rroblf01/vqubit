@@ -115,6 +115,26 @@ matriz y no su *tableau*, así que `vq.CZSWAP ** 3` no es igual a `vq.CZSWAP`
 aunque Cirq diga que sí (el ruido de coma flotante de la matriz los separa). Está
 anotado con su criterio de cierre en `ROADMAP.md`.
 
+## Los parámetros son `Parameter`, no `sympy.Symbol`
+
+Cirq acepta `sympy` en las puertas (`cirq.rz(sympy.Symbol("t"))`); vqubit tiene
+su propio tipo, `vq.Parameter` (o `vq.symbol("t")`), para no depender de `sympy`.
+Un símbolo de `sympy` en una puerta lanza `TypeError` en vez de convertirse en
+silencio; sí se puede usar como **clave** de un `vq.ParamResolver`, porque se
+reduce a su nombre.
+
+```python
+import sympy
+import vqubit as vq
+
+q0 = vq.LineQubit(0)
+t = vq.symbol("t")
+
+circuito = vq.Circuit(vq.rz(t)(q0))
+resuelto = vq.resolve_parameters(circuito, vq.ParamResolver({sympy.Symbol("t"): 0.5}))
+assert vq.allclose_up_to_global_phase(vq.unitary(resuelto), vq.unitary(vq.Circuit(vq.rz(0.5)(q0))))
+```
+
 ## Los simuladores solo aceptan `seed`
 
 `vq.Simulator` y `vq.DensityMatrixSimulator` aceptan `seed` y nada más: no hay

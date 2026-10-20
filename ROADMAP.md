@@ -1003,10 +1003,14 @@ A milestone is delivered when its gate passes, not when the work looks done:
 
 ### Definition of done (1.0.0)
 
-- [ ] Name parity 607/607, with `benchmarks/parity_tolerated.toml` holding
-      **only** `permanent`, explained entries.
-- [ ] Zero real `NotImplementedError`s (the abstract ones, as in Cirq, stay).
-- [ ] Coverage ≥95 % with a CI threshold that rises, never falls.
+- [x] **606/607** name parity —`contrib` is the single exception and it is
+      permanent (it needs `ply`, which the zero-dependency rule forbids)— with
+      `benchmarks/parity_tolerated.toml` holding **only** `permanent` entries
+      (all four are today), explained in the differences page.
+- [x] Zero real `NotImplementedError`s: the ones left are abstract (the same
+      Cirq keeps), checked by the 0.5 audit.
+- [x] Coverage ≥95 % with a CI threshold that rises, never falls (95 %,
+      `--fail-under=95`).
 - [ ] `stubtest` clean over `vqubit_native.pyi`.
 - [ ] Extras published, documented and tested in a clean environment.
 - [ ] Documentation versioned per release, with the Cirq migration guide.

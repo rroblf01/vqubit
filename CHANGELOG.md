@@ -101,6 +101,55 @@ tests with coverage at 95 %.
   method did not), so `vq.H(q0).num_qubits() == 1` works while `vq.H.num_qubits`
   stays the attribute.
 
+### Fixed (compilation and transformers, from the 0.5 audit)
+
+- **`single_qubit_op_to_framed_phase_form` is Cirq's function.** It took an
+  operation and returned a `(phase, PhasedX, Z)` triple that did not reconstruct
+  the gate; it now takes the 2x2 matrix and returns `(U, r, g)` with
+  `M = U^-1 · diag(1, r) · U · diag(g, g)`, which is the decomposition a
+  controlled rotation is built from.
+- **`decompose_cphase_into_two_fsim` actually implements the CZ.** It used to
+  return two fSims with two `Z`s whose product was not the CZ; it now ports the
+  construction of arXiv:1910.11333 (section VII F) with Cirq's signature
+  (`cphase_gate`, `fsim_gate=`, `qubits=`), including the global phase and the
+  error that lists the exponents that would work.
+- **`compute_cphase_exponents_for_fsim_decomposition` returns the intervals**
+  of valid `CZPowGate` exponents (zero, one or two of them), as Cirq does,
+  instead of three copies of one number.
+- **`decompose_two_qubit_interaction_into_four_fsim_gates` synthesises the
+  interaction.** It repeated one fSim four times; it now ports Cirq's two-B-gate
+  construction and each B gate becomes two fSims, so an iSWAP or a CNOT comes
+  out as four fSims and single-qubit rotations. It takes Cirq's signature and
+  returns a `Circuit`.
+- **`dephase_measurements` keeps measurements that are not followed by a
+  reset** (it used to drop them, losing the classical result).
+- **`defer_measurements` keeps one measurement per key**: a two-qubit
+  measurement became two single-qubit measurements with the same key.
+- **`merge_operations(tags_to_ignore=...)` protects the left-hand operation**
+  too; only the right one was checked, so a tagged operation could still be
+  merged.
+- **`Circuit.from_moments` keeps the moment boundaries** (it appended operation
+  by operation, so independent moments collapsed), takes Cirq's `*moments`
+  calling form as well as a single iterable, and `FrozenCircuit` follows.
+- **`transform_op_tree` applies both transformations** (the moment one used to
+  ignore the operation one) and forwards `iter_transformation` to nested
+  iterables, so `tuple` builds an immutable tree at every depth. It also takes
+  Cirq's `iter_transformation` position and its `preserve_moments` flag.
+- **`PointOptimizer.optimize_circuit` uses its hooks**: `optimization_at` was
+  never called, so overriding it did nothing, and the moment layout was
+  re-packed.
+- **`CircuitFunction` keeps the moments it is given** and packs loose
+  operations like `Circuit` does.
+- **`GreedyQubitManager(maximize_reuse=...)` has an effect**: the flag was
+  stored and ignored; the default is now Cirq's FIFO (reuse the qubit freed
+  earliest) and `maximize_reuse=True` is LIFO.
+- **`unitary(circuit)` works with a nested `CircuitOperation`** (the circuit
+  path assumed every operation had a gate).
+- **`PhasedXPowGate._decompose_` matches its unitary**: the Z conjugation was
+  written in the wrong order, so the decomposition disagreed with the gate.
+- **QASM: consecutive measurements into different registers** become one
+  measurement per register instead of an error.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

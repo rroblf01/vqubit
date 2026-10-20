@@ -7,8 +7,9 @@ from __future__ import annotations
 import dataclasses
 import enum
 from collections.abc import Callable, Iterable, Sequence
+from typing import Any
 
-from ._circuits import AbstractCircuit, Circuit, Moment
+from ._circuits import AbstractCircuit, Circuit, Moment, _coerce_ops
 from ._ops import Operation
 from ._qubits import Qid
 
@@ -25,12 +26,25 @@ class Alignment(enum.Enum):
 
 
 class CircuitFunction(Circuit):
-	"""A circuit whose moments are produced lazily by a function."""
+	"""A circuit built by calling a function with the given qubits.
 
-	def __init__(self, function: Callable[[Sequence[Qid]], Iterable[Moment]], qubits: Sequence[Qid]) -> None:
+	The function is called once, when the circuit is built; it may return
+	operations, moments or a mixture, and the circuit keeps the moment
+	boundaries the function produced.
+	"""
+
+	def __init__(self, function: Callable[[Sequence[Qid]], Iterable[Any]], qubits: Sequence[Qid]) -> None:
 		self._function = function
 		self._qubits = tuple(qubits)
-		super().__init__(function(self._qubits))
+		produced = list(function(self._qubits))
+		if any(isinstance(item, Moment) for item in produced):
+			# Explicit moments are kept as they are: handing the list to
+			# ``Circuit(...)`` would let independent moments collapse into one.
+			super().__init__()
+			self._moments = [item if isinstance(item, Moment) else Moment(_coerce_ops(item)) for item in produced]
+		else:
+			# Loose operations pack exactly like ``Circuit`` packs them.
+			super().__init__(*produced)
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
@@ -53,15 +67,44 @@ class PointOptimizer:
 		return self.optimize_circuit(circuit)
 
 	def optimize_circuit(self, circuit: AbstractCircuit) -> Circuit:
-		result = Circuit()
-		for moment in circuit.moments:
-			result.append(list(moment.operations))
-		return result
+		"""Rewrite the circuit one operation at a time, as Cirq's optimiser does.
+
+		Every operation is offered to :meth:`optimization_at`; when it returns a
+		summary, the operations on ``clear_qubits`` are removed from
+		``clear_span`` moments and ``new_operations`` are inserted after the
+		current one. Moments are kept as they are otherwise, so the timing of
+		independent operations does not change.
+		"""
+		moments: list[list[Operation]] = [list(moment.operations) for moment in circuit.moments]
+		index = 0
+		while index < len(moments):
+			position = 0
+			while position < len(moments[index]):
+				operation = moments[index][position]
+				summary = self.optimization_at(circuit, index, operation)
+				if summary is None:
+					position += 1
+					continue
+				clear_qubits = set(summary.clear_qubits) or set(operation.qubits)
+				for offset in range(max(1, summary.clear_span)):
+					target = index + offset
+					if target >= len(moments):
+						break
+					moments[target] = [
+						existing for existing in moments[target] if not (set(existing.qubits) & clear_qubits)
+					]
+				if summary.new_operations:
+					moments.insert(index + 1, list(summary.new_operations))
+				position += 1
+			index += 1
+		return Circuit.from_moments(*[Moment(operations) for operations in moments if operations])
 
 	def optimization_at(self, circuit: AbstractCircuit, index: int, op: Operation) -> PointOptimizationSummary | None:
+		"""Return the local change to apply at ``op``, or ``None`` to keep it."""
 		return None
 
 	def convert(self, op: Operation) -> Sequence[Operation]:
+		"""A hook a subclass may use from :meth:`optimization_at` to rewrite one operation."""
 		return [op]
 
 

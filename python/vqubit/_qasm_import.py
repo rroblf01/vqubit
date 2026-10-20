@@ -571,15 +571,23 @@ class _Parser:
 		self._operations.extend(operations)
 
 	def _flush_measurements(self) -> None:
-		"""Turn the pending measurements into one gate per classical register."""
+		"""Turn the pending measurements into one gate per run of the same register.
+
+		Consecutive measurements into different registers are a run each: they
+		become separate ``MeasurementGate`` operations, in the order they were
+		written, instead of being rejected.
+		"""
 		if not self._pending_measurements:
 			return
 		pending, self._pending_measurements = self._pending_measurements, []
-		keys = {key for key, _qubit in pending}
-		if len(keys) != 1:
-			raise QasmParseError("measurements into different registers need a gate between them")
-		key = keys.pop()
-		self._operations.append(measure(*(qubit for _key, qubit in pending), key=key))
+		run: list[tuple[str, Qid]] = []
+		for key, qubit in pending:
+			if run and key != run[-1][0]:
+				self._operations.append(measure(*(q for _key, q in run), key=run[0][0]))
+				run = []
+			run.append((key, qubit))
+		if run:
+			self._operations.append(measure(*(q for _key, q in run), key=run[0][0]))
 
 
 def _rx(angle: Any) -> Gate:

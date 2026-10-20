@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_protocols.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1e-09, 1e-08, 1.0, '_decompose_', '_qid_shape_', '_unitary_', 'qid_shape']

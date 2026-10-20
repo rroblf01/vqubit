@@ -48,11 +48,6 @@ def test_programs_round_trip_through_the_exporter() -> None:
 		assert list(again.all_qubits()) == list(circuit.all_qubits())
 
 
-@pytest.mark.xfail(
-	strict=True,
-	reason="known bug: the exporter writes adjacent measurements into different registers, which the importer rejects",
-	raises=vqubit.QasmParseError,
-)
 def test_adjacent_measurements_into_different_registers_round_trip() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
 	circuit = vqubit.Circuit(vqubit.measure(q0, key="a"), vqubit.measure(q1, key="b"))
@@ -221,9 +216,12 @@ measure q[1] -> c[1];
 	assert operations[2].gate == vqubit.MeasurementGate("c", num_qubits=1)
 
 
-def test_measurements_into_different_registers_need_a_gate_between_them() -> None:
-	with pytest.raises(vqubit.QasmParseError, match="different registers"):
-		_parse("qreg q[1];\ncreg c[1];\ncreg d[1];\nmeasure q[0] -> c[0];\nmeasure q[0] -> d[0];\n")
+def test_measurements_into_different_registers_are_separate_operations() -> None:
+	# Consecutive measurements into different registers become one measurement
+	# per register, in the order they were written.
+	circuit = _parse("qreg q[1];\ncreg c[1];\ncreg d[1];\nmeasure q[0] -> c[0];\nmeasure q[0] -> d[0];\n")
+	keys = [vqubit.measurement_key_name(operation) for operation in circuit.all_operations()]
+	assert keys == ["c", "d"]
 
 
 def test_classical_assignment_measurement_syntax() -> None:

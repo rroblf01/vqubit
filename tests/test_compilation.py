@@ -26,10 +26,14 @@ def test_single_qubit_matrix_to_pauli_rotations() -> None:
 
 
 def test_single_qubit_op_to_framed_phase_form() -> None:
-	q0 = vqubit.LineQubit(0)
-	_phase, phased_x, z_gate = vqubit.single_qubit_op_to_framed_phase_form(vqubit.H(q0))
-	matrix = vqubit.dot(vqubit.unitary(z_gate), vqubit.unitary(phased_x))
-	assert up_to_phase(matrix, vqubit.unitary(vqubit.H), tol=1e-6)
+	# M = U^-1 · diag(1, r) · U · diag(g, g), as in Cirq.
+	matrix = vqubit.unitary(vqubit.H)
+	u, r, g = vqubit.single_qubit_op_to_framed_phase_form(matrix)
+	conjugate_transpose = [[u[j][i].conjugate() for j in range(2)] for i in range(2)]
+	rebuilt = vqubit.linalg.dot(conjugate_transpose, [[1, 0], [0, r]])
+	rebuilt = vqubit.linalg.dot(rebuilt, u)
+	rebuilt = vqubit.linalg.dot(rebuilt, [[g, 0], [0, g]])
+	assert up_to_phase(rebuilt, matrix, tol=1e-6)
 
 
 def test_decompose_multi_controlled_x() -> None:
@@ -131,9 +135,13 @@ def test_prepare_two_qubit_state_using_cz() -> None:
 
 def test_other_compilation_helpers_run() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
-	assert isinstance(vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(0.3, 0.4)), tuple)
-	assert len(vqubit.decompose_cphase_into_two_fsim(q0, q1)) > 0
-	assert len(vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(q0, q1)) == 4
+	intervals = vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(0.3, 0.4))
+	assert isinstance(intervals, list)
+	assert len(vqubit.decompose_cphase_into_two_fsim(vqubit.CZ, fsim_gate=vqubit.FSimGate(math.pi / 4, 0.0))) > 0
+	four = vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(
+		vqubit.ISWAP, fsim_gate=vqubit.FSimGate(math.pi / 2, 0.0)
+	)
+	assert len(list(four.all_operations())) >= 4
 	diagonal, operations = vqubit.two_qubit_matrix_to_diagonal_and_cz_operations(q0, q1, vqubit.unitary(vqubit.CNOT))
 	assert diagonal.num_qubits == 2
 	assert len(operations) > 0

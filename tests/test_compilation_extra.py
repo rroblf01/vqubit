@@ -82,35 +82,40 @@ def test_single_qubit_matrix_to_pauli_rotations_reconstructs_the_unitary() -> No
 		assert up_to_phase(vqubit.unitary(vqubit.Circuit(operations)), matrix, tol=1e-6)
 
 
-def test_single_qubit_op_to_framed_phase_form_for_known_gates() -> None:
-	q0 = vqubit.LineQubit(0)
-	for gate in (vqubit.H, vqubit.X, vqubit.Y, vqubit.Z, vqubit.ry(0.7)):
-		phase, phased_x, z_gate = vqubit.single_qubit_op_to_framed_phase_form(gate.on(q0))
-		assert isinstance(phase, float)
-		assert isinstance(phased_x, vqubit.PhasedXPowGate)
-		assert isinstance(z_gate, vqubit.ZPowGate)
-		reconstructed = vqubit.dot(vqubit.unitary(z_gate), vqubit.unitary(phased_x))
-		assert up_to_phase(reconstructed, vqubit.unitary(gate), tol=1e-6)
+def test_single_qubit_op_to_framed_phase_form() -> None:
+	# The contract is M = U^-1 · diag(1, r) · U · diag(g, g), as in Cirq: U
+	# rotates the axis onto Z, r is the relative phase and g the global one.
+	def conjugate_transpose(matrix: Any) -> Any:
+		return [[matrix[j][i].conjugate() for j in range(len(matrix))] for i in range(len(matrix))]
+
+	for gate in (
+		vqubit.H,
+		vqubit.X,
+		vqubit.Y,
+		vqubit.Z,
+		vqubit.S,
+		vqubit.T,
+		vqubit.rx(0.3),
+		vqubit.ry(1.1),
+		vqubit.rz(0.9),
+	):
+		matrix = vqubit.unitary(gate)
+		u, r, g = vqubit.single_qubit_op_to_framed_phase_form(matrix)
+		assert abs(abs(r) - 1) < 1e-8
+		assert abs(abs(g) - 1) < 1e-8
+		rebuilt = vqubit.linalg.dot(conjugate_transpose(u), [[1, 0], [0, r]])
+		rebuilt = vqubit.linalg.dot(rebuilt, u)
+		rebuilt = vqubit.linalg.dot(rebuilt, [[g, 0], [0, g]])
+		assert up_to_phase(rebuilt, matrix, tol=1e-6), gate
 
 
-@pytest.mark.xfail(
-	reason="framed phase form does not reconstruct generic single-qubit gates (S, T, rx, rz)",
-	strict=False,
-)
-@pytest.mark.parametrize(
-	"gate",
-	[
-		pytest.param(vqubit.S, id="S"),
-		pytest.param(vqubit.T, id="T"),
-		pytest.param(vqubit.rx(0.3), id="rx"),
-		pytest.param(vqubit.rz(0.9), id="rz"),
-	],
-)
-def test_single_qubit_op_to_framed_phase_form_reconstructs_generic_gates(gate: Any) -> None:
-	q0 = vqubit.LineQubit(0)
-	_, phased_x, z_gate = vqubit.single_qubit_op_to_framed_phase_form(gate.on(q0))
-	reconstructed = vqubit.dot(vqubit.unitary(z_gate), vqubit.unitary(phased_x))
-	assert up_to_phase(reconstructed, vqubit.unitary(gate), tol=1e-6)
+def test_single_qubit_op_to_framed_phase_form_of_a_z_rotation_is_diagonal() -> None:
+	# A Z rotation already rotates about the Z axis, so U is a permutation and r
+	# is the phase between the two eigenvalues.
+	matrix = vqubit.unitary(vqubit.rz(0.7))
+	_, r, _ = vqubit.single_qubit_op_to_framed_phase_form(matrix)
+	assert abs(abs(r) - 1) < 1e-8
+	assert abs(r - 1) > 1e-3  # the two eigenvalues differ
 
 
 def test_decompose_multi_controlled_x_with_no_controls_is_x() -> None:
@@ -293,53 +298,71 @@ def test_two_qubit_matrix_to_cz_isometry_preserves_the_isometry_columns() -> Non
 			assert abs(matrix[row][column] - phase * isometry[row][column]) < 1e-6
 
 
-def test_decompose_cphase_into_two_fsim_uses_two_fsim_gates() -> None:
+def test_decompose_cphase_into_two_fsim_implements_the_cz() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
-	operations = vqubit.decompose_cphase_into_two_fsim(q0, q1)
-	assert len(operations) == 4
-	assert isinstance(operations[0].gate, vqubit.FSimGate)
-	assert isinstance(operations[-1].gate, vqubit.FSimGate)
-	custom = vqubit.FSimGate(0.3, 0.2)
-	operations = vqubit.decompose_cphase_into_two_fsim(q0, q1, fsim_gate=custom)
-	assert [operation.gate for operation in operations if len(operation.qubits) == 2] == [custom, custom]
+	fsim = vqubit.FSimGate(math.pi / 4, 0.0)
+	operations = vqubit.decompose_cphase_into_two_fsim(vqubit.CZ, fsim_gate=fsim, qubits=(q0, q1))
+	# Two copies of the fSim, with single-qubit rotations around them.
+	assert [operation.gate for operation in operations if len(operation.qubits) == 2] == [fsim, fsim]
+	_assert_implements(operations, vqubit.unitary(vqubit.CZ))
+	# The default qubits are a fresh pair.
+	assert vqubit.decompose_cphase_into_two_fsim(vqubit.CZ, fsim_gate=fsim)[0].qubits[0] == vqubit.LineQubit(0)
 
 
-@pytest.mark.xfail(
-	reason="decompose_cphase_into_two_fsim returns two fSims and Zs but does not implement a CZ",
-	strict=False,
-)
-def test_decompose_cphase_into_two_fsim_implements_cz() -> None:
+def test_decompose_cphase_into_two_fsim_rejects_what_it_cannot_do() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
-	_assert_implements(vqubit.decompose_cphase_into_two_fsim(q0, q1), vqubit.unitary(vqubit.CZ))
+	# sin(theta)^2 == sin(phi/2)^2 leaves the construction undefined.
+	with pytest.raises(ValueError, match="too close"):
+		vqubit.decompose_cphase_into_two_fsim(
+			vqubit.CZ, fsim_gate=vqubit.FSimGate(math.pi / 4, math.pi / 2), qubits=(q0, q1)
+		)
+	# A parametrized gate cannot be decomposed numerically.
+	with pytest.raises(ValueError, match="parametrized"):
+		vqubit.decompose_cphase_into_two_fsim(
+			vqubit.CZ ** vqubit.Parameter("t"),  # ty: ignore[unsupported-operator]
+			fsim_gate=vqubit.FSimGate(0.3, 0.4),
+			qubits=(q0, q1),
+		)
+	with pytest.raises(ValueError, match="pair of qubits"):
+		vqubit.decompose_cphase_into_two_fsim(vqubit.CZ, fsim_gate=vqubit.FSimGate(0.3, 0.4), qubits=(q0,))
 
 
 def test_compute_cphase_exponents_for_fsim_decomposition() -> None:
-	for theta in (0.0, 0.3, math.pi / 4):
-		exponents = vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(theta, 0.4))
-		assert isinstance(exponents, tuple)
-		assert len(exponents) == 3
-		assert exponents == pytest.approx((-4 * theta / math.pi,) * 3)
+	# The intervals come from the two angles of the fSim: each bounds the phase,
+	# so the valid exponents are the sine's hump and its mirror.
+	intervals = vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(0.3, 0.4))
+	assert isinstance(intervals, list)
+	assert all(len(interval) == 2 and interval[0] < interval[1] for interval in intervals)
+	assert all(start >= 0 and stop <= 2 for start, stop in intervals)
+	# A degenerate fSim (theta = phi = 0) cannot decompose any CZ: both bounds
+	# collapse and the intervals are empty, as in Cirq.
+	assert vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(0.0, 0.0)) == []
+	with pytest.raises(ValueError, match="Symbolic"):
+		vqubit.compute_cphase_exponents_for_fsim_decomposition(vqubit.FSimGate(vqubit.Parameter("t"), 0.0))
 
 
-def test_decompose_two_qubit_interaction_into_four_fsim_gates_uses_four_fsims() -> None:
+def test_decompose_two_qubit_interaction_into_four_fsim_gates() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
-	operations = vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(q0, q1)
-	assert len(operations) == 4
-	assert all(isinstance(operation.gate, vqubit.FSimGate) for operation in operations)
-	custom = vqubit.FSimGate(0.6, 0.0)
-	operations = vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(q0, q1, fsim_gate=custom)
-	assert [operation.gate for operation in operations] == [custom] * 4
+	fsim = vqubit.FSimGate(math.pi / 2, 0.0)
+	circuit = vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(vqubit.ISWAP, fsim_gate=fsim, qubits=(q0, q1))
+	operations = list(circuit.all_operations())
+	# Exactly four copies of the requested gate, and the whole thing is an iSWAP.
+	assert [operation.gate for operation in operations if operation.gate == fsim] == [fsim] * 4
+	assert up_to_phase(vqubit.unitary(circuit), vqubit.unitary(vqubit.ISWAP))
 
+	# An ISwapPowGate is mapped onto the fSim it parametrises, and the default
+	# qubits are a fresh pair.
+	by_power = vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(vqubit.ISWAP, fsim_gate=vqubit.ISWAP)
+	assert len([op for op in by_power.all_operations() if isinstance(op.gate, vqubit.ISwapPowGate)]) == 4
+	assert up_to_phase(vqubit.unitary(by_power), vqubit.unitary(vqubit.ISWAP))
 
-@pytest.mark.xfail(
-	reason="four fSim gates are simply repeated and do not implement an iSWAP interaction",
-	strict=False,
-)
-def test_decompose_two_qubit_interaction_into_four_fsim_gates_implements_iswap() -> None:
-	q0, q1 = vqubit.LineQubit.range(2)
-	_assert_implements(
-		vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(q0, q1), vqubit.unitary(vqubit.ISWAP)
-	)
+	# Gates outside the supported window are rejected.
+	with pytest.raises(ValueError, match="3π/8"):
+		vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(vqubit.ISWAP, fsim_gate=vqubit.FSimGate(0.3, 0.0))
+	with pytest.raises(ValueError, match="phi"):
+		vqubit.decompose_two_qubit_interaction_into_four_fsim_gates(
+			vqubit.ISWAP, fsim_gate=vqubit.FSimGate(math.pi / 2, math.pi / 2)
+		)
 
 
 def test_prepare_two_qubit_state_using_cz() -> None:

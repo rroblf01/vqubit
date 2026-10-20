@@ -116,12 +116,22 @@ class Circuit(AbstractCircuit):
 		return self
 
 	@classmethod
-	def from_moments(cls, moments: Iterable[Moment]) -> Circuit:
-		"""Build a circuit from an explicit sequence of moments."""
-		circuit = cls()
+	def from_moments(cls, *moments: Any) -> Circuit:
+		"""Build a circuit from explicit moments, keeping their boundaries.
+
+		``Circuit.from_moments(m1, m2)`` is Cirq's calling form; a single
+		iterable of moments is accepted too, since that is what the transformers
+		in this library build.
+		"""
+		if len(moments) == 1 and not isinstance(moments[0], Moment):
+			moments = tuple(moments[0])
 		for moment in moments:
-			for operation in moment.operations:
-				circuit.append(operation)
+			if not isinstance(moment, Moment):
+				raise TypeError(f"from_moments expects Moment instances, got {type(moment).__name__}")
+		circuit = cls()
+		# Assign the list directly: appending operation by operation would let two
+		# independent moments collapse into one.
+		circuit._moments = [Moment(list(moment.operations)) for moment in moments]
 		return circuit
 
 	# -- access ---------------------------------------------------------------
@@ -208,10 +218,10 @@ class FrozenCircuit(Circuit):
 		self._moments = list(built._moments)
 
 	@classmethod
-	def from_moments(cls, moments: Iterable[Moment]) -> FrozenCircuit:
-		"""Build a frozen circuit from an explicit sequence of moments."""
+	def from_moments(cls, *moments: Any) -> FrozenCircuit:
+		"""Build a frozen circuit from explicit moments, keeping their boundaries."""
 		frozen = cls()
-		frozen._moments = list(Circuit.from_moments(moments)._moments)
+		frozen._moments = list(Circuit.from_moments(*moments)._moments)
 		return frozen
 
 	def append(self, content: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> Circuit:

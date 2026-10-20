@@ -238,13 +238,19 @@ def test_simple_manager_counts_existing_qubits_against_max_size() -> None:
 		manager.qalloc()
 
 
-def test_greedy_manager_recycles_provided_qubits_last_in_first_out() -> None:
+def test_greedy_manager_recycles_provided_qubits_first_in_first_out() -> None:
+	# Cirq's default (maximize_reuse=False) is FIFO: the qubit freed earliest
+	# comes back first. ``maximize_reuse=True`` switches to LIFO.
 	q0, q1 = vqubit.LineQubit.range(2)
 	manager = vqubit.GreedyQubitManager(qubits=[q0, q1])
 
-	assert manager.qalloc() == q1
 	assert manager.qalloc() == q0
+	assert manager.qalloc() == q1
 	assert manager.qalloc() == vqubit.LineQubit(2)
+
+	lifo = vqubit.GreedyQubitManager(qubits=[q0, q1], maximize_reuse=True)
+	assert lifo.qalloc() == q1
+	assert lifo.qalloc() == q0
 
 
 def test_greedy_manager_reuses_a_freed_qubit_only_once() -> None:

@@ -23,6 +23,7 @@ from ._gates import (
 	PhasedXPowGate,
 	Rx,
 	RxGate,
+	Ry,
 	RyGate,
 	Rz,
 	RzGate,
@@ -37,6 +38,7 @@ from ._kak import two_qubit_matrix_to_cz_operations
 from ._linalg import Matrix, matmul
 from ._linalg_public import kak_decomposition, to_nested_list
 from ._ops import Operation
+from ._parameter import is_symbolic
 from ._pauli import Pauli
 from ._qubits import LineQubit, Qid
 from ._target_gatesets import TargetGateset
@@ -80,18 +82,25 @@ def single_qubit_matrix_to_pauli_rotations(
 
 
 def single_qubit_op_to_framed_phase_form(
-	operation: Operation, *, atol: float = 1e-8
-) -> tuple[float, PhasedXPowGate, ZPowGate]:
-	"""Return ``(global_phase, PhasedX, Z)`` for a single-qubit operation."""
-	from ._protocols import unitary
+	matrix: Sequence[Sequence[complex]], *, atol: float = 1e-8
+) -> tuple[Matrix, complex, complex]:
+	"""Decompose a 2x2 unitary as ``U^-1 · diag(1, r) · U · diag(g, g)``.
 
-	matrix = to_nested_list(unitary(operation.gate))
-	alpha, beta, gamma = _zyz_angles(matrix)
-	phase = cmath.phase(matrix[0][0]) if abs(matrix[0][0]) > 1e-12 else 0.0
-	phased_x = PhasedXPowGate(phase_exponent=0.5 - gamma / math.pi, exponent=beta / math.pi)
-	z_gate = ZPowGate(exponent=(alpha + gamma) / math.pi)
-	del atol
-	return phase, phased_x, z_gate
+	``U`` rotates the rotation axis of ``matrix`` onto the Z axis, ``r`` is the
+	relative phase (the rotation about that axis) and ``g`` the global phase.
+	This is ``cirq.single_qubit_op_to_framed_phase_form``, and it is what a
+	controlled single-qubit rotation is decomposed with.
+
+	Returns ``(U, r, g)``.
+	"""
+	from ._linalg_public import unitary_eig
+
+	values, vectors = unitary_eig(matrix, atol=atol)
+	# ``unitary_eig`` returns the eigenvectors as columns, so ``U`` is V^dagger.
+	u = [[complex(vectors[row][column]).conjugate() for row in range(2)] for column in range(2)]
+	relative_phase = complex(values[1]) / complex(values[0])
+	global_phase = complex(values[0])
+	return u, relative_phase, global_phase
 
 
 def decompose_multi_controlled_x(
@@ -422,29 +431,319 @@ def _complete_isometry(matrix: Matrix) -> Matrix:
 	return result
 
 
-def decompose_cphase_into_two_fsim(q0: Qid, q1: Qid, *, fsim_gate: Any = None, atol: float = 1e-8) -> list[Operation]:
-	"""Decompose a CZ into two fSim gates."""
-	del atol
-	gate = fsim_gate if fsim_gate is not None else FSimGate(math.pi / 4, 0.0)
-	return [gate.on(q0, q1), Z(q0), Z(q1), gate.on(q0, q1)]
+def _asinsin(value: float) -> float:
+	"""``arcsin(sin(value))``, returned in ``[-π/2, π/2]``."""
+	turns = round(value / math.pi)
+	if turns % 2 == 0:
+		return value - turns * math.pi
+	return turns * math.pi - value
 
 
-def compute_cphase_exponents_for_fsim_decomposition(fsim_gate: FSimGate) -> tuple[float, float, float]:
-	"""Return the CZ exponents a, b, c with ``CZ = fSim^a · fSim^b · fSim^c``-style."""
-	theta = fsim_gate.theta
-	phi = fsim_gate.phi
-	del phi
-	exponent = -4 * theta / math.pi
-	return exponent, exponent, exponent
+def compute_cphase_exponents_for_fsim_decomposition(fsim_gate: FSimGate) -> list[tuple[float, float]]:
+	"""Return the intervals of ``CZPowGate`` exponents a two-fSim decomposition allows.
+
+	This is ``cirq.compute_cphase_exponents_for_fsim_decomposition``: the fSim's
+	two angles bound the phase angle, which gives one or two intervals (cropped
+	to ``[0, 2]``). An empty list means the gate cannot decompose any CZ at all.
+	"""
+	theta, phi = fsim_gate.theta, fsim_gate.phi
+	if is_symbolic(theta) or is_symbolic(phi):
+		raise ValueError("Symbolic arguments are not supported by the fSim decomposition")
+	bound_theta = abs(_asinsin(float(theta)))
+	bound_phi = abs(_asinsin(float(phi) / 2))
+	low = 4 * min(bound_theta, bound_phi) / math.pi
+	high = 4 * max(bound_theta, bound_phi) / math.pi
+	# The sine's second "hump": the same width, mirrored about one turn.
+	mirror_low, mirror_high = 2 - high, 2 - low
+	intervals: list[tuple[float, float]] = []
+	if high < mirror_low:
+		intervals = [(low, high), (mirror_low, mirror_high)]
+	elif mirror_high < low:
+		intervals = [(mirror_low, mirror_high), (low, high)]
+	else:
+		intervals = [(min(low, mirror_low), max(high, mirror_high))]
+	return [(start, stop) for start, stop in intervals if start < stop and stop > 0 and start < 2]
+
+
+def decompose_cphase_into_two_fsim(
+	cphase_gate: Any,
+	*,
+	fsim_gate: FSimGate,
+	qubits: Sequence[Qid] | None = None,
+	atol: float = 1e-8,
+) -> list[Operation]:
+	"""Decompose a ``CZPowGate`` into two fSim gates and single-qubit rotations.
+
+	The construction is section VII F of https://arxiv.org/abs/1910.11333 and
+	matches ``cirq.decompose_cphase_into_two_fsim``, including the global phase.
+	It is feasible only when the fSim angles and the CZ exponent satisfy
+
+	``|sin(theta)| <= |sin(delta/4)| <= |sin(phi/2)|`` (or the reverse order),
+
+	with ``delta = -pi * cphase_gate.exponent``; otherwise ``ValueError`` lists
+	the exponents that would work.
+	"""
+	from ._gates import global_phase
+
+	if is_symbolic(getattr(cphase_gate, "exponent", 1.0)):
+		raise ValueError("Cannot decompose a parametrized gate.")
+	if is_symbolic(fsim_gate.theta) or is_symbolic(fsim_gate.phi):
+		raise ValueError("Cannot decompose into a parametrized gate.")
+	if qubits is None:
+		qubits = LineQubit.range(2)
+	if len(qubits) != 2:
+		raise ValueError(f"Expected a pair of qubits, but got {qubits!r}.")
+	q0, q1 = qubits
+
+	theta = float(fsim_gate.theta)
+	phi = float(fsim_gate.phi)
+	sin_half_phi = math.sin(phi / 2)
+	cos_half_phi = math.cos(phi / 2)
+	sin_theta = math.sin(theta)
+	cos_theta = math.cos(theta)
+
+	denominator = (sin_theta - sin_half_phi) * (sin_theta + sin_half_phi)
+	if abs(denominator) < atol:
+		raise ValueError(
+			f"{fsim_gate} cannot decompose a CZPowGate: sin(theta)**2 is too close to "
+			f"sin(phi/2)**2 (difference {denominator})."
+		)
+
+	exponent = float(getattr(cphase_gate, "exponent", 1.0))
+	canonical_delta = -math.pi * (exponent % 2)
+	delta = canonical_delta
+	for candidate in (canonical_delta, canonical_delta + 2 * math.pi):
+		sin_quarter = math.sin(candidate / 4)
+		numerator = (sin_quarter - sin_half_phi) * (sin_quarter + sin_half_phi)
+		sin_alpha_squared = numerator / denominator
+		if 0 <= sin_alpha_squared <= 1:
+			delta = candidate
+			break
+	else:
+		intervals = compute_cphase_exponents_for_fsim_decomposition(fsim_gate)
+		raise ValueError(
+			f"{cphase_gate} cannot be decomposed into two {fsim_gate}. "
+			f"Valid intervals for the canonical CZPowGate exponent: {intervals}."
+		)
+	alpha = math.asin(math.sqrt(sin_alpha_squared))
+
+	tan_alpha = math.tan(alpha)
+	xi = math.atan2(tan_alpha * cos_theta, cos_half_phi)
+	eta = math.atan2(tan_alpha * sin_theta, sin_half_phi)
+	if delta < 0:
+		eta += math.pi
+
+	phase = global_phase(phi / (4 * math.pi))
+	return [
+		Rx(xi)(q0),
+		Rx(eta)(q1),
+		fsim_gate.on(q0, q1),
+		Rz(phi / 2)(q0),
+		Rz(phi / 2)(q1),
+		phase.on(),
+		Rx(-2 * alpha)(q0),
+		Z(q0),
+		fsim_gate.on(q0, q1),
+		Rz(phi / 2)(q0),
+		Rz(phi / 2)(q1),
+		phase.on(),
+		Z(q0),
+		Rx(-eta)(q1),
+		Rx(xi)(q0),
+		Rz(-delta / 2)(q0),
+		Rz(-delta / 2)(q1),
+		global_phase(-delta / (4 * math.pi)).on(),
+	]
+
+
+def _sticky_0_to_1(value: float, *, atol: float) -> float | None:
+	"""``value`` clamped into ``[0, 1]`` when it is within ``atol`` of it."""
+	if 0 <= value <= 1:
+		return value
+	if 1 < value <= 1 + atol:
+		return 1.0
+	if 0 > value >= -atol:
+		return 0.0
+	return None
+
+
+def _dag(matrix: Sequence[Sequence[complex]]) -> Matrix:
+	return [[complex(matrix[j][i]).conjugate() for j in range(len(matrix))] for i in range(len(matrix))]
+
+
+class _BGate(Gate):
+	"""The two-qubit gate two copies of which reach any KAK interaction."""
+
+	def _num_qubits_(self) -> int:
+		return 2
+
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[Operation]:
+		from ._gates import XX, YY
+
+		a, b = qubits
+		return [(XX**-0.5)(a, b), (YY**-0.25)(a, b)]
+
+
+def _decompose_xx_yy_into_two_fsims_ignoring_single_qubit_ops(
+	*,
+	qubits: Sequence[Qid],
+	fsim_gate: FSimGate,
+	canonical_x_kak_coefficient: float,
+	canonical_y_kak_coefficient: float,
+	atol: float = 1e-8,
+) -> list[Operation]:
+	x = canonical_x_kak_coefficient
+	y = canonical_y_kak_coefficient
+	assert 0 <= y <= x <= math.pi / 4
+
+	eta = math.sin(x) ** 2 * math.cos(y) ** 2 + math.cos(x) ** 2 * math.sin(y) ** 2
+	xi = abs(math.sin(2 * x) * math.sin(2 * y))
+
+	t = float(fsim_gate.phi) / 2
+	kappa = math.sin(float(fsim_gate.theta)) ** 2 - math.sin(t) ** 2
+	s_sum = (eta - math.sin(t) ** 2) / kappa
+	s_dif = 0.5 * xi / kappa
+
+	a_dif = _sticky_0_to_1(s_sum + s_dif, atol=atol)
+	a_sum = _sticky_0_to_1(s_sum - s_dif, atol=atol)
+	if a_dif is None or a_sum is None:
+		raise ValueError(
+			f"Failed to synthesize XX^{x / math.pi}·YY^{y / math.pi} from two {fsim_gate!r} "
+			"separated by single-qubit operations."
+		)
+
+	x_dif = math.asin(math.sqrt(a_dif))
+	x_sum = math.asin(math.sqrt(a_sum))
+	x_a, x_b = x_sum + x_dif, x_dif - x_sum
+	a, b = qubits
+	return [
+		fsim_gate.on(a, b),
+		Rz(t + math.pi)(a),
+		Rz(t)(b),
+		Rx(x_a)(a),
+		Rx(x_b)(b),
+		fsim_gate.on(a, b),
+	]
+
+
+def _decompose_interaction_into_two_b_gates_ignoring_single_qubit_ops(
+	qubits: Sequence[Qid], kak_interaction_coefficients: Sequence[float]
+) -> list[Operation]:
+	"""The minimal two-B construction of a two-qubit operation (quant-ph/0312193)."""
+	a, b = qubits
+	x, y, z = kak_interaction_coefficients
+	r = max(0.0, (math.sin(y) * math.cos(z)) ** 2)
+	if r > 0.499999999999:
+		rb: list[Operation] = [Ry(math.pi)(b)]
+	else:
+		b1 = max(0.0, min(1.0, math.cos(y * 2) * math.cos(z * 2) / (1 - 2 * r)))
+		b2 = math.asin(math.sqrt(b1))
+		b3 = math.acos(1 - 4 * r)
+		rb = [Rz(-b2)(b), Ry(-b3)(b), Rz(-b2)(b)]
+	s = 1 if z < 0 else -1
+	return [_BGate().on(a, b), Ry(s * 2 * x)(a), *rb, _BGate().on(a, b)]
+
+
+def _fix_single_qubit_gates_around_kak_interaction(
+	*,
+	desired: Any,
+	operations: list[Operation],
+	qubits: Sequence[Qid],
+) -> list[Operation]:
+	"""Complete a KAK interaction with the single-qubit gates around it."""
+	from ._protocols import unitary as _unitary
+
+	actual = kak_decomposition(_unitary(Circuit(operations)))
+	result: list[Operation] = []
+	for k in range(2):
+		gate = MatrixGate(
+			matmul(_dag(actual.single_qubit_operations_before[k]), desired.single_qubit_operations_before[k])
+		)
+		result.append(gate.on(qubits[k]))
+	result.extend(operations)
+	for k in range(2):
+		gate = MatrixGate(
+			matmul(desired.single_qubit_operations_after[k], _dag(actual.single_qubit_operations_after[k]))
+		)
+		result.append(gate.on(qubits[k]))
+	phase = complex(desired.global_phase) / complex(actual.global_phase)
+	result.append(global_phase_for(phase).on())
+	return result
 
 
 def decompose_two_qubit_interaction_into_four_fsim_gates(
-	q0: Qid, q1: Qid, *, fsim_gate: Any = None, **kwargs: Any
-) -> list[Operation]:
-	"""Decompose an iSWAP interaction into four fSim gates (best-effort)."""
-	del kwargs
-	gate = fsim_gate if fsim_gate is not None else FSimGate(math.pi / 4, math.pi / 4)
-	return [gate.on(q0, q1), gate.on(q0, q1), gate.on(q0, q1), gate.on(q0, q1)]
+	interaction: Any,
+	*,
+	fsim_gate: Any,
+	qubits: Sequence[Qid] | None = None,
+	atol: float = 1e-8,
+) -> Circuit:
+	"""Decompose a two-qubit interaction into exactly four fSim gates.
+
+	This is ``cirq.decompose_two_qubit_interaction_into_four_fsim_gates``: the
+	interaction becomes two ``B`` gates and each ``B`` gate becomes two copies
+	of ``fsim_gate`` separated by single-qubit rotations. It only works for an
+	fSim close to iSWAP strength (``3π/8 ≤ |theta| ≤ 5π/8``) and a small cphase
+	(``|phi| ≤ π/4``).
+	"""
+	from ._gates import ISwapPowGate
+
+	if is_symbolic(getattr(fsim_gate, "theta", None)) or is_symbolic(getattr(fsim_gate, "phi", None)):
+		raise ValueError("FSimGate must not have parameterized values for angles.")
+	mapped_gate = (
+		FSimGate(-float(fsim_gate.exponent) * math.pi / 2, 0.0) if isinstance(fsim_gate, ISwapPowGate) else fsim_gate
+	)
+	theta = float(mapped_gate.theta)
+	phi = float(mapped_gate.phi)
+	if not 3 / 8 * math.pi <= abs(theta) <= 5 / 8 * math.pi:
+		raise ValueError("Must have 3π/8 ≤ |fsim_gate.theta| ≤ 5π/8")
+	if abs(phi) > math.pi / 4:
+		raise ValueError("Must have abs(fsim_gate.phi) ≤ π/4")
+	if qubits is None:
+		from ._ops import Operation
+
+		qubits = interaction.qubits if isinstance(interaction, Operation) else LineQubit.range(2)
+	if len(qubits) != 2:
+		raise ValueError(f"Expected a pair of qubits, but got {qubits!r}.")
+
+	from ._protocols import unitary as _unitary
+
+	try:
+		interaction_matrix = _unitary(interaction)
+	except TypeError:
+		interaction_matrix = interaction
+	kak = kak_decomposition(interaction_matrix)
+	two_b = _decompose_interaction_into_two_b_gates_ignoring_single_qubit_ops(qubits, kak.interaction_coefficients)
+	two_b = _fix_single_qubit_gates_around_kak_interaction(desired=kak, operations=two_b, qubits=qubits)
+
+	b_kak = kak_decomposition(_unitary((_BGate()).on(*qubits)))
+	b_as_fsims = _decompose_xx_yy_into_two_fsims_ignoring_single_qubit_ops(
+		qubits=qubits,
+		fsim_gate=mapped_gate,
+		canonical_x_kak_coefficient=b_kak.interaction_coefficients[0],
+		canonical_y_kak_coefficient=b_kak.interaction_coefficients[1],
+		atol=atol,
+	)
+	b_as_fsims = _fix_single_qubit_gates_around_kak_interaction(desired=b_kak, operations=b_as_fsims, qubits=qubits)
+	if mapped_gate is not fsim_gate:
+		b_as_fsims = [
+			fsim_gate.on(*operation.qubits) if operation.gate == mapped_gate else operation for operation in b_as_fsims
+		]
+
+	result: list[Operation] = []
+	for operation in two_b:
+		if isinstance(operation.gate, _BGate):
+			result.extend(b_as_fsims)
+		else:
+			result.append(operation)
+	return Circuit(result)
+
+
+def global_phase_for(coefficient: complex) -> Any:
+	"""A ``GlobalPhaseGate`` applying ``coefficient`` (an arbitrary unit phase)."""
+	from ._gates import global_phase
+
+	return global_phase(cmath.phase(coefficient) / math.pi)
 
 
 def prepare_two_qubit_state_using_cz(

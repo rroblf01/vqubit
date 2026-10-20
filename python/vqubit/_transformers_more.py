@@ -186,20 +186,49 @@ def _is_diagonal(gate: Gate) -> bool:
 
 
 def dephase_measurements(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:
-	"""Replace a measurement followed by a reset with a dephasing channel."""
+	"""Replace a measurement followed by a reset with a dephasing channel.
+
+	A measurement that is **not** followed by a reset stays a measurement: it is
+	only the measure-then-reset pair that dephases the qubit, and dropping the
+	plain measurement would lose its classical result.
+	"""
 	del atol
-	result = Circuit()
-	pending: set[Qid] = set()
+	# Measurements are held back until we know whether a reset follows them.
+	pending: list[list[Any]] = []  # [operation, alive]
+	pending_qubits: dict[Qid, list[Any]] = {}
+	result_ops: list[Operation] = []
+
+	def flush() -> None:
+		for entry in pending:
+			if entry[1]:
+				result_ops.append(entry[0])
+		pending.clear()
+		pending_qubits.clear()
+
 	for operation in circuit.all_operations():
 		if operation.gate._is_measurement_():
-			pending.update(operation.qubits)
+			# Measurements keep their order among themselves, so flush first.
+			flush()
+			entry: list[Any] = [operation, True]
+			pending.append(entry)
+			for qubit in operation.qubits:
+				pending_qubits[qubit] = entry
 			continue
-		if isinstance(operation.gate, ResetChannel) and operation.qubits[0] in pending:
-			pending.discard(operation.qubits[0])
-			result.append(PhaseDampingChannel(1.0).on(operation.qubits[0]))
+		if isinstance(operation.gate, ResetChannel) and all(q in pending_qubits for q in operation.qubits):
+			for qubit in operation.qubits:
+				entry = pending_qubits.pop(qubit)
+				# The measurement is replaced only once every qubit it covered
+				# has been reset; otherwise its classical result is still needed.
+				covered = set(entry[0].qubits)
+				if covered.issubset(set(operation.qubits)):
+					entry[1] = False
+			for qubit in operation.qubits:
+				result_ops.append(PhaseDampingChannel(1.0).on(qubit))
 			continue
-		result.append(operation)
-	return result
+		flush()
+		result_ops.append(operation)
+	flush()
+	return Circuit(result_ops)
 
 
 def merge_operations(
@@ -229,6 +258,10 @@ def merge_operations(
 		merged = False
 		for index in candidates:
 			left = result[index]
+			# A tagged operation is protected from merging, whichever side of the
+			# pair it is on.
+			if not ignored.isdisjoint(getattr(left, "tags", ())):
+				continue
 			left_qubits, op_qubits = set(left.qubits), set(operation.qubits)
 			if left_qubits.issubset(op_qubits) or op_qubits.issubset(left_qubits):
 				new_op = merge_func(left, operation)
@@ -418,19 +451,22 @@ def defer_measurements(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:
 	result = Circuit()
 	used = set(circuit.all_qubits())
 	next_index = max((q.x for q in used if isinstance(q, LineQubit)), default=-1) + 1
-	ancilla_measurements: list[Operation] = []
+	# One deferred measurement per original one, so the key keeps its width.
+	deferred: list[tuple[Any, list[Qid], tuple[bool, ...]]] = []
 	for operation in circuit.all_operations():
 		if isinstance(operation.gate, MeasurementGate):
 			gate = operation.gate
+			ancillas: list[Qid] = []
 			for qubit in operation.qubits:
 				ancilla = LineQubit(next_index)
 				next_index += 1
 				result.append(_cnot(qubit, ancilla))
-				ancilla_measurements.append(MeasurementGate(gate.key, num_qubits=1).on(ancilla))
+				ancillas.append(ancilla)
+			deferred.append((gate.key, ancillas, gate.full_invert_mask))
 			continue
 		result.append(operation)
-	for measurement in ancilla_measurements:
-		result.append(measurement)
+	for key, ancillas, invert_mask in deferred:
+		result.append(MeasurementGate(key, num_qubits=len(ancillas), invert_mask=invert_mask).on(*ancillas))
 	return result
 
 

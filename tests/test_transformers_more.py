@@ -226,10 +226,6 @@ def test_dephase_measurements_replaces_measure_reset_with_a_dephasing_channel() 
 	assert list(vqubit.dephase_measurements(reset_only).all_operations()) == list(reset_only.all_operations())
 
 
-@pytest.mark.xfail(
-	reason="dephase_measurements drops measurements that are not followed by a reset",
-	strict=False,
-)
 def test_dephase_measurements_keeps_a_plain_measurement() -> None:
 	q0 = vqubit.LineQubit(0)
 	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.measure(q0, key="m"))
@@ -259,10 +255,6 @@ def test_merge_operations_merges_two_qubit_gates_and_respects_tags() -> None:
 	assert len(list(protected.all_operations())) == 2
 
 
-@pytest.mark.xfail(
-	reason="merge_operations only checks the tags of the right-hand operation, so a tagged left-hand operation is still merged",
-	strict=False,
-)
 def test_merge_operations_protects_a_tagged_left_hand_operation() -> None:
 	q0 = vqubit.LineQubit(0)
 	tagged = next(iter(vqubit.toggle_tags(vqubit.Circuit(vqubit.H(q0)), "keep").all_operations()))
@@ -441,13 +433,14 @@ def test_defer_measurements_handles_multi_qubit_measurements() -> None:
 	circuit = vqubit.Circuit(vqubit.measure(q0, q1, key="both"))
 	result = vqubit.defer_measurements(circuit)
 	measurements = [operation for operation in result.all_operations() if operation.gate._is_measurement_()]
-	assert len(measurements) == 2
-	keys: set[str] = set()
-	for operation in measurements:
-		measurement = operation.gate
-		assert isinstance(measurement, vqubit.MeasurementGate)
-		keys.add(str(measurement.key))
-	assert keys == {"both"}
+	# One deferred measurement, on the two ancillas and with the original key: a
+	# single-qubit measurement per ancilla would repeat the key and lose the
+	# classical bit ordering.
+	assert len(measurements) == 1
+	measurement = measurements[0].gate
+	assert isinstance(measurement, vqubit.MeasurementGate)
+	assert str(measurement.key) == "both"
+	assert len(measurements[0].qubits) == 2
 	assert len(result.all_qubits()) == 4
 	no_measurement = vqubit.Circuit(vqubit.H(q0))
 	assert vqubit.defer_measurements(no_measurement) == no_measurement

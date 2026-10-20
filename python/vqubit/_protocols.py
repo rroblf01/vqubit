@@ -124,11 +124,11 @@ def _numpy_circuit_unitary(circuit: Circuit) -> Any:
 	result = np.eye(dim, dtype=np.complex128)
 	for moment in circuit.moments:
 		for operation in moment.operations:
-			if isinstance(operation.gate, MeasurementGate):
+			if isinstance(_operation_gate(operation), MeasurementGate):
 				raise TypeError("a circuit with measurements has no unitary")
-			matrix = _as_matrix(operation.gate._cached_unitary_())
+			matrix = _operation_unitary(operation)
 			if matrix is None:
-				raise TypeError(f"{operation.gate!r} has no unitary")
+				raise TypeError(f"{operation!r} has no unitary")
 			targets = [index[q] for q in operation.qubits]
 			result = _numpy_apply_to_unitary(result, np.asarray(matrix, dtype=np.complex128), num_qubits, targets)
 	return result
@@ -159,15 +159,48 @@ def _numpy_apply_to_unitary(U: Any, gate_matrix: Any, num_qubits: int, targets: 
 	return moved.reshape(dim, dim)
 
 
+def _operation_gate(operation: Any) -> Any:
+	"""The operation's gate, or ``None`` for an operation that has no single one.
+
+	``CircuitOperation.gate`` raises ``NotImplementedError`` on purpose, and
+	``getattr`` only swallows ``AttributeError``.
+	"""
+	try:
+		return operation.gate
+	except NotImplementedError:
+		return None
+
+
+def _operation_unitary(operation: Any) -> Matrix | None:
+	"""The matrix an operation applies, whether it wraps a gate or not.
+
+	A ``CircuitOperation`` has no single gate (its ``gate`` property raises), so
+	the operation's own ``_unitary_`` is asked first and the gate is the fallback.
+	"""
+	# The gate's own matrix is the definition; the decomposition is only a
+	# fallback (and the ``B`` gate of the fSim synthesis has nothing else).
+	gate = _operation_gate(operation)
+	if gate is not None:
+		matrix = _as_matrix(gate._cached_unitary_())
+		if matrix is not None:
+			return matrix
+	method = getattr(operation, "_unitary_", None)
+	if callable(method):
+		matrix = _as_matrix(method())
+		if matrix is not None:
+			return matrix
+	return _decomposed_unitary(operation)
+
+
 def _moment_unitary(moment: Moment, index: dict[Qid, int], dim: int) -> Matrix:
 	num_qubits = dim.bit_length() - 1
 	result = identity(dim)
 	for operation in moment.operations:
-		if isinstance(operation.gate, MeasurementGate):
+		if isinstance(_operation_gate(operation), MeasurementGate):
 			raise TypeError("a circuit with measurements has no unitary")
-		gate_matrix = _as_matrix(operation.gate._cached_unitary_())
+		gate_matrix = _operation_unitary(operation)
 		if gate_matrix is None:
-			raise TypeError(f"{operation.gate!r} has no unitary")
+			raise TypeError(f"{operation!r} has no unitary")
 		targets = [index[q] for q in operation.qubits]
 		embedded = from_flat(_native.embed_operator(to_flat(gate_matrix), len(gate_matrix), targets, num_qubits), dim)
 		result = matmul(embedded, result)

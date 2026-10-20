@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import difflib
 import inspect
+import re
 import sys
 import types
 from pathlib import Path
@@ -38,7 +39,13 @@ def describe_signature(value: Any) -> str:
 		return "(...)"
 	parameters = [parameter.replace(annotation=inspect.Parameter.empty) for parameter in signature.parameters.values()]
 	normalised = signature.replace(parameters=parameters, return_annotation=inspect.Signature.empty)
-	return str(normalised)
+	rendered = str(normalised)
+	# A callable default (or any object) prints with its memory address: keep the
+	# name and drop the address so the snapshot is reproducible.
+	rendered = re.sub(r"<function (.+?) at 0x[0-9a-fA-F]+>", r"<function \1>", rendered)
+	rendered = re.sub(r"<([A-Za-z_][^ <>]*) object at 0x[0-9a-fA-F]+>", r"<\1>", rendered)
+	rendered = re.sub(r"<bound method ([^ ]+) of [^>]+>", r"<bound \1>", rendered)
+	return rendered
 
 
 def interpreter() -> str:

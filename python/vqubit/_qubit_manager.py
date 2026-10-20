@@ -134,7 +134,9 @@ class GreedyQubitManager(QubitManager):
 
 	def qalloc(self) -> Qid:
 		if self._free_pool:
-			qubit = self._free_pool.pop()
+			# Cirq's two modes: the qubit freed latest (LIFO) when reuse is
+			# maximised, the one freed earliest (FIFO) when it is not.
+			qubit = self._free_pool.pop() if self._maximize_reuse else self._free_pool.pop(0)
 		else:
 			if self._max_size is not None and self._next >= self._max_size:
 				raise ValueError("GreedyQubitManager exceeded max_size")

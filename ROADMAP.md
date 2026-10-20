@@ -401,70 +401,20 @@ Las divergencias `permanent` están explicadas en
 - [ ] `mypy`/`pyright` en modo estricto junto a `ty`; escaneo semanal de
       dependencias y seguridad.
 
-#### 9. Deuda de compilación y transformadores (abierta por la auditoría de 0.5)
+#### 9. Deuda de compilación y transformadores (auditoría de 0.5)
 
-También, de la misma auditoría:
+**Cerrado** en su mayor parte: la forma de fase enmarcada, la descomposición
+de `CZ` en dos fSim, la síntesis de cuatro fSim, los intervalos de exponentes,
+las etiquetas en `merge_operations`, `dephase_measurements` (conserva las
+medidas sueltas), `defer_measurements` (una medida por clave),
+`unitary(circuit)` con `CircuitOperation`, `from_moments`/`merge_moments`
+(los límites de momento se respetan), `transform_op_tree` (las dos
+transformaciones y los iterables anidados), los ganchos de `PointOptimizer`,
+`CircuitFunction` con momentos, `GreedyQubitManager(maximize_reuse)` (FIFO/LIFO)
+y las medidas consecutivas en registros distintos del importador QASM.
 
-- [ ] `CircuitFunction` descarta los momentos: el resultado se pasa a
-      `Circuit(...)`, que filtra las operaciones, así que una función que
-      devuelva `[Moment, Moment]` produce un circuito vacío; además se llama de
-      forma eager aunque la documentación diga «lazy». **Criterio:** una función
-      que devuelva momentos o operaciones produce el mismo circuito, y el
-      docstring dice la verdad.
-- [ ] `TextDiagramDrawer.vertical_line` no dibuja nada: guarda coordenadas en
-      `_vertical` y `render` nunca las lee. **Criterio:** una línea vertical
-      aparece en el diagrama renderizado.
-- [ ] `PointOptimizer.optimize_circuit` no llama a `optimization_at` ni a
-      `convert`, así que sobrescribirlos no hace nada, y re-empaqueta cada
-      momento por separado, fusionando operaciones que estaban en momentos
-      distintos. **Criterio:** los ganchos se usan y los límites de momento se
-      conservan (o se documenta que el optimizador los puede mover).
-- [ ] `transform_op_tree` ignora la transformación de operaciones cuando se da
-      una de momentos, e `iter_transformation` solo se aplica en el nivel
-      superior. **Criterio:** las dos transformaciones se aplican en el nivel que
-      les toca y los iterables anidados se reconstruyen con su tipo.
-- [ ] `GreedyQubitManager(maximize_reuse=...)` guarda la opción y no la usa: el
-      orden de asignación es el mismo con `True` y con `False`.
-      **Criterio:** con `maximize_reuse=True` se reutilizan los qubits liberados
-      antes de asignar nuevos.
-- [ ] QASM: dos medidas consecutivas en registros distintos no hacen
-      round-trip, y los índices de bit (`c[1] = measure q[0]`) se ignoran y se
-      fusionan en orden textual. **Criterio:** el export y el import conservan
-      los registros y el bit exacto de cada medida.
-- [ ] `bidiagonalize_real_matrix_pair_with_symmetric_products` no diagonaliza
-      parejas de rango deficiente (`A = [[1,1],[1,1]]`). **Criterio:** el
-      algoritmo devuelve `L A R` y `L B R` diagonales también en ese caso, o
-      lanza `ValueError` explicando la precondición.
+Queda abierto:
 
-
-Cada punto tiene su test en rojo (`xfail(strict=False)`) en
-`tests/test_compilation_extra.py` / `tests/test_transformers_more.py`; al
-arreglarlo, el test pasa y hay que quitar el `xfail`.
-
-- [ ] `single_qubit_op_to_framed_phase_form` reconstruye H/X/Y/Z pero no `S`,
-      `T`, `rx`, `rz` (el exponente Z sale con el signo cambiado). **Criterio:**
-      para una muestra de 50 unitarias de un qubit, `PhasedXZ ⟷ (H, Z, fase)`
-      reconstruye la matriz con `atol=1e-9`.
-- [ ] `decompose_cphase_into_two_fsim` devuelve dos fSim y dos Z, pero el
-      producto no es CZ. **Criterio:** `unitary(circuit)` de la descomposición
-      es igual a CZ salvo fase global, para el fSim por defecto y uno propio.
-- [ ] `decompose_two_qubit_interaction_into_four_fsim_gates` repite el mismo
-      fSim cuatro veces. **Criterio:** implementa el iSWAP pedido salvo fase.
-- [ ] `compute_cphase_exponents_for_fsim_decomposition` es un stub (tres valores
-      iguales, ignora `phi`). **Criterio:** devuelve los tres exponentes de Cirq
-      para los fSim de referencia.
-- [ ] `merge_operations(tags_to_ignore=...)` solo mira las etiquetas de la
-      operación derecha. **Criterio:** una operación etiquetada a la izquierda
-      tampoco se fusiona.
-- [ ] `dephase_measurements` borra las medidas que no van seguidas de `reset`.
-      **Criterio:** una medida simple sobrevive; solo la pareja
-      medida+reset en el mismo qubit se convierte en `PhaseDampingChannel(1)`.
-- [ ] `defer_measurements` duplica la clave: una medida de n qubits se vuelve n
-      medidas con la misma clave. **Criterio:** la clave se conserva una vez y
-      los bits clásicos quedan en el orden correcto.
-- [ ] `vqubit.unitary(circuit)` falla con `CircuitOperation` (`.gate` lanza
-      `NotImplementedError`). **Criterio:** un circuito con una
-      `CircuitOperation` anidada da su matriz completa.
 - [ ] La validación de las descomposiciones es débil: algunas matrices de forma
       incorrecta revientan dentro del núcleo V (`RuntimeError`) en vez de dar
       `ValueError`. **Criterio:** cada helper público valida forma y unitariedad
@@ -472,12 +422,16 @@ arreglarlo, el test pasa y hay que quitar el `xfail`.
 - [ ] `two_qubit_matrix_to_diagonal_and_cz_operations` siempre devuelve un
       `DiagonalGate` identidad. **Criterio:** extrae la parte diagonal real
       (el producto sigue implementando la matriz).
-- [ ] `merge_moments` no puede conservar los límites de momento explícitos.
-      **Criterio:** `Circuit.from_moments` de los momentos fusionados respeta
-      los cortes pedidos.
+- [ ] Los índices de bit de la medida QASM (`c[1] = measure q[0]`) se ignoran y
+      se fusionan en orden textual. **Criterio:** el bit exacto de cada medida
+      se conserva.
 - [ ] `ApplyUnitaryArgs.with_axes_transposed_to_start` es un no-op.
       **Criterio:** devuelve un tensor con los ejes objetivo al principio y
       `axes == range(len(axes))`.
+- [ ] `bidiagonalize_real_matrix_pair_with_symmetric_products` no diagonaliza
+      parejas de rango deficiente (`A = [[1,1],[1,1]]`). **Criterio:** devuelve
+      `L A R` y `L B R` diagonales también en ese caso, o lanza `ValueError`
+      explicando la precondición.
 
 #### 8. Rendimiento (apoyo)
 
@@ -940,38 +894,19 @@ blanket. The `permanent` divergences are explained in
 - [ ] `mypy`/`pyright` in strict mode alongside `ty`; weekly dependency and
       security scanning.
 
-#### 9. Compilation and transformer debt (opened by the 0.5 audit)
+#### 9. Compilation and transformer debt (0.5 audit)
 
-Each item has a failing test (`xfail(strict=False)`) in
-`tests/test_compilation_extra.py` / `tests/test_transformers_more.py`; when it
-is fixed the test passes and the `xfail` marker must be removed.
+**Mostly closed**: the framed phase form, the two-fSim decomposition of `CZ`,
+the four-fSim synthesis, the exponent intervals, the tags in `merge_operations`,
+`dephase_measurements` (plain measurements survive), `defer_measurements` (one
+measurement per key), `unitary(circuit)` with `CircuitOperation`,
+`from_moments`/`merge_moments` (moment boundaries are kept), `transform_op_tree`
+(both transformations and nested iterables), the `PointOptimizer` hooks,
+`CircuitFunction` with moments, `GreedyQubitManager(maximize_reuse)` (FIFO/LIFO)
+and consecutive measurements into different registers in the QASM importer.
 
-- [ ] `single_qubit_op_to_framed_phase_form` reconstructs H/X/Y/Z but not `S`,
-      `T`, `rx`, `rz` (the Z exponent comes out with the wrong sign).
-      **Criterion:** over 50 single-qubit unitaries, `PhasedXZ ⟷ (H, Z, phase)`
-      rebuilds the matrix with `atol=1e-9`.
-- [ ] `decompose_cphase_into_two_fsim` returns two fSims and two Zs whose
-      product is not CZ. **Criterion:** the decomposition's unitary equals CZ
-      up to global phase, for the default fSim and for a custom one.
-- [ ] `decompose_two_qubit_interaction_into_four_fsim_gates` repeats the same
-      fSim four times. **Criterion:** it implements the requested iSWAP up to
-      phase.
-- [ ] `compute_cphase_exponents_for_fsim_decomposition` is a stub (three equal
-      values, ignores `phi`). **Criterion:** it returns Cirq's three exponents
-      for the reference fSims.
-- [ ] `merge_operations(tags_to_ignore=...)` only inspects the right-hand
-      operation's tags. **Criterion:** a tagged left-hand operation is not
-      merged either.
-- [ ] `dephase_measurements` drops measurements that are not followed by a
-      reset. **Criterion:** a plain measurement survives; only a
-      measure-then-reset pair on the same qubit becomes
-      `PhaseDampingChannel(1)`.
-- [ ] `defer_measurements` duplicates the key: an n-qubit measurement becomes n
-      measurements with the same key. **Criterion:** the key is kept once and
-      the classical bits stay in order.
-- [ ] `vqubit.unitary(circuit)` fails with `CircuitOperation` (`.gate` raises
-      `NotImplementedError`). **Criterion:** a circuit with a nested
-      `CircuitOperation` yields its full matrix.
+Still open:
+
 - [ ] Decomposition validation is weak: some wrong-shaped matrices blow up
       inside the V core (`RuntimeError`) instead of raising `ValueError`.
       **Criterion:** every public helper validates shape and unitarity and
@@ -979,43 +914,14 @@ is fixed the test passes and the `xfail` marker must be removed.
 - [ ] `two_qubit_matrix_to_diagonal_and_cz_operations` always returns an
       identity `DiagonalGate`. **Criterion:** it extracts the actual diagonal
       part (the product still implements the matrix).
-- [ ] `merge_moments` cannot preserve explicit moment boundaries.
-      **Criterion:** `Circuit.from_moments` of the merged moments respects the
-      requested cuts.
+- [ ] QASM measurement bit indices (`c[1] = measure q[0]`) are ignored and fused
+      in textual order. **Criterion:** each measurement keeps its exact bit.
 - [ ] `ApplyUnitaryArgs.with_axes_transposed_to_start` is a no-op.
       **Criterion:** it returns a tensor with the target axes first and
       `axes == range(len(axes))`.
-
-**Also, from the same audit:**
-
-- [ ] `CircuitFunction` drops moments: the result goes through `Circuit(...)`,
-      which filters operations, so a function returning `[Moment, Moment]`
-      yields an empty circuit; it is also called eagerly although the docstring
-      says "lazily". **Criterion:** a function returning moments or operations
-      produces the same circuit, and the docstring tells the truth.
-- [ ] `TextDiagramDrawer.vertical_line` draws nothing: it records coordinates in
-      `_vertical` and `render` never reads them. **Criterion:** a vertical line
-      shows up in the rendered diagram.
-- [ ] `PointOptimizer.optimize_circuit` never calls `optimization_at` or
-      `convert`, so overriding them has no effect, and it re-packs each moment
-      separately, merging operations that were in different moments.
-      **Criterion:** the hooks are used and the moment boundaries are preserved
-      (or the docs say the optimiser may move them).
-- [ ] `transform_op_tree` ignores the operation transformation when a moment
-      transformation is supplied, and `iter_transformation` is only applied at
-      the top level. **Criterion:** both transformations apply at their own
-      level and nested iterables are rebuilt with their type.
-- [ ] `GreedyQubitManager(maximize_reuse=...)` stores the flag and never reads
-      it: the allocation order is the same for `True` and `False`.
-      **Criterion:** with `maximize_reuse=True`, freed qubits are reused before
-      new ones are allocated.
-- [ ] QASM: two adjacent measurements into different registers do not round
-      trip, and bit indices (`c[1] = measure q[0]`) are ignored and fused in
-      textual order. **Criterion:** export and import keep the registers and the
-      exact bit of each measurement.
 - [ ] `bidiagonalize_real_matrix_pair_with_symmetric_products` does not
-      diagonalise rank-deficient pairs (`A = [[1,1],[1,1]]`). **Criterion:** the
-      algorithm returns diagonal `L A R` and `L B R` in that case too, or raises
+      diagonalise rank-deficient pairs (`A = [[1,1],[1,1]]`). **Criterion:** it
+      returns diagonal `L A R` and `L B R` in that case too, or raises
       `ValueError` explaining the precondition.
 
 #### 8. Performance (supporting)

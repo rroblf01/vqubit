@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_circuits_extra.py
+# hypothesis_version: 6.140.3
+
+['-', 'AbstractCircuit', 'Alignment', 'CircuitFunction', 'PointOptimizer', 'QasmOutput', 'TextDiagramDrawer', 'append', 'earliest', 'inline', 'left', 'new_then_inline', 'right']

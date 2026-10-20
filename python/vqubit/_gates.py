@@ -88,7 +88,7 @@ class Gate:
 	def _resolve_parameters_(self, resolver: ParamResolver) -> Gate:
 		return self
 
-	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation] | None:
+	def _decompose_(self, qubits: Sequence[Qid]) -> list[Any] | None:
 		"""Return a decomposition into simpler operations, or ``None``."""
 		return None
 
@@ -724,11 +724,13 @@ class PhasedXPowGate(Gate):
 		)
 
 	def _decompose_(self, qubits: Sequence[Qid]) -> list[GateOperation]:
+		# ``PhasedXPowGate(p, e)`` is ``Z^-p · X^e · Z^p``, so the gates are
+		# applied in the order Cirq applies them.
 		qubit = qubits[0]
 		return [
-			ZPowGate(exponent=self._phase_exponent).on(qubit),
-			XPowGate(exponent=self._exponent).on(qubit),
 			ZPowGate(exponent=-self._phase_exponent).on(qubit),
+			XPowGate(exponent=self._exponent, global_shift=self._global_shift).on(qubit),
+			ZPowGate(exponent=self._phase_exponent).on(qubit),
 		]
 
 	def _diagram_symbols_(self, qubits: Sequence[Qid]) -> tuple[str, ...]:

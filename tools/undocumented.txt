@@ -217,9 +217,6 @@ PhasedXPowGate.phase_exponent
 PhasedXZGate.axis_phase_exponent
 PhasedXZGate.x_exponent
 PhasedXZGate.z_exponent
-PointOptimizer.convert
-PointOptimizer.optimization_at
-PointOptimizer.optimize_circuit
 Points.param_resolvers
 Product.param_resolvers
 ProductOfSums.to_str

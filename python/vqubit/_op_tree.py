@@ -80,32 +80,57 @@ def freeze_op_tree(op_tree: Any, preserve_moments: bool = False) -> tuple[Any, .
 
 
 def transform_op_tree(
-	op_tree: Any,
-	op_transformation: Callable[[Operation], Any],
+	root: Any,
+	op_transformation: Callable[[Operation], Any] = lambda operation: operation,
+	iter_transformation: Callable[[Iterator[Any]], Any] = lambda items: list(items),
+	preserve_moments: bool = False,
+	*,
 	moment_transformation: Callable[[Moment], Any] | None = None,
-	iter_transformation: Callable[[Iterator[Any]], Any] | None = None,
 ) -> Any:
-	"""Apply ``op_transformation`` to every operation in an op tree."""
-	if op_tree is None:
+	"""Apply the transformation functions to the nodes of an op tree.
+
+	``op_transformation`` rewrites every operation (the leaves);
+	``iter_transformation`` rewrites every iterable (the internal nodes), so
+	passing ``tuple`` builds an immutable tree. ``preserve_moments`` leaves
+	moments and their contents untouched, as Cirq's flag does.
+
+	As an extension, ``moment_transformation`` (keyword-only) rewrites each
+	moment after its operations have been transformed, which is what a caller
+	that wants to inspect or rebuild the moment needs.
+	"""
+	if root is None:
 		return None
-	if isinstance(op_tree, Operation):
-		return op_transformation(op_tree)
-	if isinstance(op_tree, Moment):
-		transformed = [op_transformation(operation) for operation in op_tree.operations]
-		if moment_transformation is not None:
-			return moment_transformation(Moment(transformed))
-		return Moment(transformed)
-	if isinstance(op_tree, Circuit):
-		transformed = [op_transformation(operation) for operation in op_tree.all_operations()]
-		if moment_transformation is not None:
-			return [moment_transformation(moment) for moment in op_tree.moments]
-		return Circuit(transformed)
-	if _is_iterable_tree(op_tree):
-		children = (transform_op_tree(item, op_transformation, moment_transformation) for item in op_tree)
-		if iter_transformation is not None:
-			return iter_transformation(children)
-		return list(children)
-	raise TypeError(f"Not an op tree: {op_tree!r}")
+	if isinstance(root, Operation):
+		return op_transformation(root)
+	if preserve_moments and isinstance(root, Moment):
+		return root
+	if isinstance(root, Moment):
+		transformed = [op_transformation(operation) for operation in root.operations]
+		moment = Moment(transformed)
+		return moment_transformation(moment) if moment_transformation is not None else moment
+	if isinstance(root, Circuit):
+		moments: list[Moment] = [
+			moment if preserve_moments else Moment([op_transformation(operation) for operation in moment.operations])
+			for moment in root.moments
+		]
+		if moment_transformation is not None and not preserve_moments:
+			# The caller asked to see every moment and decide what to build (a
+			# list of lengths, a new circuit, ...), so hand back their results.
+			return [moment_transformation(moment) for moment in moments]
+		return Circuit.from_moments(moments)
+	if _is_iterable_tree(root):
+		children = (
+			transform_op_tree(
+				item,
+				op_transformation,
+				iter_transformation,
+				preserve_moments,
+				moment_transformation=moment_transformation,
+			)
+			for item in root
+		)
+		return iter_transformation(children)
+	raise TypeError(f"Not an op tree: {root!r}")
 
 
 __all__ = [

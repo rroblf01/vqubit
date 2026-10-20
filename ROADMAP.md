@@ -461,9 +461,9 @@ de reventar en el núcleo V).
       `madvise(MADV_HUGEPAGE)` en `buffer_new_*`; `UPSTREAM.md` §4) y, a más
       largo plazo, **dispatch en runtime** (*function multiversioning*) para los
       kernels calientes, que daría SIMD con una rueda portable.
-- [ ] `-march=…` queda como **opt-in documentado** para un build propio; no se
-      hornea en la rueda publicada (portabilidad y no divergir del artefacto
-      testeado).
+- [x] **(0.9)** `-march=…` es un **opt-in documentado** para un build propio
+      (`docs/{es,en}/installation.md`, sección «builds más rápidos») y no se
+      hornea en la rueda publicada, para no divergir del artefacto testeado.
 - [ ] Benchmarks en CI con umbrales de regresión.
 - [ ] Evaluar más SIMD/OpenMP en los kernels V; densidad a mayor anchura.
 

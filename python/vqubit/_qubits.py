@@ -34,7 +34,8 @@ class Qid:
 		return self._comparison_key()
 
 	def _type_order(self) -> int:
-		return 0
+		"""A coarse rank so that qids of different kinds still sort stably."""
+		return getattr(type(self), "_TYPE_ORDER", 99)
 
 	def __lt__(self, other: object) -> bool:
 		if not isinstance(other, Qid):
@@ -62,6 +63,8 @@ class Qubit(Qid):
 
 
 class LineQubit(Qubit):
+	_TYPE_ORDER = 0
+
 	"""A qubit on a line, identified by a non-negative integer position."""
 
 	def __init__(self, x: int) -> None:
@@ -91,6 +94,8 @@ class LineQubit(Qubit):
 
 
 class GridQubit(Qubit):
+	_TYPE_ORDER = 1
+
 	"""A qubit on a two-dimensional grid, identified by ``(row, col)``."""
 
 	def __init__(self, row: int, col: int) -> None:
@@ -145,6 +150,8 @@ class GridQubit(Qubit):
 
 
 class NamedQubit(Qubit):
+	_TYPE_ORDER = 2
+
 	"""A qubit identified by a name."""
 
 	def __init__(self, name: str) -> None:
@@ -167,6 +174,8 @@ class NamedQubit(Qubit):
 
 
 class LineQid(Qid):
+	_TYPE_ORDER = 3
+
 	"""A qid on a line, identified by a non-negative integer position."""
 
 	def __init__(self, x: int) -> None:
@@ -196,6 +205,8 @@ class LineQid(Qid):
 
 
 class GridQid(Qid):
+	_TYPE_ORDER = 4
+
 	"""A qid on a two-dimensional grid, identified by ``(row, col)``."""
 
 	def __init__(self, row: int, col: int) -> None:
@@ -223,6 +234,8 @@ class GridQid(Qid):
 
 
 class NamedQid(Qid):
+	_TYPE_ORDER = 5
+
 	"""A qid identified by a name."""
 
 	def __init__(self, name: str) -> None:
@@ -245,6 +258,8 @@ class NamedQid(Qid):
 
 
 class VariableQid(Qid):
+	_TYPE_ORDER = 6
+
 	"""A qid whose index is a free variable (used by parameterized circuits)."""
 
 	def __init__(self, name: Any) -> None:
@@ -265,6 +280,8 @@ class VariableQid(Qid):
 
 
 class VariableLineQid(Qid):
+	_TYPE_ORDER = 7
+
 	"""A line qid with a possibly-symbolic position."""
 
 	def __init__(self, x: Any) -> None:
@@ -285,6 +302,8 @@ class VariableLineQid(Qid):
 
 
 class VariableGridQid(Qid):
+	_TYPE_ORDER = 8
+
 	"""A grid qid with possibly-symbolic coordinates."""
 
 	def __init__(self, row: Any, col: Any) -> None:

@@ -273,6 +273,8 @@ class CliffordTableau:
 		"""Rebuild a tableau from the flattened native form."""
 		n = num_qubits
 		side = 2 * n + 1
+		if len(flat) < 2 * n * side:
+			raise ValueError(f"The flattened tableau for {n} qubits needs {2 * n * side} entries, got {len(flat)}.")
 		xs = [[int(flat[i * side + j]) for j in range(n)] for i in range(2 * n)]
 		zs = [[int(flat[i * side + n + j]) for j in range(n)] for i in range(2 * n)]
 		rs = [int(flat[i * side + 2 * n]) for i in range(2 * n)]

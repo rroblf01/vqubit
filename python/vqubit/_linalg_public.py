@@ -11,6 +11,7 @@ from __future__ import annotations
 import cmath
 import itertools
 import math
+import random
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -102,20 +103,22 @@ def all_near_zero_mod(a: Any, period: float, *, atol: float = 1e-8) -> bool:
 def is_diagonal(matrix: Sequence[Sequence[complex]], *, atol: float = 1e-8) -> bool:
 	"""Return whether ``matrix`` is approximately diagonal."""
 	m = to_nested_list(matrix)
+	if any(len(row) != len(m) for row in m):
+		return False
 	return all(abs(m[i][j]) <= atol for i in range(len(m)) for j in range(len(m)) if i != j)
 
 
 def is_hermitian(matrix: Sequence[Sequence[complex]], *, rtol: float = 1e-5, atol: float = 1e-8) -> bool:
 	"""Return whether ``matrix`` is square and equal to its adjoint."""
 	m = to_nested_list(matrix)
-	return len(m) == len(m[0]) and _allclose(m, _conj_t(m), rtol, atol)
+	return (not m or len(m) == len(m[0])) and _allclose(m, _conj_t(m), rtol, atol)
 
 
 def is_orthogonal(matrix: Sequence[Sequence[complex]], *, rtol: float = 1e-5, atol: float = 1e-8) -> bool:
 	"""Return whether ``matrix`` is square, real, and its transpose is its inverse."""
 	m = to_nested_list(matrix)
-	if len(m) != len(m[0]) or any(z.imag != 0 for row in m for z in row):
-		return False
+	if not m or len(m) != len(m[0]) or any(z.imag != 0 for row in m for z in row):
+		return not m
 	return _allclose(_mm(m, _transpose(m)), _eye(len(m)), rtol, atol)
 
 
@@ -128,6 +131,8 @@ def is_special_orthogonal(matrix: Sequence[Sequence[complex]], *, rtol: float = 
 def is_unitary(matrix: Sequence[Sequence[complex]], *, rtol: float = 1e-5, atol: float = 1e-8) -> bool:
 	"""Return whether ``matrix`` is square and its adjoint is its inverse."""
 	m = to_nested_list(matrix)
+	if not m:
+		return True
 	if len(m) != len(m[0]):
 		return False
 	return _allclose(_mm(m, _conj_t(m)), _eye(len(m)), rtol, atol)
@@ -256,9 +261,21 @@ def kron(*factors: Any, shape_len: int = 2) -> Any:
 	for factor in factors:
 		if _is_matrix(factor):
 			matrix = to_nested_list(factor)
-			product = matrix if product is None else _la.kron(to_nested_list(product), matrix)
+			if product is None:
+				product = matrix
+			elif isinstance(product, list):
+				product = _la.kron(product, matrix)
+			else:
+				# A scalar seen first scales the matrix that follows it.
+				product = [[entry * product for entry in row] for row in matrix]
 		else:
-			product = complex(factor) if product is None else product * factor
+			scalar = complex(factor)
+			if product is None:
+				product = scalar
+			elif isinstance(product, list):
+				product = [[entry * scalar for entry in row] for row in product]
+			else:
+				product = product * scalar
 	if product is None:
 		return asarray([[1 + 0j]])
 	return asarray(product) if isinstance(product, list) else product
@@ -383,16 +400,21 @@ def density_matrix_kronecker_product(t1: Sequence[Sequence[complex]], t2: Sequen
 	"""Merge two density matrices into a single unified density matrix."""
 	a = to_nested_list(t1)
 	b = to_nested_list(t2)
+	rows_b = len(b)
+	cols_b = len(b[0]) if b else 0
+	rows_a = len(a)
+	cols_a = len(a[0]) if a else 0
 	return asarray(
 		[
-			[a[i][j] * b[k][m] for k in range(len(b)) for m in range(len(b[0]))]
-			for i in range(len(a))
-			for j in range(len(a[0]))
+			[a[i // rows_b][j // cols_b] * b[i % rows_b][j % cols_b] for j in range(cols_a * cols_b)]
+			for i in range(rows_a * rows_b)
 		]
 	)
 
 
 def _shape_of(tensor: Any) -> tuple[int, ...]:
+	if is_numpy_array(tensor):
+		return tuple(int(size) for size in tensor.shape)
 	shape: list[int] = []
 	node = tensor
 	while isinstance(node, list):
@@ -483,6 +505,8 @@ def targeted_conjugate_about(
 
 
 def _conj_elementwise(tensor: Any) -> Any:
+	if is_numpy_array(tensor):
+		return tensor.conjugate()
 	if isinstance(tensor, list):
 		return [_conj_elementwise(x) for x in tensor]
 	return complex(tensor).conjugate()
@@ -512,29 +536,54 @@ def sub_state_vector(
 	default: Any = None,
 	atol: float = 1e-6,
 ) -> Any:
-	"""Factor ``state_vector`` into the part on ``keep_indices`` and the rest."""
-	vector = [complex(z) for z in state_vector]
-	n_qubits = int(math.log2(len(vector)))
-	keep = list(keep_indices)
+	"""Factor ``state_vector`` into the part on ``keep_indices`` and the rest.
+
+	If the state is a product ``|x> ⊗ |y>`` with ``|x>`` living on the kept
+	qubits, the returned vector is ``|x>`` (up to a global phase, which is
+	randomised so callers do not come to depend on it). If the state is
+	entangled across the cut, ``default`` is returned instead — this mirrors
+	``cirq.sub_state_vector``, including the tolerance on the reduced state's
+	largest eigenvalue.
+	"""
+
+	def flatten(node: Any) -> list[Any]:
+		if isinstance(node, (list, tuple)) or is_numpy_array(node):
+			return [item for child in node for item in flatten(child)]
+		return [node]
+
+	vector = [complex(z) for z in flatten(state_vector)]
+	size = len(vector)
+	if size == 0 or (size & (size - 1)) != 0:
+		raise ValueError(f"Input state_vector of size {size} does not represent a state over qubits.")
+	n_qubits = size.bit_length() - 1
+	keep = [int(index) for index in keep_indices]
+	if len(set(keep)) != len(keep):
+		raise ValueError(f"keep_indices were {keep} but must be unique.")
+	if any(index < 0 or index >= n_qubits for index in keep):
+		raise ValueError(f"keep_indices {keep} are an invalid subset of the input state vector.")
+	norm = math.sqrt(sum(abs(z) ** 2 for z in vector))
+	if abs(norm - 1) > 1e-6:
+		raise ValueError("Input state must be normalized.")
 	keep_dims = 1 << len(keep)
-	remaining = [i for i in range(n_qubits) if i not in set(keep)]
+	if not keep:
+		return asvector([complex(1)])
+	remaining = [index for index in range(n_qubits) if index not in set(keep)]
 	rest_dims = 1 << len(remaining)
-	order = keep + remaining
-	permuted = _permute_qubits(vector, order, n_qubits)
-	c_psi = [permuted[i * rest_dims : (i + 1) * rest_dims] for i in range(keep_dims)]
-	pivot = max(range(keep_dims), key=lambda i: abs(c_psi[i][0]) if rest_dims else 0.0)
-	norm = math.sqrt(sum(abs(z) ** 2 for z in c_psi[pivot]))
-	if norm < atol:
+	permuted = _permute_qubits(vector, [*sorted(keep), *remaining], n_qubits)
+	columns = [permuted[i * rest_dims : (i + 1) * rest_dims] for i in range(keep_dims)]
+	# The reduced density matrix on the kept qubits; a product state has it
+	# rank one, with eigenvalue 1.
+	rho = [
+		[sum(columns[i][k] * columns[j][k].conjugate() for k in range(rest_dims)) for j in range(keep_dims)]
+		for i in range(keep_dims)
+	]
+	values, vectors = _hermitian_eig(rho)
+	index = max(range(len(values)), key=lambda i: values[i])
+	if abs(values[index] - 1) > atol:
 		return default
-	extracted = [z / norm for z in c_psi[pivot]]
-	anchor = extracted[0] if abs(extracted[0]) > 1e-12 else next((z for z in extracted if abs(z) > 1e-12), 0j)
-	for i in range(keep_dims):
-		scale = c_psi[i][0] / anchor if abs(anchor) > 1e-12 else 0j
-		for r in range(rest_dims):
-			if abs(c_psi[i][r] - scale * extracted[r]) > atol:
-				return default
-	phase = cmath.exp(2j * math.pi * 0.123456789)
-	return asvector([phase * z for z in extracted])
+	factored = [vectors[index][i] for i in range(keep_dims)]
+	phase = cmath.exp(2j * math.pi * random.random())
+	return asvector([phase * z for z in factored])
 
 
 def _permute_qubits(vector: Sequence[complex], order: Sequence[int], n_qubits: int) -> Vector:
@@ -826,26 +875,157 @@ def _qr(a: Matrix) -> tuple[Matrix, Matrix]:
 	return q, r
 
 
+def _normalize_vector(vector: Sequence[complex]) -> Vector:
+	norm = math.sqrt(sum(abs(z) ** 2 for z in vector))
+	if norm <= 1e-300:
+		return [0j] * len(vector)
+	return [z / norm for z in vector]
+
+
+def _null_space_basis(matrix: Sequence[Sequence[complex]], *, atol: float = 1e-9) -> list[Vector]:
+	"""Return an orthonormal basis of the null space of ``matrix``.
+
+	Gauss-Jordan elimination with partial pivoting, then Gram-Schmidt on the
+	free columns. The matrices we factor are ``A - λI`` for a normal ``A``, so
+	the basis vectors are already orthogonal in exact arithmetic.
+	"""
+	a = [[complex(entry) for entry in row] for row in matrix]
+	n = len(a)
+	pivots: list[int] = []
+	row = 0
+	for col in range(n):
+		best = max(range(row, n), key=lambda r: abs(a[r][col]))
+		if abs(a[best][col]) <= atol:
+			continue
+		a[row], a[best] = a[best], a[row]
+		pivot = a[row][col]
+		a[row] = [entry / pivot for entry in a[row]]
+		for r in range(n):
+			if r != row and abs(a[r][col]) > atol:
+				factor = a[r][col]
+				a[r] = [entry - factor * reference for entry, reference in zip(a[r], a[row], strict=True)]
+		pivots.append(col)
+		row += 1
+		if row == n:
+			break
+	free = [col for col in range(n) if col not in set(pivots)]
+	basis: list[Vector] = []
+	for column in free:
+		vector = [0j] * n
+		vector[column] = 1 + 0j
+		for r, pivot_column in enumerate(pivots):
+			vector[pivot_column] = -a[r][column]
+		for previous in basis:
+			projection = sum(vector[i] * previous[i].conjugate() for i in range(n))
+			vector = [vector[i] - projection * previous[i] for i in range(n)]
+		if math.sqrt(sum(abs(z) ** 2 for z in vector)) > atol:
+			basis.append(_normalize_vector(vector))
+	return basis
+
+
+def _characteristic_coefficients(matrix: Sequence[Sequence[complex]]) -> list[complex]:
+	"""The coefficients of ``det(xI - A)``, via Leverrier's recursion."""
+	n = len(matrix)
+	a = [[complex(entry) for entry in row] for row in matrix]
+	traces: list[complex] = []
+	power = _eye(n)
+	for _ in range(n):
+		power = _mm(power, a)
+		traces.append(sum(power[i][i] for i in range(n)))
+	coefficients = [1 + 0j]
+	for k in range(1, n + 1):
+		total = sum(coefficients[k - i] * traces[i - 1] for i in range(1, k + 1))
+		coefficients.append(-total / k)
+	return coefficients
+
+
+def _polynomial_roots(coefficients: Sequence[complex], iterations: int = 400) -> list[complex]:
+	"""The roots of a monic polynomial by Durand-Kerner iteration.
+
+	Unlike a QR sweep, this does not stall when every root has the same modulus
+	(a permutation matrix, say), and for the small matrices this library
+	decomposes it converges in a handful of steps.
+	"""
+	n = len(coefficients) - 1
+	if n <= 0:
+		return []
+	if n == 1:
+		return [-coefficients[1] / coefficients[0]]
+	radius = max(1.0, abs(coefficients[-1]) ** (1.0 / n))
+	roots = [cmath.exp(2j * math.pi * (k + 0.25) / n) * radius for k in range(n)]
+
+	def evaluate(value: complex) -> complex:
+		result = complex(coefficients[0])
+		for coefficient in coefficients[1:]:
+			result = result * value + coefficient
+		return result
+
+	for _ in range(iterations):
+		converged = True
+		for i in range(n):
+			denominator = 1 + 0j
+			for j in range(n):
+				if j != i:
+					denominator *= roots[i] - roots[j]
+			if abs(denominator) <= 1e-300:
+				continue
+			step = evaluate(roots[i]) / denominator
+			roots[i] -= step
+			if abs(step) > 1e-13 * max(1.0, abs(roots[i])):
+				converged = False
+		if converged:
+			break
+	return roots
+
+
 def _complex_eig(
 	matrix: Sequence[Sequence[complex]], iterations: int = 3000, tol: float = 1e-12
 ) -> tuple[Vector, Matrix]:
-	"""A complex eigensolver (shifted QR) for the normal matrices we care about."""
-	n = len(matrix)
-	a = to_nested_list(matrix)
-	v = _eye(n)
-	for _ in range(iterations):
-		if all(abs(a[i][i - 1]) < tol for i in range(1, n)):
-			break
-		mu = a[n - 1][n - 1]
-		shifted = [[a[i][j] - (mu if i == j else 0j) for j in range(n)] for i in range(n)]
-		q, r = _qr(shifted)
-		a = _mm(r, q)
-		for i in range(n):
-			a[i][i] += mu
-		v = _mm(v, q)
-	values = [a[i][i] for i in range(n)]
-	vectors = [[v[i][j] for i in range(n)] for j in range(n)]
-	return values, vectors
+	"""Eigen-decompose a normal matrix.
+
+	The eigenvalues are the roots of the characteristic polynomial, and each
+	eigenvector comes from the null space of ``A - λI``. For a normal matrix the
+	null spaces of different eigenvalues are orthogonal, so the resulting basis
+	is unitary even when an eigenvalue repeats; a repeated eigenvalue whose
+	space is already spanned takes any direction left by Gram-Schmidt.
+	"""
+	del iterations, tol
+	m = to_nested_list(matrix)
+	n = len(m)
+	if n == 0:
+		return [], []
+	if n == 1:
+		return [complex(m[0][0])], [[1 + 0j]]
+	values = _polynomial_roots(_characteristic_coefficients(m))
+	basis: list[Vector] = []
+	for value in values:
+		shifted = [[complex(m[i][j]) - (value if i == j else 0j) for j in range(n)] for i in range(n)]
+		chosen: Vector | None = None
+		for candidate in _null_space_basis(shifted):
+			orthogonal = all(
+				abs(sum(candidate[i] * previous[i].conjugate() for i in range(n))) < 1e-6 for previous in basis
+			)
+			if orthogonal:
+				chosen = candidate
+				break
+		if chosen is None:
+			chosen = _first_orthogonal_direction(basis, n)
+		basis.append(chosen)
+	# ``unitary_eig`` hands back a matrix whose columns are the eigenvectors.
+	return values, [[basis[j][i] for j in range(n)] for i in range(n)]
+
+
+def _first_orthogonal_direction(basis: Sequence[Vector], n: int) -> Vector:
+	"""A unit vector orthogonal to ``basis`` (the standard basis, then Gram-Schmidt)."""
+	for index in range(n):
+		candidate = [0j] * n
+		candidate[index] = 1 + 0j
+		for previous in basis:
+			projection = sum(candidate[i] * previous[i].conjugate() for i in range(n))
+			candidate = [candidate[i] - projection * previous[i] for i in range(n)]
+		if math.sqrt(sum(abs(z) ** 2 for z in candidate)) > 1e-8:
+			return _normalize_vector(candidate)
+	return [0j] * n
 
 
 def unitary_eig(
@@ -919,6 +1099,8 @@ def so4_to_magic_su2s(
 ) -> tuple[Matrix, Matrix]:
 	"""Return ``A, B`` in SU(2) with ``Mag^H kron(A, B) Mag = mat``."""
 	m = to_nested_list(mat)
+	if len(m) != 4 or any(len(row) != 4 for row in m):
+		raise ValueError("mat must be 4x4 special orthogonal.")
 	if check_preconditions and not is_special_orthogonal(m, rtol=rtol, atol=atol):
 		raise ValueError("mat must be 4x4 special orthogonal.")
 	ab = _mm(_mm(_MAGIC, m), _MAGIC_CONJ_T)

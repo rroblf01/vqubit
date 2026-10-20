@@ -5,6 +5,64 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+An audit of the numerical core (driven by the 0.5 coverage work) found several
+helpers that returned the wrong answer rather than an error. They are fixed
+here, each with a regression test, and the test suite grew from 690 to 1082
+tests with coverage at 90 %.
+
+### Fixed
+
+- **`unitary_eig` and `map_eigenvalues` on non-Hermitian normal matrices.**
+  The shifted-QR solver used real shifts, so a rotation (`[[0,-1],[1,0]]`)
+  returned eigenvalues `[0, 0]` and a permutation matrix stalled forever. The
+  eigenvalues now come from the characteristic polynomial (Durand-Kerner) and
+  the eigenvectors from the null spaces of `A - λI`, which also keeps the basis
+  unitary when an eigenvalue repeats.
+- **`sub_state_vector`** returned the factor of the wrong subsystem and failed
+  on valid product states such as `|10>`. It now builds the reduced density
+  matrix, keeps the eigenvector with eigenvalue one and randomises the global
+  phase, exactly as `cirq.sub_state_vector` does, and validates the input.
+- **`density_matrix_kronecker_product`** was computing `vec(t1) vec(t2)^T`
+  instead of the Kronecker product (wrong shape, zero trace).
+- **`targeted_conjugate_about`** raised `IndexError` whenever NumPy was
+  installed, because the shape and conjugation helpers only understood lists.
+- **`kron`** rejected a scalar mixed with matrices (`kron(2, X)`).
+- **`is_diagonal`** accepted rectangular matrices; `is_unitary`, `is_hermitian`
+  and `match_global_phase` indexed empty input; `so4_to_magic_su2s` did not
+  check that its input is 4x4.
+- **`parameter_names` / `parameter_symbols`** missed parameters inside
+  expressions (`X ** (2*t + 1)`) and inside circuits; they now walk the
+  expression's names and the value's state.
+- **`ControlledGate`** reported itself as not parameterized and returned itself
+  unchanged when asked to resolve its sub-gate's parameters.
+- **`PauliString`** is iterable over its qubits (iterating used to loop
+  forever), has `len`, `values` and `get`, and `ps ** -1` returns the string
+  instead of the identity.
+- **`PauliSum`** has value equality and a hash, as `cirq.PauliSum` does.
+- **`Collector.collect`** now stops dispensing jobs once `max_total_samples` is
+  spent, instead of draining the whole batch.
+- **Mixed kinds of qid sort deterministically**: `sorted([NamedQubit('a'),
+  LineQubit(0), GridQubit(0, 0)])` used to raise `TypeError`.
+- **`qid_shape`** honours the declared dimension of a gate, so a qutrit channel
+  reports `(3,)` rather than `(2,)`.
+- **`unitary` of a decomposition that leaves qubits idle** (a uniform
+  superposition over a subset, say) now spans the gate's full width.
+- **`CliffordTableau.from_flat`** validates the length of the flat layout.
+
+### Changed
+
+- `sub_state_vector` raises `ValueError` for a state that is not normalized,
+  as Cirq does, instead of returning the default.
+
+### Tests
+
+- New suites for the sampling collectors, the experiments, the plotting
+  helpers, the stabilizer tableau, parameterized gates, Pauli operations, the
+  compilation and transformer extras, the protocol helpers and the numerical
+  regressions above. Coverage of the published wheel: 79 % → 90 %.
+
 ## [0.3.0] - 2026-10-19
 
 Behaviour parity with Cirq 1.7.0: the plain gates *are* the power gates, value

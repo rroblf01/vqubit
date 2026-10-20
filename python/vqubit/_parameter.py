@@ -108,6 +108,9 @@ class _BinaryOp(_Expression):
 	def __str__(self) -> str:
 		return f"({self._left} {self._op} {self._right})"
 
+	def __repr__(self) -> str:
+		return f"({self._left!r} {self._op} {self._right!r})"
+
 
 @value_equality
 class _UnaryOp(_Expression):
@@ -129,6 +132,9 @@ class _UnaryOp(_Expression):
 
 	def __str__(self) -> str:
 		return f"(-{self._operand})"
+
+	def __repr__(self) -> str:
+		return f"({self._op}{self._operand!r})"
 
 
 def _apply(op: str, left: Any, right: Any) -> Any:

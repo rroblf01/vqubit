@@ -365,10 +365,12 @@ Las divergencias `permanent` están explicadas en
 
 - [x] (0.2.0) Ejecutar la suite en **Windows** dentro del CI: hoy son 3 SO × 5
       versiones de Python (3.11–3.15), verde.
-- [ ] Objetivo de cobertura ≥95 % con umbral en CI. **Medido hoy: 77 %**, con los
-      peores módulos en `_vis.py` (13 %), `_experiments.py` (27 %), `_work.py`
-      (31 %) y `_clifford.py` (41 %) — este último importa, porque el simulador
-      de estabilizadores es una de las banderas del proyecto.
+- [ ] Objetivo de cobertura ≥95 % con umbral en CI. **Medido hoy: 90 %**
+      (subió desde el 77 %), con los peores módulos ya en `_clifford_gates.py`
+      (71 %), `_interop.py` (73 %), `_circuits_extra.py` (52 %) y
+      `_op_tree.py` (61 %). El umbral de CI se fija al nivel alcanzado y **solo
+      sube**; criterio de cierre: `pytest --cov --cov-fail-under=95` en verde y
+      ningún módulo por debajo del 80 %.
 - [ ] `stubtest` de `mypy` sobre `vqubit_native.pyi`. **Bloqueado por vcraft**
       (`UPSTREAM.md` §1 y §2: el `.pyi` genera los enums como anotaciones y
       escribe `__init__` donde el constructor vive en `tp_new`). Con el enum
@@ -377,6 +379,50 @@ Las divergencias `permanent` están explicadas en
       QASM/Quirk/JSON.
 - [ ] `mypy`/`pyright` en modo estricto junto a `ty`; escaneo semanal de
       dependencias y seguridad.
+
+#### 9. Deuda de compilación y transformadores (abierta por la auditoría de 0.5)
+
+Cada punto tiene su test en rojo (`xfail(strict=False)`) en
+`tests/test_compilation_extra.py` / `tests/test_transformers_more.py`; al
+arreglarlo, el test pasa y hay que quitar el `xfail`.
+
+- [ ] `single_qubit_op_to_framed_phase_form` reconstruye H/X/Y/Z pero no `S`,
+      `T`, `rx`, `rz` (el exponente Z sale con el signo cambiado). **Criterio:**
+      para una muestra de 50 unitarias de un qubit, `PhasedXZ ⟷ (H, Z, fase)`
+      reconstruye la matriz con `atol=1e-9`.
+- [ ] `decompose_cphase_into_two_fsim` devuelve dos fSim y dos Z, pero el
+      producto no es CZ. **Criterio:** `unitary(circuit)` de la descomposición
+      es igual a CZ salvo fase global, para el fSim por defecto y uno propio.
+- [ ] `decompose_two_qubit_interaction_into_four_fsim_gates` repite el mismo
+      fSim cuatro veces. **Criterio:** implementa el iSWAP pedido salvo fase.
+- [ ] `compute_cphase_exponents_for_fsim_decomposition` es un stub (tres valores
+      iguales, ignora `phi`). **Criterio:** devuelve los tres exponentes de Cirq
+      para los fSim de referencia.
+- [ ] `merge_operations(tags_to_ignore=...)` solo mira las etiquetas de la
+      operación derecha. **Criterio:** una operación etiquetada a la izquierda
+      tampoco se fusiona.
+- [ ] `dephase_measurements` borra las medidas que no van seguidas de `reset`.
+      **Criterio:** una medida simple sobrevive; solo la pareja
+      medida+reset en el mismo qubit se convierte en `PhaseDampingChannel(1)`.
+- [ ] `defer_measurements` duplica la clave: una medida de n qubits se vuelve n
+      medidas con la misma clave. **Criterio:** la clave se conserva una vez y
+      los bits clásicos quedan en el orden correcto.
+- [ ] `vqubit.unitary(circuit)` falla con `CircuitOperation` (`.gate` lanza
+      `NotImplementedError`). **Criterio:** un circuito con una
+      `CircuitOperation` anidada da su matriz completa.
+- [ ] La validación de las descomposiciones es débil: algunas matrices de forma
+      incorrecta revientan dentro del núcleo V (`RuntimeError`) en vez de dar
+      `ValueError`. **Criterio:** cada helper público valida forma y unitariedad
+      y lanza `ValueError` con el argumento nombrado.
+- [ ] `two_qubit_matrix_to_diagonal_and_cz_operations` siempre devuelve un
+      `DiagonalGate` identidad. **Criterio:** extrae la parte diagonal real
+      (el producto sigue implementando la matriz).
+- [ ] `merge_moments` no puede conservar los límites de momento explícitos.
+      **Criterio:** `Circuit.from_moments` de los momentos fusionados respeta
+      los cortes pedidos.
+- [ ] `ApplyUnitaryArgs.with_axes_transposed_to_start` es un no-op.
+      **Criterio:** devuelve un tensor con los ejes objetivo al principio y
+      `axes == range(len(axes))`.
 
 #### 8. Rendimiento (apoyo)
 
@@ -808,10 +854,12 @@ blanket. The `permanent` divergences are explained in
 
 - [x] (0.2.0) Run the suite on **Windows** in CI: today 3 OSes × 5 Python
       versions (3.11–3.15), green.
-- [ ] Coverage target ≥95 % enforced in CI. **Measured today: 77 %**, with the
-      worst modules at `_vis.py` (13 %), `_experiments.py` (27 %), `_work.py`
-      (31 %) and `_clifford.py` (41 %) — the last one matters, because the
-      stabilizer simulator is a flagship feature.
+- [ ] Coverage target ≥95 % enforced in CI. **Measured today: 90 %** (up from
+      77 %), with the worst modules now at `_clifford_gates.py` (71 %),
+      `_interop.py` (73 %), `_circuits_extra.py` (52 %) and `_op_tree.py`
+      (61 %). The CI threshold is pinned to the level reached and **only goes
+      up**; closing criterion: `pytest --cov --cov-fail-under=95` green and no
+      module below 80 %.
 - [ ] `mypy` `stubtest` over `vqubit_native.pyi`. **Blocked by vcraft**
       (`UPSTREAM.md` §1 and §2: the `.pyi` writes enums as annotations and emits
       `__init__` where the constructor lives in `tp_new`). With the enum patched
@@ -820,6 +868,52 @@ blanket. The `permanent` divergences are explained in
       parsers.
 - [ ] `mypy`/`pyright` in strict mode alongside `ty`; weekly dependency and
       security scanning.
+
+#### 9. Compilation and transformer debt (opened by the 0.5 audit)
+
+Each item has a failing test (`xfail(strict=False)`) in
+`tests/test_compilation_extra.py` / `tests/test_transformers_more.py`; when it
+is fixed the test passes and the `xfail` marker must be removed.
+
+- [ ] `single_qubit_op_to_framed_phase_form` reconstructs H/X/Y/Z but not `S`,
+      `T`, `rx`, `rz` (the Z exponent comes out with the wrong sign).
+      **Criterion:** over 50 single-qubit unitaries, `PhasedXZ ⟷ (H, Z, phase)`
+      rebuilds the matrix with `atol=1e-9`.
+- [ ] `decompose_cphase_into_two_fsim` returns two fSims and two Zs whose
+      product is not CZ. **Criterion:** the decomposition's unitary equals CZ
+      up to global phase, for the default fSim and for a custom one.
+- [ ] `decompose_two_qubit_interaction_into_four_fsim_gates` repeats the same
+      fSim four times. **Criterion:** it implements the requested iSWAP up to
+      phase.
+- [ ] `compute_cphase_exponents_for_fsim_decomposition` is a stub (three equal
+      values, ignores `phi`). **Criterion:** it returns Cirq's three exponents
+      for the reference fSims.
+- [ ] `merge_operations(tags_to_ignore=...)` only inspects the right-hand
+      operation's tags. **Criterion:** a tagged left-hand operation is not
+      merged either.
+- [ ] `dephase_measurements` drops measurements that are not followed by a
+      reset. **Criterion:** a plain measurement survives; only a
+      measure-then-reset pair on the same qubit becomes
+      `PhaseDampingChannel(1)`.
+- [ ] `defer_measurements` duplicates the key: an n-qubit measurement becomes n
+      measurements with the same key. **Criterion:** the key is kept once and
+      the classical bits stay in order.
+- [ ] `vqubit.unitary(circuit)` fails with `CircuitOperation` (`.gate` raises
+      `NotImplementedError`). **Criterion:** a circuit with a nested
+      `CircuitOperation` yields its full matrix.
+- [ ] Decomposition validation is weak: some wrong-shaped matrices blow up
+      inside the V core (`RuntimeError`) instead of raising `ValueError`.
+      **Criterion:** every public helper validates shape and unitarity and
+      raises `ValueError` naming the argument.
+- [ ] `two_qubit_matrix_to_diagonal_and_cz_operations` always returns an
+      identity `DiagonalGate`. **Criterion:** it extracts the actual diagonal
+      part (the product still implements the matrix).
+- [ ] `merge_moments` cannot preserve explicit moment boundaries.
+      **Criterion:** `Circuit.from_moments` of the merged moments respects the
+      requested cuts.
+- [ ] `ApplyUnitaryArgs.with_axes_transposed_to_start` is a no-op.
+      **Criterion:** it returns a tensor with the target axes first and
+      `axes == range(len(axes))`.
 
 #### 8. Performance (supporting)
 

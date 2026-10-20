@@ -1272,6 +1272,18 @@ class ControlledGate(Gate):
 				matrix[offset + i][offset + j] = sub[i][j]
 		return matrix
 
+	def _is_parameterized_(self) -> bool:
+		return bool(self._sub_gate._is_parameterized_())
+
+	def _resolve_parameters_(self, resolver: ParamResolver) -> ControlledGate:
+		if not self._is_parameterized_():
+			return self
+		return ControlledGate(
+			self._sub_gate._resolve_parameters_(resolver),
+			num_controls=self._num_controls,
+			control_values=self._control_values,
+		)
+
 	def _inverse_(self) -> ControlledGate | None:
 		sub_inverse = self._sub_gate._inverse_()
 		if sub_inverse is None:

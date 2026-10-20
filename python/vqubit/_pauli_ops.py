@@ -123,8 +123,14 @@ class PauliStringGateOperation(Operation):
 	def _value_equality_values_(self) -> Any:
 		return (self._pauli_string, self._qubits)
 
-	def __pow__(self, exponent: int) -> PauliStringGateOperation:
-		return PauliStringGateOperation(self._pauli_string**exponent, self._qubits)
+	def __pow__(self, exponent: int) -> Any:
+		powered = self._pauli_string**exponent
+		if not powered.qubits:
+			# An even power of a Pauli string is the identity on its qubits.
+			from ._gates import IdentityGate
+
+			return IdentityGate(len(self._qubits)).on(*self._qubits)
+		return PauliStringGateOperation(powered, self._qubits)
 
 	def __str__(self) -> str:
 		return f"{self._pauli_string}{list(self._qubits)}"
@@ -290,8 +296,10 @@ def measure_paulistring_terms(pauli_sum: PauliSum, key: str | None = None) -> li
 class PauliSumExponential:
 	"""The operator ``exp(i π exponent H)`` for a Hermitian :class:`~vqubit.PauliSum`."""
 
-	def __init__(self, pauli_sum: PauliSum, exponent: Any = 1.0) -> None:
-		self._pauli_sum = pauli_sum
+	def __init__(self, pauli_sum: Any, exponent: Any = 1.0) -> None:
+		# A lone Pauli string is the one-term sum, so ``PauliString(...) * 0.5``
+		# can be handed straight to the exponential.
+		self._pauli_sum = pauli_sum if isinstance(pauli_sum, PauliSum) else PauliSum([(pauli_sum, 1.0)])
 		self._exponent = exponent
 
 	@property

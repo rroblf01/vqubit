@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import random
 from collections.abc import Sequence
+from typing import Any
 
 
-def assert_matrix_close(
-	actual: Sequence[Sequence[complex]], expected: Sequence[Sequence[complex]], tol: float = 1e-9
-) -> None:
+def assert_matrix_close(actual: Any, expected: Any, tol: float = 1e-9) -> None:
 	assert len(actual) == len(expected), f"row count {len(actual)} != {len(expected)}"
 	for i, (row_a, row_e) in enumerate(zip(actual, expected, strict=True)):
 		assert len(row_a) == len(row_e), f"column count in row {i}: {len(row_a)} != {len(row_e)}"

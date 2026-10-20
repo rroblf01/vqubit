@@ -231,17 +231,12 @@ class PauliString:
 		return PauliString(self._map, -self._coefficient)
 
 	def __pow__(self, exponent: int) -> PauliString:
+		# Every Pauli squares to the identity, so only the parity of the
+		# exponent matters: ``X ** -1`` is ``X``, not the identity.
 		coefficient = self._coefficient**exponent
-		result: dict[Qid, Pauli] = {}
-		for qubit, pauli in self._map.items():
-			product, factor = "I", 1 + 0j
-			for _ in range(exponent):
-				product, step = _product(product, pauli.value)
-				factor *= step
-			coefficient *= factor
-			if product != "I":
-				result[qubit] = Pauli(product)
-		return PauliString(result, coefficient)
+		if exponent % 2 == 0:
+			return PauliString(coefficient=coefficient)
+		return PauliString(self._map, coefficient)
 
 	def matrix(self) -> Matrix:
 		"""Return the full matrix over this string's qubits, coefficient included."""
@@ -266,6 +261,20 @@ class PauliString:
 
 	def keys(self) -> Any:
 		return self._map.keys()
+
+	def values(self) -> Iterator[Pauli]:
+		return iter([pauli for _, pauli in self.items()])
+
+	def get(self, key: Qid, default: Any = None) -> Any:
+		"""The Pauli on ``key``, or ``default`` when the string does not touch it."""
+		return self._map.get(key, Pauli.I if default is None else default)
+
+	def __iter__(self) -> Iterator[Qid]:
+		"""Iterate the qubits the string touches, as Cirq does."""
+		return iter(self.qubits)
+
+	def __len__(self) -> int:
+		return len(self._map)
 
 	def __truediv__(self, other: Any) -> PauliString:
 		if isinstance(other, complex | int | float):
@@ -418,7 +427,7 @@ def _format_coefficient(coefficient: complex) -> str:
 class PauliSum:
 	"""A weighted sum of Pauli strings, the output of a Pauli expansion."""
 
-	def __init__(self, terms: Mapping[PauliString, complex] | None = None) -> None:
+	def __init__(self, terms: Any = None) -> None:
 		self._terms: dict[PauliString, complex] = {}
 		if terms is not None:
 			for pauli_string, coefficient in dict(terms).items():
@@ -426,6 +435,18 @@ class PauliSum:
 					raise TypeError("PauliSum keys must be PauliString instances")
 				if abs(coefficient) > 0:
 					self._terms[pauli_string] = complex(coefficient)
+
+	def __eq__(self, other: object) -> bool:
+		if not isinstance(other, PauliSum):
+			return NotImplemented
+		return self._terms == other._terms
+
+	def __ne__(self, other: object) -> bool:
+		result = self.__eq__(other)
+		return result if result is NotImplemented else not result
+
+	def __hash__(self) -> int:
+		return hash(frozenset(self._terms.items()))
 
 	@classmethod
 	def wrap(cls, value: Any) -> PauliSum:

@@ -55,11 +55,17 @@ class Collector:
 		raise NotImplementedError
 
 	def collect(self, sampler: Sampler, *, concurrency: int = 2, max_total_samples: int | None = None) -> None:
-		"""Collect needed samples from ``sampler``."""
+		"""Collect needed samples from ``sampler``.
+
+		Samples are taken one job at a time (``concurrency`` is Cirq's hint and is
+		accepted for parity); ``max_total_samples`` stops dispatching once the
+		budget is spent, even if the last batch handed out had jobs to spare.
+		"""
+		del concurrency
 		remaining = float("inf") if max_total_samples is None else max_total_samples
 		queued: list[CircuitSampleJob] = []
-		while True:
-			if remaining > 0 and not queued:
+		while remaining > 0:
+			if not queued:
 				queued.extend(_flatten_jobs(self.next_job()))
 			if not queued:
 				break

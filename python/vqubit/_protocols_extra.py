@@ -236,17 +236,40 @@ def decompose_once_with_qubits(
 DEFAULT_RESOLVERS: tuple[ParamResolver, ...] = ()
 
 
-def _iter_parameters(value: Any) -> Iterable[Parameter]:
-	values = getattr(value, "_value_equality_values_", None)
-	if values is None:
+def _parameters_in(value: Any, depth: int = 0) -> Iterable[Parameter]:
+	"""The parameters named by a value, looking inside expressions and children."""
+	if depth > 8:
 		return
-	for item in values() if callable(values) else values:
-		if isinstance(item, Parameter):
-			yield item
-		elif isinstance(item, (tuple, list)):
-			for sub in item:
-				if isinstance(sub, Parameter):
-					yield sub
+	if isinstance(value, Parameter):
+		yield value
+		return
+	names = getattr(value, "names", None)
+	if callable(names) and not isinstance(value, (list, tuple, set, dict)):
+		for name in sorted(names()):
+			yield Parameter(name)
+		return
+	if isinstance(value, (tuple, list, set, frozenset)):
+		for item in value:
+			yield from _parameters_in(item, depth + 1)
+		return
+	inner = getattr(value, "_value_equality_values_", None)
+	if callable(inner):
+		try:
+			values = inner()
+		except Exception:
+			values = None
+		if values is not None:
+			yield from _parameters_in(values, depth + 1)
+	# Gates keep their exponent, angle or parameter in a private attribute, so
+	# walking the object's state is what finds the symbol inside a circuit.
+	attributes = getattr(value, "__dict__", None)
+	if isinstance(attributes, dict):
+		for item in attributes.values():
+			yield from _parameters_in(item, depth + 1)
+
+
+def _iter_parameters(value: Any) -> Iterable[Parameter]:
+	return _parameters_in(value)
 
 
 def parameter_names(value: Any) -> set[str]:

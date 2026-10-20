@@ -79,7 +79,17 @@ def _decomposed_unitary(value: Any) -> Matrix | None:
 		return None
 	if operations is None:
 		return None
-	return _circuit_unitary(Circuit(list(operations)))
+	operations = list(operations)
+	# A decomposition may leave some of the gate's qubits idle (a uniform
+	# superposition over a subset, say); the unitary still spans all of them,
+	# so idle qubits get an identity in a final moment.
+	present = {qubit for operation in operations for qubit in operation.qubits}
+	idle = [qubit for qubit in qubits if qubit not in present]
+	if idle:
+		from ._gates import IdentityGate
+
+		operations.extend(IdentityGate(1).on(qubit) for qubit in idle)
+	return _circuit_unitary(Circuit(operations))
 
 
 def has_unitary(value: Any) -> bool:
@@ -176,7 +186,32 @@ def num_qubits(value: Any) -> int:
 
 
 def qid_shape(value: Any) -> tuple[int, ...]:
-	"""Return the qid shape of ``value`` (all twos for qubits)."""
+	"""Return the qid shape of ``value``: the dimension of each qid it acts on."""
+	from ._qubits import Qid
+
+	if isinstance(value, Qid):
+		return (value.dimension,)
+	if isinstance(value, Circuit):
+		return (tuple(value.all_qubits()) and tuple(qubit.dimension for qubit in sorted(value.all_qubits()))) or ()
+	if isinstance(value, Moment):
+		return tuple(
+			qubit.dimension for qubit in sorted({qubit for operation in value.operations for qubit in operation.qubits})
+		)
+	if isinstance(value, (GateOperation, Operation)):
+		return tuple(qubit.dimension for qubit in value.qubits)
+	if isinstance(value, Gate):
+		shape_of_gate = getattr(value, "_qid_shape_", None)
+		if shape_of_gate is not None:
+			return tuple(shape_of_gate())
+		return (2,) * value.num_qubits
+	if isinstance(value, (list, tuple)):
+		total: list[int] = []
+		for item in value:
+			total.extend(qid_shape(item))
+		return tuple(total)
+	shape = getattr(value, "qid_shape", None)
+	if shape is not None:
+		return tuple(shape)
 	return (2,) * num_qubits(value)
 
 

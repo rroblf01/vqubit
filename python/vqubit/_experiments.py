@@ -32,7 +32,7 @@ def log_xeb_fidelity_from_probabilities(hilbert_space_dimension: int, probabilit
 
 
 def _bitstrings_to_probabilities(
-	bitstrings: Iterable[int], hilbert_space_dimension: int, bitstrings_are_probabilities: bool
+	bitstrings: Iterable[int | float], hilbert_space_dimension: int, bitstrings_are_probabilities: bool
 ) -> list[float]:
 	values = list(bitstrings)
 	if bitstrings_are_probabilities:
@@ -41,7 +41,7 @@ def _bitstrings_to_probabilities(
 
 
 def linear_xeb_fidelity(
-	bitstrings: Iterable[int],
+	bitstrings: Iterable[int | float],
 	hilbert_space_dimension: int,
 	*,
 	bitstrings_are_probabilities: bool = False,
@@ -52,7 +52,7 @@ def linear_xeb_fidelity(
 
 
 def log_xeb_fidelity(
-	bitstrings: Iterable[int],
+	bitstrings: Iterable[int | float],
 	hilbert_space_dimension: int,
 	*,
 	bitstrings_are_probabilities: bool = False,
@@ -63,7 +63,7 @@ def log_xeb_fidelity(
 
 
 def xeb_fidelity(
-	bitstrings: Iterable[int],
+	bitstrings: Iterable[int | float],
 	hilbert_space_dimension: int,
 	*,
 	bitstrings_are_probabilities: bool = False,

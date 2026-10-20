@@ -1,0 +1,46 @@
+name: Feature request
+description: A missing piece of the API, or a place where vqubit should behave like Cirq.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        vqubit mirrors Cirq's names **and** behaviour, so the strongest argument
+        for a feature is "Cirq does this, and here is how". Check
+        [ROADMAP.md](https://github.com/rroblf01/vqubit/blob/main/ROADMAP.md)
+        first: the feature may already have an entry with its acceptance
+        criterion.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What can't you do today?
+      description: Describe the task, not the API you have in mind; the API follows Cirq.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: If Cirq has it, show the Cirq call and the result.
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterion
+    attributes:
+      label: How would we know it works?
+      description: A test, a comparison with Cirq, or a number. Every roadmap item needs one.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Would you like to work on it?
+      options:
+        - label: I can open a pull request
+        - label: I can write the tests
+        - label: I can check the result against Cirq

@@ -52,7 +52,12 @@ though the implementation is organised into private modules under
   but the standard library. Numeric work belongs in V.
 - **Type hints everywhere**, and the code is checked with `ty`.
 - **Lint and format with `ruff`** (line length 120).
-- **Tests for everything that makes sense**, written with `pytest`.
+- **Tests for everything that makes sense**, written with `pytest`. Property
+  tests use Hypothesis (a dev dependency; skip when it is missing) and the
+  parser fuzzers use a seeded `random` so they run everywhere.
+- **Every public symbol has a docstring.** `tools/check_api_docs.py` keeps a
+  baseline of the ones that do not yet; a new symbol not in the baseline fails
+  the check. Prune the baseline with `--write` when you document something.
 - **Bilingual docs.** Every user-facing feature needs a Spanish page and an
   English page under `docs/es` and `docs/en`.
 - **Commits** are written in English, one logical change each, with no
@@ -64,11 +69,20 @@ Run these before opening a pull request; CI runs the same ones:
 
 ```console
 $ vcraft develop
-$ pytest
+$ pytest                        # the whole suite
+$ pytest --cov --cov-fail-under=95   # CI also enforces 95 % coverage
 $ ruff check .
 $ ruff format --check .
 $ ty check
+$ python benchmarks/verify.py   # 619 numerical checks
+$ python benchmarks/parity.py   # 1867 API checks against cirq-core 1.7.0
+$ python tools/check_api_docs.py # new public API must be documented
+$ mkdocs build --strict         # both languages
 ```
+
+The test suite must also pass **without** numpy, sympy or matplotlib: the
+matrix installs only the wheel and pytest, so import those lazily or guard
+them with `pytest.importorskip`. 
 
 ## Reporting issues
 

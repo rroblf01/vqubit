@@ -24,7 +24,7 @@ vqubit exposes **606 of the 607 top-level names** of cirq-core 1.7.0 (the one
 missing is `contrib`). That includes the submodules that mirror Cirq's:
 
 ```python
-from vqubit import ops, sim, linalg, optimizers, protocols, transformers, work
+from vqubit import ops, sim, linalg, protocols, transformers, work
 ```
 
 Where Cirq had `cirq.ops.X`, vqubit has `vq.ops.X`; the flat name `vq.X` also

@@ -162,6 +162,16 @@ jobs:
 
       # The 0.5 gate: no module below 80 % and the total above 95 %. The
       # threshold only goes up from here.
+      # A ratchet: new public API must be documented, and the baseline of
+      # already-undocumented symbols only shrinks.
+      - name: public API docstrings
+        run: .venv/bin/python tools/check_api_docs.py
+
+      # A change to the public API has to be deliberate: if this fails, update
+      # the snapshot and say whether the change is major, minor or a patch.
+      - name: public API surface
+        run: .venv/bin/python tools/check_api_surface.py
+
       - name: coverage
         run: |
           .venv/bin/python -m coverage run --source=vqubit -m pytest -q

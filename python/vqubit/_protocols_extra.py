@@ -418,26 +418,41 @@ def trace_distance_from_angle_list(angle_list: Sequence[float]) -> float:
 
 @runtime_checkable
 class SupportsUnitary(Protocol):
+	"""The protocol of values that implement ``class Unitary(Protocol):
+	``."""
+
 	def _unitary_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsExplicitHasUnitary(Protocol):
+	"""The protocol of values that implement ``class ExplicitHasUnitary(Protocol):
+	``."""
+
 	def _has_unitary_(self) -> bool: ...
 
 
 @runtime_checkable
 class SupportsKraus(Protocol):
+	"""The protocol of values that implement ``class Kraus(Protocol):
+	``."""
+
 	def _kraus_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsMixture(Protocol):
+	"""The protocol of values that implement ``class Mixture(Protocol):
+	``."""
+
 	def _mixture_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsApplyUnitary(Protocol):
+	"""The protocol of values that implement ``class ApplyUnitary(Protocol):
+	``."""
+
 	def _apply_unitary_(self, args: ApplyUnitaryArgs) -> Any: ...
 
 
@@ -446,16 +461,25 @@ SupportsConsistentApplyUnitary = SupportsApplyUnitary
 
 @runtime_checkable
 class SupportsApplyChannel(Protocol):
+	"""The protocol of values that implement ``class ApplyChannel(Protocol):
+	``."""
+
 	def _apply_channel_(self, args: ApplyChannelArgs) -> Any: ...
 
 
 @runtime_checkable
 class SupportsApplyMixture(Protocol):
+	"""The protocol of values that implement ``class ApplyMixture(Protocol):
+	``."""
+
 	def _apply_mixture_(self, args: ApplyMixtureArgs) -> Any: ...
 
 
 @runtime_checkable
 class SupportsActOn(Protocol):
+	"""The protocol of values that implement ``class ActOn(Protocol):
+	``."""
+
 	def _act_on_(self, args: Any, qubits: Sequence[Qid] | None = None) -> Any: ...
 
 
@@ -464,91 +488,145 @@ SupportsActOnQubits = SupportsActOn
 
 @runtime_checkable
 class SupportsApproximateEquality(Protocol):
+	"""The protocol of values that implement ``class ApproximateEquality(Protocol):
+	``."""
+
 	def _approx_eq_(self, other: Any, atol: float) -> bool: ...
 
 
 @runtime_checkable
 class SupportsCircuitDiagramInfo(Protocol):
+	"""The protocol of values that implement ``class CircuitDiagramInfo(Protocol):
+	``."""
+
 	def _circuit_diagram_info_(self, args: CircuitDiagramInfoArgs) -> Any: ...
 
 
 @runtime_checkable
 class SupportsCommutes(Protocol):
+	"""The protocol of values that implement ``class Commutes(Protocol):
+	``."""
+
 	def _commutes_(self, other: Any, *, atol: float) -> bool: ...
 
 
 @runtime_checkable
 class SupportsControlKey(Protocol):
+	"""The protocol of values that implement ``class ControlKey(Protocol):
+	``."""
+
 	def _control_keys_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsDecompose(Protocol):
+	"""The protocol of values that implement ``class Decompose(Protocol):
+	``."""
+
 	def _decompose_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsDecomposeWithQubits(Protocol):
+	"""The protocol of values that implement ``class DecomposeWithQubits(Protocol):
+	``."""
+
 	def _decompose_(self, qubits: Sequence[Qid]) -> Any: ...
 
 
 @runtime_checkable
 class SupportsEqualUpToGlobalPhase(Protocol):
+	"""The protocol of values that implement ``class EqualUpToGlobalPhase(Protocol):
+	``."""
+
 	def _equal_up_to_global_phase_(self, other: Any, *, atol: float) -> bool: ...
 
 
 @runtime_checkable
 class SupportsExplicitQidShape(Protocol):
+	"""The protocol of values that implement ``class ExplicitQidShape(Protocol):
+	``."""
+
 	def _qid_shape_(self) -> tuple[int, ...]: ...
 
 
 @runtime_checkable
 class SupportsExplicitNumQubits(Protocol):
+	"""The protocol of values that implement ``class ExplicitNumQubits(Protocol):
+	``."""
+
 	def _num_qubits_(self) -> int: ...
 
 
 @runtime_checkable
 class SupportsJSON(Protocol):
+	"""The protocol of values that implement ``class JSON(Protocol):
+	``."""
+
 	def _json_dict_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsMeasurementKey(Protocol):
+	"""The protocol of values that implement ``class MeasurementKey(Protocol):
+	``."""
+
 	def _measurement_key_obj_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsParameterization(Protocol):
+	"""The protocol of values that implement ``class Parameterization(Protocol):
+	``."""
+
 	def _is_parameterized_(self) -> bool: ...
 
 
 @runtime_checkable
 class SupportsPauliExpansion(Protocol):
+	"""The protocol of values that implement ``class PauliExpansion(Protocol):
+	``."""
+
 	def _pauli_expansion_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsPhase(Protocol):
+	"""The protocol of values that implement ``class Phase(Protocol):
+	``."""
+
 	def _phase_by_(self, phase_turns: float, qubit_index: int) -> Any: ...
 
 
 @runtime_checkable
 class SupportsQasm(Protocol):
+	"""The protocol of values that implement ``class Qasm(Protocol):
+	``."""
+
 	def _qasm_(self) -> Any: ...
 
 
 @runtime_checkable
 class SupportsQasmWithArgs(Protocol):
+	"""The protocol of values that implement ``class QasmWithArgs(Protocol):
+	``."""
+
 	def _qasm_(self, args: Any) -> Any: ...
 
 
 @runtime_checkable
 class SupportsQasmWithArgsAndQubits(Protocol):
+	"""The protocol of values that implement ``class QasmWithArgsAndQubits(Protocol):
+	``."""
+
 	def _qasm_(self, args: Any, qubits: Sequence[Qid]) -> Any: ...
 
 
 @runtime_checkable
 class SupportsTraceDistanceBound(Protocol):
+	"""The protocol of values that implement ``class TraceDistanceBound(Protocol):
+	``."""
+
 	def _trace_distance_bound_(self) -> float: ...
 
 

@@ -101,6 +101,32 @@ tests with coverage at 95 %.
   method did not), so `vq.H(q0).num_qubits() == 1` works while `vq.H.num_qubits`
   stays the attribute.
 
+### Added (0.9: governance)
+
+- **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,
+  the latter with an explicit scope for the native extension and the parsers,
+  response targets and what is out of scope.
+- **Issue and pull request templates**: bug reports ask for a minimal script and
+  the environment, feature requests for an acceptance criterion, and the PR
+  template lists every gate the project runs.
+- **`CITATION.cff`**, so GitHub's "Cite this repository" button works.
+- **`tools/check_api_surface.py`**: a snapshot of the public API
+  (`tools/api_snapshot.txt`) that fails when a signature changes without being
+  declared, which is what makes the SemVer promise checkable.
+- **`tools/check_api_docs.py`**: a docstring ratchet with a baseline
+  (`tools/undocumented.txt`) — new public API must be documented, and the
+  baseline only shrinks. 811 of 1142 public symbols (71 %) are documented today.
+- **`tests/test_public_api.py`**: the export list is clean, every name exists,
+  the version agrees with `vcraft.toml` and the changelog, the snapshot and the
+  ratchet are current, and the Cirq-style submodules import.
+
+### Fixed (0.9)
+
+- **`vqubit.optimizers` was in the migration guide but not in the package.**
+  Cirq 1.7 does not have it either (its optimizers moved to `transformers`), so
+  the guide now lists the submodules that exist: `ops`, `sim`, `linalg`,
+  `protocols`, `transformers` and `work`.
+
 ### Tests (0.5)
 
 - Property tests with Hypothesis for the algebraic laws (powers, rotation sums,

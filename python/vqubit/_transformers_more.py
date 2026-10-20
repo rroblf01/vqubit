@@ -20,6 +20,7 @@ from ._optimizers import single_qubit_matrix_to_phased_x_z, single_qubit_matrix_
 from ._qubits import LineQubit, Qid
 
 TRANSFORMER = Callable[..., Circuit]
+"""The type of a transformer: a callable that takes a circuit and returns one."""
 
 
 class TransformerLogger:

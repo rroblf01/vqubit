@@ -25,7 +25,7 @@ vqubit expone **606 de los 607 nombres de nivel superior** de cirq-core 1.7.0
 (el que falta es `contrib`). Eso incluye los submódulos que imitan a Cirq:
 
 ```python
-from vqubit import ops, sim, linalg, optimizers, protocols, transformers, work
+from vqubit import ops, sim, linalg, protocols, transformers, work
 ```
 
 Si en Cirq escribías `cirq.ops.X`, en vqubit puedes escribir `vq.ops.X`; el

@@ -75,7 +75,7 @@ development tooling.
 ```console
 $ python -m venv .venv && source .venv/bin/activate
 $ pip install vcraft
-$ uv pip install --group dev   # pytest, ruff, ty, build
+$ uv pip install --group dev   # pytest, coverage, hypothesis, ruff, ty, build
 $ vcraft develop               # build and install into the active virtualenv
 $ python main.py               # run the example
 $ pytest                       # run the test suite
@@ -89,6 +89,16 @@ extension that `vcraft develop` installs.)
 
 The development setup is the only thing that needs the V toolchain — the
 published wheels need nothing.
+
+## Community
+
+- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) explains the setup and
+  every check a pull request has to pass.
+- **Code of conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+- **Security**: [SECURITY.md](SECURITY.md) — please report vulnerabilities
+  privately, not in a public issue.
+- **Citing**: [CITATION.cff](CITATION.cff) (GitHub's "Cite this repository"
+  button reads it).
 
 ## License
 

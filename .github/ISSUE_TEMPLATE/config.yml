@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/rroblf01/vqubit/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately, not in a public issue.
+  - name: Differences from Cirq
+    url: https://rroblf01.github.io/vqubit/guide/cirq-differences/
+    about: Some divergences are deliberate; check the list before filing a bug.
+  - name: Migrating from Cirq
+    url: https://rroblf01.github.io/vqubit/guide/migrating-from-cirq/
+    about: The checklist for porting a Cirq program, including the renamed arguments.

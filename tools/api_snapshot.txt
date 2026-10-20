@@ -1,0 +1,1142 @@
+ABCMetaImplementAnyOneOf: class ABCMetaImplementAnyOneOf(name, bases, namespace, /, **kwargs)
+AQTDevice: class AQTDevice(num_qubits: 'int') -> 'None'
+AbstractCircuit: class AbstractCircuit()
+    property moments
+AbstractControlValues: class AbstractControlValues(qubits: 'Sequence[Qid]', terms: 'Sequence[Sequence[tuple[Qid, bool]]]') -> 'None'
+    method to_str(self) -> 'str'
+    method validate(self, conditions: 'Sequence[bool]') -> 'None'
+    property qubits
+    property terms
+AbstractInitialMapper: class AbstractInitialMapper(*, device: 'Device | None' = None, **kwargs: 'Any') -> 'None'
+    method initial_mapping(self, circuit: 'Circuit') -> 'dict[Qid, Qid]'
+    method map_operations(self, operation: 'Operation', mapping: 'Mapping[Qid, Qid]') -> 'Operation'
+    method update_mapping(self, operations: 'Sequence[Operation]', mapping: 'dict[Qid, Qid]') -> 'dict[Qid, Qid]'
+Alignment: class Alignment(*values)
+AmplitudeDampingChannel: class AmplitudeDampingChannel(gamma: 'Any') -> 'None'
+    property gamma
+AnyIntegerPowerGateFamily: class AnyIntegerPowerGateFamily(gate: 'type[Gate] | Gate', name: 'str | None' = None, description: 'str | None' = None) -> 'None'
+AnyUnitaryGateFamily: class AnyUnitaryGateFamily(num_qubits: 'int | None' = None) -> 'None'
+ApplyChannelArgs: class ApplyChannelArgs(target_tensor: 'Any', out_buffer: 'Any' = None, auxiliary_buffer0: 'Any' = None, auxiliary_buffer1: 'Any' = None, left_axes: 'Sequence[int] | None' = None, right_axes: 'Sequence[int] | None' = None) -> 'None'
+ApplyMixtureArgs: class ApplyMixtureArgs(target_tensor: 'Any', out_buffer: 'Any' = None, auxiliary_buffer: 'Any' = None, left_axes: 'Sequence[int] | None' = None, right_axes: 'Sequence[int] | None' = None) -> 'None'
+ApplyUnitaryArgs: class ApplyUnitaryArgs(target_tensor: 'Any', available_buffer: 'Any' = None, axes: 'Sequence[int] | None' = None) -> 'None'
+    method subspace_index(self, big_endian_bits_int: 'int' = 0) -> 'Any'
+    method with_axes_transposed_to_start(self) -> 'ApplyUnitaryArgs'
+ArithmeticGate: class ArithmeticGate()
+    method apply(self, *register_values: 'int') -> 'int | Iterable[int]'
+    method registers(self) -> 'Sequence[int | Sequence[int]]'
+    method with_registers(self, *new_registers: 'int | Sequence[int]') -> 'ArithmeticGate'
+AsymmetricDepolarizingChannel: class AsymmetricDepolarizingChannel(p_x: 'float | None' = None, p_y: 'float | None' = None, p_z: 'float | None' = None, error_probabilities: 'dict[str, float] | None' = None, tol: 'float' = 1e-08) -> 'None'
+    property error_probabilities
+    property p_x
+    property p_y
+    property p_z
+AxisAngleDecomposition: class AxisAngleDecomposition(*, angle: 'float', axis: 'tuple[float, float, float]', global_phase: 'complex') -> 'None'
+    method canonicalize(self, atol: 'float' = 1e-08) -> 'AxisAngleDecomposition'
+    method matrix(self) -> 'Any'
+BaseDensePauliString: class DensePauliString(pauli_string: 'str', coefficient: 'complex' = 1) -> 'None'
+    method matrix(self) -> 'Matrix'
+    method to_pauli_string(self, qubits: 'Sequence[Qid]') -> 'PauliString'
+    property coefficient
+    property paulis
+BitFlipChannel: class BitFlipChannel(probability: 'Any') -> 'None'
+    property probability
+BitMaskKeyCondition: class BitMaskKeyCondition(key: 'Any', mask: 'int') -> 'None'
+BitPhaseFlipChannel: class BitPhaseFlipChannel(probability: 'Any') -> 'None'
+    property probability
+BooleanHamiltonianGate: class BooleanHamiltonianGate(parameter_names: 'Sequence[str]', boolean_strs: 'Sequence[str]', theta: 'float') -> 'None'
+BorrowableQubit: class BorrowableQubit(qubit: 'Qid') -> 'None'
+    property qubit
+CCNOT: value CCXPowGate
+CCNotPowGate: class CCXPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CCX: value CCXPowGate
+CCXGate: class CCXPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CCXPowGate: class CCXPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CCY: value CCYPowGate
+CCYPowGate: class CCYPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CCZ: value CCZPowGate
+CCZPowGate: class CCZPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CIRCUIT_LIKE: class Any(*args, **kwargs)
+CNOT: value CXPowGate
+CNOTGate: class CXPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CNOTTargetGateset: class CNOTTargetGateset(*, atol: 'float' = 1e-08) -> 'None'
+    method convert_two_qubit(self, operation: 'Operation') -> 'list[Operation] | None'
+    method synthesize_two_qubit(self, operation: 'Operation') -> 'list[Operation] | None'
+    method two_qubit_gates(self) -> 'tuple[type[Gate], ...]'
+CNotPowGate: class CXPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CONTROL_TAG: value list
+CSWAP: value CSWAPGate
+CSWAPGate: class CSWAPGate()
+CSwapGate: class CSWAPGate()
+CX: value CXPowGate
+CXPowGate: class CXPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CXSWAP: value CliffordGate
+CY: value CYPowGate
+CYPowGate: class CYPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CZ: value CZPowGate
+CZGate: class CZPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CZPowGate: class CZPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+CZSWAP: value CliffordGate
+CZTargetGateset: class CZTargetGateset(*, atol: 'float' = 1e-08) -> 'None'
+    method convert_two_qubit(self, operation: 'Operation') -> 'list[Operation] | None'
+    method synthesize_two_qubit(self, operation: 'Operation') -> 'list[Operation] | None'
+    method two_qubit_gates(self) -> 'tuple[type[Gate], ...]'
+Circuit: class Circuit(*contents: 'Any', strategy: 'InsertStrategy' = <InsertStrategy.EARLIEST: 0>) -> 'None'
+    classmethod from_moments(cls, moments: 'Iterable[Moment]') -> 'Circuit'
+    method all_operations(self) -> 'Iterator[Operation]'
+    method all_qubits(self) -> 'tuple[Qid, ...]'
+    method append(self, content: 'Any', strategy: 'InsertStrategy' = <InsertStrategy.EARLIEST: 0>) -> 'Circuit'
+    method findall_operations(self, predicate: 'Callable[[Operation], bool]') -> 'Iterator[tuple[int, Operation]]'
+    method findall_operations_with_gate_type(self, gate_type: 'type') -> 'Iterator[tuple[int, Operation]]'
+    method insert(self, index: 'int', content: 'Any', strategy: 'InsertStrategy' = <InsertStrategy.EARLIEST: 0>) -> 'Circuit'
+    method to_text_diagram(self) -> 'str'
+    method unitary(self) -> 'Any'
+    property moments
+CircuitDiagramInfo: class CircuitDiagramInfo(wire_symbols: 'tuple[str, ...]', exponent: 'Any' = 1, connected: 'bool' = True) -> None
+    method with_wire_symbols(self, wire_symbols: 'Sequence[str]') -> 'CircuitDiagramInfo'
+CircuitDiagramInfoArgs: class CircuitDiagramInfoArgs(known_qubits: 'tuple[Qid, ...] | None' = None, known_qubit_count: 'int | None' = None, qubit_map: 'Mapping[Qid, int] | None' = None, precision: 'int | None' = None, qubit_map_entries: 'Any' = None, use_unicode_characters: 'bool' = True) -> None
+    method format_real(self, value: 'Any') -> 'str'
+CircuitFunction: class CircuitFunction(function: 'Callable[[Sequence[Qid]], Iterable[Moment]]', qubits: 'Sequence[Qid]') -> 'None'
+    property qubits
+CircuitOperation: class CircuitOperation(circuit: 'Circuit', *, repetitions: 'int' = 1) -> 'None'
+    property circuit
+    property qubits
+    property repetitions
+CircuitSampleJob: class CircuitSampleJob(circuit: 'Circuit', *, repetitions: 'int', tag: 'Any' = None) -> 'None'
+ClassicalDataDictionaryStore: class ClassicalDataDictionaryStore(measurements: 'Mapping[str, Sequence[Any]] | None' = None, records: 'Mapping[str, Sequence[Any]] | None' = None) -> 'None'
+    method keys(self) -> 'Iterable[str]'
+    method measurements(self, key: 'str') -> 'list[Any]'
+    method record(self, **kwargs: 'Any') -> 'None'
+    method records(self, key: 'str') -> 'list[Any]'
+ClassicalDataStore: class ClassicalDataStore()
+    method record(self, **kwargs: 'Any') -> 'None'
+ClassicalDataStoreReader: class ClassicalDataStoreReader()
+    method keys(self) -> 'Iterable[str]'
+ClassicalStateSimulator: class ClassicalStateSimulator()
+ClassicallyControlledOperation: class ClassicallyControlledOperation(conditions: 'Sequence[Condition]', sub_operation: 'Operation') -> 'None'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'ClassicallyControlledOperation'
+    property conditions
+    property gate
+    property qubits
+    property sub_operation
+CleanQubit: class CleanQubit(qubit: 'Qid') -> 'None'
+    property qubit
+CliffordGate: class CliffordGate(*, unitary: 'Sequence[Sequence[complex]]', num_qubits: 'int') -> 'None'
+    classmethod from_op_list(cls, operations: 'Sequence[Any]', qubit_order: 'Sequence[Qid]') -> 'CliffordGate'
+    classmethod from_unitary(cls, u: 'Sequence[Sequence[complex]]') -> 'CliffordGate'
+CliffordSimulationResult: class CliffordSimulationResult(state: 'CliffordState', params: 'Any' = None) -> 'None'
+    method state_vector(self) -> 'list[complex]'
+    property final_state
+    property params
+CliffordSimulator: class CliffordSimulator(*, seed: 'int | None' = None) -> 'None'
+    method is_supported_operation(self, operation: 'Operation') -> 'bool'
+    method run(self, program: 'Circuit', param_resolver: 'Any' = None, repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'Any'
+    method sample(self, program: 'Circuit', param_resolver: 'Any' = None, repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'Any'
+    method simulate(self, program: 'Circuit', param_resolver: 'Any' = None, qubit_order: 'Sequence[Qid] | None' = None) -> 'CliffordSimulationResult'
+CliffordSimulatorStepResult: class CliffordSimulatorStepResult(*, qubits: 'Sequence[Qid]', measurements: 'dict[str, Any]', state: 'Any') -> 'None'
+    property clifford_state
+    property state
+CliffordState: class CliffordState(tableau: 'Any', qubits: 'Sequence[Qid]') -> 'None'
+    method dirac_notation(self, decimals: 'int' = 3) -> 'str'
+    method stabilizers(self) -> 'list[Any]'
+    method state_vector(self) -> 'list[complex]'
+    property qubits
+CliffordTableau: class CliffordTableau(num_qubits: 'int', initial_state: 'int' = 0, rs: 'Any | None' = None, xs: 'Any | None' = None, zs: 'Any | None' = None) -> 'None'
+    classmethod from_flat(cls, flat: 'Sequence[int]', num_qubits: 'int') -> 'CliffordTableau'
+    method apply_cx(self, control_axis: 'int', target_axis: 'int', exponent: 'float' = 1, global_shift: 'float' = 0) -> 'None'
+    method apply_cz(self, control_axis: 'int', target_axis: 'int', exponent: 'float' = 1, global_shift: 'float' = 0) -> 'None'
+    method apply_global_phase(self, coefficient: 'Any') -> 'None'
+    method apply_h(self, axis: 'int', exponent: 'float' = 1, global_shift: 'float' = 0) -> 'None'
+    method apply_x(self, axis: 'int', exponent: 'float' = 1, global_shift: 'float' = 0) -> 'None'
+    method apply_y(self, axis: 'int', exponent: 'float' = 1, global_shift: 'float' = 0) -> 'None'
+    method apply_z(self, axis: 'int', exponent: 'float' = 1, global_shift: 'float' = 0) -> 'None'
+    method copy(self, deep_copy_buffers: 'bool' = True) -> 'CliffordTableau'
+    method destabilizers(self) -> 'list[Any]'
+    method factor(self, axes: 'Sequence[int]', *, validate: 'bool' = True, atol: 'float' = 1e-07) -> 'Any'
+    method inverse(self) -> 'CliffordTableau'
+    method kron(self, other: 'Any') -> 'CliffordTableau'
+    method matrix(self) -> 'Any'
+    method measure(self, axes: 'Sequence[int]', seed: 'Any' = None) -> 'list[int]'
+    method reindex(self, axes: 'Sequence[int]') -> 'CliffordTableau'
+    method sample(self, axes: 'Sequence[int]', repetitions: 'int' = 1, seed: 'Any' = None) -> 'Any'
+    method stabilizer_pauli_strings(self) -> 'list[Any]'
+    method stabilizers(self) -> 'list[Any]'
+    method then(self, second: 'CliffordTableau') -> 'CliffordTableau'
+    property can_represent_mixed_states
+    property rs
+    property supports_factor
+    property xs
+    property zs
+CliffordTableauSimulationState: class CliffordTableauSimulationState(*, tableau: 'Any', qubits: 'Sequence[Qid]', prng: 'random.Random | None' = None) -> 'None'
+    method apply_operation(self, operation: 'Any') -> 'None'
+    method state_vector(self) -> 'list[complex]'
+    property tableau
+CliffordTrialResult: class CliffordTrialResult(params: 'Any', measurements: 'dict[str, Any]', *, qubits: 'Sequence[Qid]', final_state: 'Any') -> 'None'
+    property final_state
+Collector: class Collector()
+    method collect(self, sampler: 'Sampler', *, concurrency: 'int' = 2, max_total_samples: 'int | None' = None) -> 'None'
+    method collect_async(self, sampler: 'Sampler', *, concurrency: 'int' = 2, max_total_samples: 'int | None' = None) -> 'None'
+    method next_job(self) -> 'Any'
+    method on_job_result(self, job: 'CircuitSampleJob', result: 'Result') -> 'None'
+CompilationTargetGateset: class CompilationTargetGateset(*, atol: 'float' = 1e-08) -> 'None'
+    method postprocess_transformers(self) -> 'list[Any]'
+    method preprocess_transformers(self) -> 'list[Any]'
+    property num_qubits
+Concat: class Concat(*sweeps: 'Any') -> 'None'
+    property param_resolvers
+Condition: class Condition()
+ConstantQubitNoiseModel: class ConstantQubitNoiseModel(qubit_noise_gate: 'Gate') -> 'None'
+    method noisy_moment(self, moment: 'Moment', qubits: 'Sequence[Qid]') -> 'list[Moment]'
+ControlledGate: class ControlledGate(sub_gate: 'Gate', *, num_controls: 'int', control_values: 'Sequence[bool | int] | AbstractControlValues | None' = None) -> 'None'
+    property control_values
+    property num_controls
+    property sub_gate
+ControlledOperation: class ControlledOperation(controls: 'Sequence[Qid]', sub_operation: 'Operation', control_values: 'Sequence[bool | int] | AbstractControlValues | None' = None) -> 'None'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'ControlledOperation'
+    property control_values
+    property controls
+    property gate
+    property qubits
+    property sub_operation
+DEFAULT_RESOLVERS: value tuple
+DURATION_LIKE: class Any(*args, **kwargs)
+DecompositionContext: class DecompositionContext(qubits: 'tuple[Qid, ...]' = (), preserve_measurements: 'bool' = False, preserve_tags: 'bool' = False, atol: 'float' = 1e-08) -> None
+DensePauliString: class DensePauliString(pauli_string: 'str', coefficient: 'complex' = 1) -> 'None'
+    method matrix(self) -> 'Matrix'
+    method to_pauli_string(self, qubits: 'Sequence[Qid]') -> 'PauliString'
+    property coefficient
+    property paulis
+DensityMatrix: class DensityMatrix(matrix: 'Any', qubits: 'Sequence[Qid]', *, owner: 'Any' = None) -> 'None'
+    method density_matrix(self) -> 'Any'
+    method dirac_notation(self, decimals: 'int' = 3) -> 'str'
+    property qubits
+DensityMatrixSimulationState: class DensityMatrixSimulationState(*, qubits: 'Sequence[Qid]', prng: 'random.Random | None' = None, initial_state: 'Any' = 0) -> 'None'
+    method apply_operation(self, operation: 'Any') -> 'None'
+    method density_matrix(self) -> 'list[list[complex]]'
+    method measure(self, qubits: 'Sequence[Qid]', key: 'str') -> 'int'
+DensityMatrixSimulator: class DensityMatrixSimulator(*, seed: 'int | None' = None) -> 'None'
+    method run(self, program: 'Circuit', param_resolver: 'Any' = None, repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0, seed: 'int | None' = None) -> 'Result'
+    method sample(self, program: 'Circuit', param_resolver: 'Any' = None, repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0, seed: 'int | None' = None) -> 'Result'
+    method simulate(self, program: 'Circuit', param_resolver: 'Any' = None, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0) -> 'DensityMatrixTrialResult'
+    method simulate_moment_steps(self, program: 'Circuit', param_resolver: 'Any' = None, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0) -> 'Iterator[Any]'
+DensityMatrixStepResult: class DensityMatrixStepResult(*, qubits: 'Sequence[Qid]', measurements: 'dict[str, Any]', density_matrix: 'Sequence[Sequence[complex]]') -> 'None'
+DensityMatrixTrialResult: class DensityMatrixTrialResult(qubits: 'Sequence[Qid]', density: 'DensityMatrix', params: 'Any' = None, measurements: 'dict[str, list[list[int]]] | None' = None) -> 'None'
+    method density_matrix(self) -> 'Any'
+    property final_density_matrix
+    property measurements
+    property params
+    property qubit_map
+    property qubits
+DepolarizingChannel: class DepolarizingChannel(probability: 'Any', num_qubits: 'int' = 1) -> 'None'
+    property probability
+Device: class Device(qubits: 'Iterable[Qid]', *, metadata: 'DeviceMetadata | None' = None) -> 'None'
+    method is_adjacent(self, first: 'Qid', second: 'Qid') -> 'bool'
+    method neighbors(self, qubit: 'Qid') -> 'list[Qid]'
+    method validate_circuit(self, circuit: 'Any') -> 'None'
+    method validate_operation(self, operation: 'Operation') -> 'None'
+    property qubit_set
+    property qubits
+DeviceMetadata: class DeviceMetadata(*, name: 'str' = 'device', qubit_set: 'Iterable[Qid] | None' = None, gate_durations: 'dict[Any, Any] | None' = None) -> 'None'
+    method duration_of(self, operation: 'Operation') -> 'Any'
+DiagonalGate: class DiagonalGate(diag_angles_radians: 'Sequence[Any]') -> 'None'
+    property diag_angles_radians
+Duration: class Duration(*, picos: 'int') -> 'None'
+    method total_nanos(self) -> 'float'
+    method total_picos(self) -> 'int'
+    property picos
+EigenGate: class EigenGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+    property exponent
+    property global_shift
+Engine: class Engine(*, device: 'Device | None' = None, seed: 'int | None' = None, project_id: 'str | None' = None) -> 'None'
+    method get_sampler(self, device: 'Device | None' = None) -> 'Sampler'
+    method qasm(self, program: 'Circuit') -> 'str'
+    method run(self, program: 'Circuit', repetitions: 'int' = 1, *, param_resolver: 'ParamResolver | None' = None, device: 'Device | None' = None, seed: 'int | None' = None) -> 'Result'
+    method run_sweep(self, program: 'Circuit', params: 'Points | ParamResolver', repetitions: 'int' = 1, *, device: 'Device | None' = None, seed: 'int | None' = None) -> 'list[Result]'
+    method sample(self, program: 'Circuit', repetitions: 'int' = 1, *, param_resolver: 'ParamResolver | None' = None, device: 'Device | None' = None, seed: 'int | None' = None) -> 'Result'
+ExpressionMap: class ExpressionMap(...)
+FREDKIN: value CSWAPGate
+FSimGate: class FSimGate(theta: 'Any', phi: 'Any') -> 'None'
+    property phi
+    property theta
+FrozenCircuit: class FrozenCircuit(*contents: 'Any', strategy: 'InsertStrategy' = <InsertStrategy.EARLIEST: 0>) -> 'None'
+    classmethod from_moments(cls, moments: 'Iterable[Moment]') -> 'FrozenCircuit'
+    method append(self, content: 'Any', strategy: 'InsertStrategy' = <InsertStrategy.EARLIEST: 0>) -> 'Circuit'
+    method insert(self, index: 'int', content: 'Any', strategy: 'InsertStrategy' = <InsertStrategy.EARLIEST: 0>) -> 'Circuit'
+Gate: class Gate()
+    method controlled_by(self, *control_qubits: 'Qid | Iterable[Qid]', control_values: 'Sequence[bool | int] | None' = None) -> 'ControlledGate'
+    method on(self, *qubits: 'Qid | Iterable[Qid]') -> 'GateOperation'
+    method on_each(self, *targets: 'Qid | Iterable[Qid]') -> 'tuple[GateOperation, ...]'
+    property num_qubits
+    property qid_shape
+GateFamily: class GateFamily(gate: 'Gate | type[Gate] | None' = None, *, name: 'str | None' = None, description: 'str | None' = None, predicate: 'Callable[[Gate], bool] | None' = None) -> 'None'
+    method validate(self, operation: 'Operation') -> 'None'
+GateOperation: class GateOperation(gate: 'Gate', qubits: 'Iterable[Qid]') -> 'None'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'GateOperation'
+    property gate
+    property qubits
+Gateset: class Gateset(gates: 'Iterable[Gate | type[Gate] | GateFamily]', *, name: 'str | None' = None, description: 'str | None' = None) -> 'None'
+    method validate(self, operation: 'Operation') -> 'None'
+    method with_added_gates(self, *gates: 'Gate | type[Gate] | GateFamily', name: 'str | None' = None) -> 'Gateset'
+GeneralizedAmplitudeDampingChannel: class GeneralizedAmplitudeDampingChannel(p: 'float', gamma: 'float') -> 'None'
+    property gamma
+    property p
+GlobalPhaseGate: class GlobalPhaseGate(exponent: 'Any' = 0.0) -> 'None'
+    property exponent
+GreedyQubitManager: class GreedyQubitManager(qubits: 'Sequence[Qid] | None' = None, max_size: 'int | None' = None, maximize_reuse: 'bool' = False) -> 'None'
+    method qalloc(self) -> 'Qid'
+    method qborrow(self) -> 'BorrowableQubit'
+    method qfree(self, qubit: 'Qid') -> 'None'
+    method qrelease(self, qubit: 'Qid') -> 'None'
+GridDevice: class GridDevice(qubits: 'Iterable[GridQubit]', *, metadata: 'DeviceMetadata | None' = None) -> 'None'
+    classmethod rect(cls, rows: 'int', cols: 'int', *, top: 'int' = 0, left: 'int' = 0) -> 'GridDevice'
+    method neighbors(self, qubit: 'Qid') -> 'list[Qid]'
+GridDeviceMetadata: class GridDeviceMetadata(qubits: 'Iterable[Qid]', qubit_pairs: 'Iterable[tuple[Qid, Qid]]', gate_durations: 'Mapping[OpIdentifier, Any] | None' = None) -> 'None'
+GridQid: class GridQid(row: 'int', col: 'int') -> 'None'
+    property col
+    property row
+GridQubit: class GridQubit(row: 'int', col: 'int') -> 'None'
+    classmethod rect(cls, rows: 'Any', cols: 'Any') -> 'list[GridQubit]'
+    classmethod square(cls, diameter: 'int', top: 'int' = 0, left: 'int' = 0) -> 'list[GridQubit]'
+    method is_adjacent(self, other: 'GridQubit') -> 'bool'
+    method neighbors(self, on_grid: 'Any' = None) -> 'list[GridQubit]'
+    property col
+    property row
+H: value HPowGate
+HPowGate: class HPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+HardCodedInitialMapper: class HardCodedInitialMapper(mapping: 'Mapping[Qid, Qid]', *, device: 'Device | None' = None) -> 'None'
+    method initial_mapping(self, circuit: 'Circuit') -> 'dict[Qid, Qid]'
+HasJSONNamespace: class HasJSONNamespace()
+Heatmap: class Heatmap(value_map: 'Mapping[Any, Any]', **kwargs: 'Any') -> 'None'
+    method plot(self, ax: 'Any' = None, **kwargs: 'Any') -> 'tuple[Any, Any]'
+    method update_config(self, **kwargs: 'Any') -> 'Heatmap'
+I: value IdentityGate
+ISWAP: value ISwapPowGate
+ISWAPGate: class ISwapPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+ISWAP_INV: value ISwapPowGate
+ISwapPowGate: class ISwapPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+IdentityGate: class IdentityGate(num_qubits: 'int' = 1) -> 'None'
+If: function If(condition: 'Condition', *then_ops: 'Operation', else_ops: 'Sequence[Operation]' = ()) -> 'Any'
+InsertStrategy: class InsertStrategy(*values)
+InterchangeableQubitsGate: class InterchangeableQubitsGate()
+IonDevice: class IonDevice(num_qubits: 'int') -> 'None'
+    method neighbors(self, qubit: 'Qid') -> 'list[Qid]'
+JsonResolver: class JsonResolver(resolvers: 'Mapping[str, type] | None' = None) -> 'None'
+KET_IMAG: value list
+KET_MINUS: value list
+KET_MINUS_IMAG: value list
+KET_ONE: value list
+KET_PLUS: value list
+KET_ZERO: value list
+KakDecomposition: class KakDecomposition(*, global_phase: 'complex' = (1+0j), single_qubit_operations_before: 'tuple[Any, Any] | None' = None, interaction_coefficients: 'tuple[float, ...]', single_qubit_operations_after: 'tuple[Any, Any] | None' = None) -> 'None'
+    method matrix(self) -> 'Any'
+KeyCondition: class KeyCondition(key: 'Any', index: 'int' = 0) -> 'None'
+KrausChannel: class KrausChannel(kraus_ops: 'Sequence[Sequence[Sequence[complex]]]', key: 'Any' = None, validate: 'bool' = False) -> 'None'
+    staticmethod from_channel(channel: 'Gate', key: 'Any' = None) -> 'KrausChannel'
+LabelEntity: class LabelEntity(*, name: 'str | None' = None, display_name: 'str | None' = None, description: 'str' = '') -> 'None'
+LineDevice: class LineDevice(num_qubits: 'int') -> 'None'
+    method neighbors(self, qubit: 'Qid') -> 'list[Qid]'
+LineInitialMapper: class LineInitialMapper(*, device: 'Device | None' = None, **kwargs: 'Any') -> 'None'
+    method initial_mapping(self, circuit: 'Circuit') -> 'dict[Qid, Qid]'
+LineQid: class LineQid(x: 'int') -> 'None'
+    classmethod range(cls, n: 'int') -> 'tuple[LineQid, ...]'
+    property x
+LineQubit: class LineQubit(x: 'int') -> 'None'
+    classmethod range(cls, n: 'int') -> 'tuple[LineQubit, ...]'
+    property x
+LineTopology: class LineTopology(length: 'int') -> 'None'
+    property edges
+    property nodes
+LinearCombinationOfGates: class LinearCombinationOfGates(terms: 'Mapping[Gate, complex]') -> 'None'
+    method matrix(self) -> 'Matrix'
+    property terms
+LinearCombinationOfOperations: class LinearCombinationOfOperations(terms: 'Mapping[Operation, complex]') -> 'None'
+    method matrix(self) -> 'Matrix'
+    property terms
+LinearDict: class LinearDict(values: 'Mapping[Any, Any] | Iterable[tuple[Any, Any]] | None' = None) -> 'None'
+    method copy(self) -> 'LinearDict'
+Linspace: class Linspace(key: 'Any', start: 'Any' = None, stop: 'Any' = None, length: 'int | None' = None, *, metadata: 'Any | None' = None) -> 'None'
+    property param_resolvers
+ListSweep: class ListSweep(resolvers: 'Sequence[ParamResolver]') -> 'None'
+M: function measure(*qubits: 'Qid | Iterable[Qid]', key: 'str | None' = None) -> 'GateOperation'
+MEASUREMENT_KEY_SEPARATOR: value str
+MSGate: class MSGate(*, rads: 'Any') -> 'None'
+    property rads
+MappingManager: class MappingManager(device: 'Device') -> 'None'
+    method initial_mapping(self, circuit: 'Circuit') -> 'dict[Qid, Qid]'
+    method map_circuit(self, circuit: 'Circuit') -> 'Circuit'
+    property current_mapping
+MatrixGate: class MatrixGate(matrix: 'Matrix') -> 'None'
+    property matrix
+MeasurementGate: class MeasurementGate(key: 'str', num_qubits: 'int' = 1, invert_mask: 'Sequence[bool]' = ()) -> 'None'
+    property full_invert_mask
+    property invert_mask
+    property key
+MeasurementKey: class MeasurementKey(name: 'str', path: 'Sequence[str]' = ()) -> 'None'
+    property name
+    property path
+MeasurementType: class MeasurementType(*values)
+MixedUnitaryChannel: class MixedUnitaryChannel(mixture: 'Sequence[tuple[float, Sequence[Sequence[complex]]]]', key: 'Any' = None, validate: 'bool' = False) -> 'None'
+    staticmethod from_mixture(mixture: 'Any', key: 'Any' = None) -> 'MixedUnitaryChannel'
+Moment: class Moment(operations: 'Iterable[Operation]' = ()) -> 'None'
+    method with_operation(self, operation: 'Operation') -> 'Moment'
+    method without_operations_touching(self, qubits: 'Iterable[Qid]') -> 'Moment'
+    property operations
+    property qubits
+    property qubits_set
+MutableDensePauliString: class MutableDensePauliString(pauli_string: 'str', coefficient: 'complex' = 1) -> 'None'
+    property coefficient
+MutablePauliString: class MutablePauliString(qubit_pauli_map: 'Mapping[Qid, Pauli] | Iterable[tuple[Qid, Pauli]] | None' = None, coefficient: 'complex' = 1) -> 'None'
+    method items(self) -> 'Iterable[tuple[Qid, Pauli]]'
+    method to_pauli_string(self) -> 'PauliString'
+    property coefficient
+    property qubits
+NOISE_MODEL_LIKE: class Any(*args, **kwargs)
+NO_NOISE: value _NoNoiseModel
+NamedQid: class NamedQid(name: 'str') -> 'None'
+    property name
+NamedQubit: class NamedQubit(name: 'str') -> 'None'
+    property name
+NamedTopology: class NamedTopology(name: 'str') -> 'None'
+    property edges
+    property graph
+    property nodes
+NeutralAtomDevice: class NeutralAtomDevice(qubits: 'Iterable[Qid] | None' = None, *, num_qubits: 'int' = 10) -> 'None'
+    method neighbors(self, qubit: 'Qid') -> 'list[Qid]'
+NoiseModel: class NoiseModel()
+    method noisy_moment(self, moment: 'Moment', qubits: 'Sequence[Qid]') -> 'Moment | list[Moment]'
+    method noisy_moments(self, moments: 'Iterable[Moment]', qubits: 'Sequence[Qid]') -> 'list[Moment]'
+    method noisy_operation(self, operation: 'Operation') -> 'Operation'
+NoiseModelFromNoiseProperties: class NoiseModelFromNoiseProperties(noise_properties: 'NoiseProperties') -> 'None'
+    method noisy_moment(self, moment: 'Moment', qubits: 'Sequence[Qid]') -> 'list[Moment]'
+    method noisy_operation(self, operation: 'Operation') -> 'Operation'
+NoiseProperties: class NoiseProperties()
+    method gate_error(self, op_id: 'OpIdentifier') -> 'float'
+    method readout_error(self, qubit: 'Qid') -> 'float'
+OP_TREE: class Any(*args, **kwargs)
+OpIdentifier: class OpIdentifier(gate_type: 'type', num_qubits: 'int | None' = None) -> 'None'
+Operation: class Operation()
+    method num_qubits(self) -> 'int'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'Operation'
+    property gate
+    property qubits
+PAULI_BASIS: value dict
+PAULI_GATE_LIKE: class Any(*args, **kwargs)
+PAULI_STATES: value dict
+PAULI_STRING_LIKE: class Any(*args, **kwargs)
+PRNG_OR_SEED_LIKE: class Any(*args, **kwargs)
+ParallelGate: class ParallelGate(sub_gate: 'Gate') -> 'None'
+    property sub_gate
+ParallelGateFamily: class ParallelGateFamily(gate: 'Gate | type[Gate] | GateFamily', *, name: 'str | None' = None, description: 'str | None' = None, max_parallel_allowed: 'int | None' = None) -> 'None'
+ParamDictType: class Any(*args, **kwargs)
+ParamMappingType: class Any(*args, **kwargs)
+ParamResolver: class ParamResolver(param_dict: 'Mapping[Any, Any] | None' = None, **kwargs: 'Any') -> 'None'
+    method value_of(self, value: 'Any') -> 'Any'
+ParamResolverOrSimilarType: class Any(*args, **kwargs)
+Parameter: class Parameter(name: 'str') -> 'None'
+    method names(self) -> 'set[str]'
+    method substitute(self, resolver: 'ParamResolver') -> 'Any'
+    property name
+Pauli: class Pauli(*values)
+    method matrix(self) -> 'Matrix'
+    method on(self, qubit: 'Qid') -> 'Any'
+PauliInteractionGate: class PauliInteractionGate(pauli0: 'Pauli', invert0: 'bool', pauli1: 'Pauli', invert1: 'bool') -> 'None'
+    property pauli0
+    property pauli1
+PauliMeasurementGate: class PauliMeasurementGate(pauli_string: 'PauliString', key: 'str | None' = None, invert_mask: 'Sequence[bool]' = ()) -> 'None'
+    property pauli_string
+PauliString: class PauliString(qubit_pauli_map: 'Mapping[Any, PauliLike] | Iterable[tuple[Any, PauliLike]] | None' = None, coefficient: 'complex' = 1) -> 'None'
+    method commutes_with(self, other: 'PauliString') -> 'bool'
+    method expectation_from_density_matrix(self, state: 'Any', qubit_map: 'Mapping[TKey, int]', *, atol: 'float' = 1e-07, check_preconditions: 'bool' = True) -> 'complex'
+    method expectation_from_state_vector(self, state_vector: 'Any', qubit_map: 'Mapping[TKey, int]', *, atol: 'float' = 1e-07, check_preconditions: 'bool' = True) -> 'complex'
+    method get(self, key: 'Qid', default: 'Any' = None) -> 'Any'
+    method items(self) -> 'Iterator[tuple[Qid, Pauli]]'
+    method keys(self) -> 'Any'
+    method matrix(self) -> 'Matrix'
+    method to_z_basis_ops(self) -> 'Iterator[Any]'
+    method unitary(self) -> 'Matrix'
+    method values(self) -> 'Iterator[Pauli]'
+    property coefficient
+    property qubits
+PauliStringGateOperation: class PauliStringGateOperation(pauli_string: 'PauliString', qubits: 'Sequence[Qid]') -> 'None'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'PauliStringGateOperation'
+    property gate
+    property pauli_string
+    property qubits
+PauliStringPhasor: class PauliStringPhasor(pauli_string: 'PauliString', *, half_turns: 'Any' = 1.0) -> 'None'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'PauliStringPhasor'
+    property gate
+    property half_turns
+    property pauli_string
+    property qubits
+PauliStringPhasorGate: class PauliStringPhasorGate(pauli_string: 'PauliString', *, half_turns: 'Any' = 1.0) -> 'None'
+    property half_turns
+    property pauli_string
+PauliSum: class PauliSum(terms: 'Any' = None) -> 'None'
+    classmethod from_pauli_strings(cls, terms: 'Any') -> 'PauliSum'
+    classmethod wrap(cls, value: 'Any') -> 'PauliSum'
+    method expectation_from_density_matrix(self, state: 'Any', qubit_map: 'Mapping[TKey, int]', *, atol: 'float' = 1e-07, check_preconditions: 'bool' = True) -> 'complex'
+    method expectation_from_state_vector(self, state_vector: 'Any', qubit_map: 'Mapping[TKey, int]', *, atol: 'float' = 1e-07, check_preconditions: 'bool' = True) -> 'complex'
+    method items(self) -> 'Iterator[tuple[PauliString, complex]]'
+PauliSumCollector: class PauliSumCollector(circuit: 'Circuit', observable: 'Any', *, samples_per_term: 'int', max_samples_per_job: 'int' = 1000000) -> 'None'
+    method estimated_energy(self) -> 'float | complex'
+    method next_job(self) -> 'CircuitSampleJob | None'
+    method on_job_result(self, job: 'CircuitSampleJob', result: 'Result') -> 'None'
+PauliSumExponential: class PauliSumExponential(pauli_sum: 'Any', exponent: 'Any' = 1.0) -> 'None'
+    method matrix(self) -> 'Matrix'
+    property exponent
+    property pauli_sum
+PauliSumLike: class Any(*args, **kwargs)
+PeriodicValue: class PeriodicValue(value: 'float', period: 'float') -> 'None'
+PhaseDampingChannel: class PhaseDampingChannel(gamma: 'Any') -> 'None'
+    property gamma
+PhaseFlipChannel: class PhaseFlipChannel(probability: 'Any') -> 'None'
+    property probability
+PhaseGradientGate: class PhaseGradientGate(*, num_qubits: 'int', exponent: 'Any') -> 'None'
+    property exponent
+PhasedFSimGate: class PhasedFSimGate(theta: 'Any', zeta: 'Any' = 0.0, chi: 'Any' = 0.0, gamma: 'Any' = 0.0, phi: 'Any' = 0.0) -> 'None'
+    property chi
+    property gamma
+    property phi
+    property rz_angles_after
+    property rz_angles_before
+    property theta
+    property zeta
+    staticmethod from_fsim_rz(theta: 'Any', phi: 'Any', rz_angles_before: 'Any', rz_angles_after: 'Any') -> 'PhasedFSimGate'
+PhasedISwapPowGate: class PhasedISwapPowGate(*, phase_exponent: 'Any' = 0.25, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+    property phase_exponent
+PhasedXPowGate: class PhasedXPowGate(*, phase_exponent: 'Any' = 0.0, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+    property exponent
+    property global_shift
+    property phase_exponent
+PhasedXZGate: class PhasedXZGate(*, x_exponent: 'Any' = 0.0, z_exponent: 'Any' = 0.0, axis_phase_exponent: 'Any' = 0.0) -> 'None'
+    property axis_phase_exponent
+    property x_exponent
+    property z_exponent
+Point: class Point(x: 'float', y: 'float') -> None
+PointOptimizationSummary: class PointOptimizationSummary(clear_span: 'int', clear_qubits: 'Sequence[Qid]', new_operations: 'Sequence[Operation]') -> None
+PointOptimizer: class PointOptimizer()
+    method convert(self, op: 'Operation') -> 'Sequence[Operation]'
+    method optimization_at(self, circuit: 'AbstractCircuit', index: 'int', op: 'Operation') -> 'PointOptimizationSummary | None'
+    method optimize_circuit(self, circuit: 'AbstractCircuit') -> 'Circuit'
+Points: class Points(key_or_points: 'Mapping[Any, Any] | Sequence[Mapping[Any, Any]] | Any', points: 'Sequence[Any] | None' = None, *, metadata: 'Any | None' = None) -> 'None'
+    property param_resolvers
+PolygonUnit: class PolygonUnit(polygon: 'Any', value: 'float', center: 'Point', annot: 'str | None') -> None
+Product: class Product(*sweeps: 'Any') -> 'None'
+    property param_resolvers
+ProductOfSums: class ProductOfSums(qubits: 'Sequence[Qid]', terms: 'Sequence[Sequence[tuple[Qid, bool]]]') -> 'None'
+    method to_str(self) -> 'str'
+ProductState: class ProductState(state_vector: 'Sequence[Any]') -> 'None'
+    method state_vector(self) -> 'list[complex]'
+    property states
+ProjectorString: class ProjectorString(pauli_string: 'PauliString', coefficient: 'complex' = 1) -> 'None'
+    method matrix(self) -> 'Matrix'
+    property coefficient
+    property pauli_string
+ProjectorSum: class ProjectorSum(terms: 'Mapping[PauliString, complex] | None' = None) -> 'None'
+    method items(self) -> 'Iterable[tuple[PauliString, complex]]'
+QUANTUM_STATE_LIKE: class Any(*args, **kwargs)
+QasmArgs: class QasmArgs(*, qubit_id_map: 'Any' = None, precision: 'int' = 15, version: 'str' = '2.0', args: 'Any' = None) -> 'None'
+    method format(self, text: 'str') -> 'str'
+QasmOutput: class QasmOutput(circuit: 'AbstractCircuit') -> 'None'
+    method qasm(self) -> 'str'
+QasmParseError: class QasmParseError(message: 'str', line: 'int | None' = None) -> 'None'
+Qid: class Qid()
+    property dimension
+QuantumFourierTransformGate: class QuantumFourierTransformGate(num_qubits: 'int', *, without_reverse: 'bool' = False) -> 'None'
+QuantumState: class QuantumState(state: 'Any', *, qid_shape: 'Sequence[int] | None' = None, atol: 'float' = 1e-07) -> 'None'
+    method density_matrix(self) -> 'Matrix'
+    method state_vector(self) -> 'list[complex]'
+QuantumStateRepresentation: class QuantumStateRepresentation()
+    method density_matrix(self) -> 'Matrix'
+    method state_vector(self) -> 'list[complex]'
+Qubit: class Qubit()
+QubitManager: class QubitManager()
+    method allocate(self, n: 'int') -> 'list[Qid]'
+    method free(self, qubits: 'Iterable[Qid]') -> 'None'
+    method qalloc(self) -> 'Qid'
+    method qborrow(self) -> 'BorrowableQubit'
+    method qfree(self, qubit: 'Qid') -> 'None'
+    method qrelease(self, qubit: 'Qid') -> 'None'
+QubitOrder: class QubitOrder(order_func: 'Callable[[tuple[Qid, ...]], Iterable[Qid]]') -> 'None'
+    method order_for(self, qubits: 'Iterable[Qid]') -> 'tuple[Qid, ...]'
+    staticmethod explicit(qubits: 'Iterable[Qid]') -> 'QubitOrder'
+    staticmethod sorted_by(key: 'Callable[[Qid], Any]') -> 'QubitOrder'
+QubitOrderOrList: value Union
+QubitPermutationGate: class QubitPermutationGate(permutation: 'Sequence[int]') -> 'None'
+    property permutation
+R: function reset(qubit: 'Qid') -> 'Any'
+RANDOM_STATE_OR_SEED_LIKE: class Any(*args, **kwargs)
+RandomGateChannel: class RandomGateChannel(*, sub_gate: 'Gate', probability: 'Any') -> 'None'
+    property probability
+    property sub_gate
+ResetChannel: class ResetChannel(dimension: 'int' = 2) -> 'None'
+Result: class Result(measurements: 'dict[str, list[list[int]]]', params: 'Any' = None) -> 'None'
+    method histogram(self, key: 'str' = '', fold_func: 'Callable[[list[int]], Any] | None' = None) -> 'Counter'
+    property measurements
+    property params
+ResultDict: class ResultDict(...)
+RouteCQC: class RouteCQC(device: 'Device') -> 'None'
+    method route_circuit(self, circuit: 'Circuit', *, initial_mapper: 'AbstractInitialMapper | None' = None, **kwargs: 'Any') -> 'Circuit'
+RoutingSwapTag: class RoutingSwapTag()
+Rx: function Rx(radians: 'Any') -> 'RxGate'
+RxGate: class RxGate(radians: 'Any') -> 'None'
+Ry: function Ry(radians: 'Any') -> 'RyGate'
+RyGate: class RyGate(radians: 'Any') -> 'None'
+Rz: function Rz(radians: 'Any') -> 'RzGate'
+RzGate: class RzGate(radians: 'Any') -> 'None'
+S: value ZPowGate
+SQRT_ISWAP: value ISwapPowGate
+SQRT_ISWAP_INV: value ISwapPowGate
+STATE_VECTOR_LIKE: class Any(*args, **kwargs)
+SWAP: value SwapPowGate
+SWAPGate: class SwapPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+SWAP_INV: value SwapPowGate
+Sampler: class Sampler(*, seed: 'int | None' = None) -> 'None'
+    method run(self, program: 'Circuit', repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'Result'
+    method sample(self, program: 'Circuit', repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'Result'
+SerializableByKey: class SerializableByKey()
+SetVariable: class SetVariable(key: 'Any', value: 'Any') -> 'None'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'SetVariable'
+    property qubits
+SimpleQubitManager: class SimpleQubitManager(qubits: 'Sequence[Qid] | None' = None, max_size: 'int | None' = None) -> 'None'
+    method qalloc(self) -> 'Qid'
+    method qborrow(self) -> 'BorrowableQubit'
+    method qfree(self, qubit: 'Qid') -> 'None'
+    method qrelease(self, qubit: 'Qid') -> 'None'
+    property qubits
+SimulatesAmplitudes: class SimulatesAmplitudes()
+SimulatesExpectationValues: class SimulatesExpectationValues()
+SimulatesFinalState: class SimulatesFinalState()
+SimulatesIntermediateState: class SimulatesIntermediateState()
+SimulatesIntermediateStateVector: class SimulatesIntermediateStateVector()
+SimulatesSamples: class SimulatesSamples()
+SimulationProductState: class SimulationProductState(states: 'Sequence[SimulationStateBase]') -> 'None'
+    property states
+SimulationResult: class SimulationResult(qubits: 'Sequence[Qid]', state: 'StateVector', params: 'Any' = None, measurements: 'dict[str, list[list[int]]] | None' = None) -> 'None'
+    method bloch_vector_of(self, qubit: 'Qid') -> 'list[float]'
+    method density_matrix_of(self, qubits: 'Sequence[Qid] | None' = None) -> 'Any'
+    method dirac_notation(self, decimals: 'int' = 3) -> 'str'
+    method get_state_containing_qubit(self, qubit: 'Qid') -> 'Any'
+    method state_vector(self) -> 'Any'
+    property final_state
+    property final_state_vector
+    property measurements
+    property params
+    property qubit_map
+    property qubits
+SimulationState: class SimulationState(qubits: 'Sequence[Qid]', prng: 'random.Random | None' = None) -> 'None'
+    method apply_operation(self, operation: 'Any') -> 'None'
+    method create_merged_state(self) -> 'SimulationState'
+    method measure(self, qubits: 'Sequence[Qid]', key: 'str') -> 'int'
+    method reset(self, qubits: 'Sequence[Qid]') -> 'None'
+    property qubits
+SimulationStateBase: class SimulationStateBase()
+    property qubits
+SimulationTrialResult: class SimulationTrialResult(params: 'Any', measurements: 'dict[str, Any]', *, qubits: 'Sequence[Qid]', state_vector: 'Sequence[complex] | None' = None, density_matrix: 'Sequence[Sequence[complex]] | None' = None) -> 'None'
+    property params
+SimulationTrialResultBase: class SimulationTrialResultBase()
+    property params
+Simulator: class Simulator(*, seed: 'int | None' = None) -> 'None'
+    method compute_amplitudes(self, program: 'Circuit', bitstrings: 'Sequence[int]', param_resolver: 'Any' = None, qubit_order: 'Sequence[Qid] | None' = None) -> 'list[complex]'
+    method run(self, program: 'Circuit', param_resolver: 'Any' = None, repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0, seed: 'int | None' = None) -> 'Result'
+    method sample(self, program: 'Circuit', param_resolver: 'Any' = None, repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0, seed: 'int | None' = None) -> 'Result'
+    method simulate(self, program: 'Circuit', param_resolver: 'Any' = None, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0) -> 'SimulationResult'
+    method simulate_moment_steps(self, program: 'Circuit', param_resolver: 'Any' = None, qubit_order: 'Sequence[Qid] | None' = None, initial_state: 'Any' = 0) -> 'Iterator[Any]'
+SimulatorBase: class SimulatorBase()
+SingleQubitCliffordGate: class SingleQubitCliffordGate(*, x_to: 'tuple[Pauli, bool]', z_to: 'tuple[Pauli, bool]', unitary: 'Matrix') -> 'None'
+    method commutes_with_pauli(self, pauli: 'Pauli') -> 'bool'
+    method commutes_with_single_qubit_gate(self, gate: 'SingleQubitCliffordGate') -> 'bool'
+    method decompose_gate(self) -> 'list[Gate]'
+    method decompose_rotation(self) -> 'list[tuple[Pauli, int]]'
+    method equivalent_gate_before(self, after: 'SingleQubitCliffordGate') -> 'SingleQubitCliffordGate'
+    method merged_with(self, second: 'SingleQubitCliffordGate') -> 'SingleQubitCliffordGate'
+    method pauli_tuple(self, pauli: 'Pauli') -> 'tuple[Pauli, bool]'
+    staticmethod from_double_map(pauli_map_to: 'dict[Pauli, tuple[Pauli, bool]] | None' = None, *, x_to: 'tuple[Pauli, bool] | None' = None, y_to: 'tuple[Pauli, bool] | None' = None, z_to: 'tuple[Pauli, bool] | None' = None) -> 'SingleQubitCliffordGate'
+    staticmethod from_pauli(pauli: 'Pauli', sqrt: 'bool' = False) -> 'SingleQubitCliffordGate'
+    staticmethod from_quarter_turns(pauli: 'Pauli', quarter_turns: 'int') -> 'SingleQubitCliffordGate'
+    staticmethod from_single_map(pauli_map_to: 'dict[Pauli, tuple[Pauli, bool]] | None' = None, *, x_to: 'tuple[Pauli, bool] | None' = None, y_to: 'tuple[Pauli, bool] | None' = None, z_to: 'tuple[Pauli, bool] | None' = None) -> 'SingleQubitCliffordGate'
+    staticmethod from_unitary(u: 'Sequence[Sequence[complex]]') -> 'SingleQubitCliffordGate | None'
+    staticmethod from_unitary_with_global_phase(u: 'Sequence[Sequence[complex]]') -> 'tuple[SingleQubitCliffordGate, complex] | None'
+    staticmethod from_xz_map(x_to: 'tuple[Pauli, bool]', z_to: 'tuple[Pauli, bool]') -> 'SingleQubitCliffordGate'
+SingleQubitPauliStringGateOperation: class SingleQubitPauliStringGateOperation(pauli_string: 'PauliString', qubit: 'Qid') -> 'None'
+    method with_qubits(self, *new_qubits: 'Qid') -> 'SingleQubitPauliStringGateOperation'
+    property gate
+SingleSweep: class SingleSweep(key: 'Any', points: 'Sequence[Any]') -> 'None'
+    property param_resolvers
+SparseSimulatorStep: class SparseSimulatorStep(*, qubits: 'Sequence[Qid]', measurements: 'dict[str, Any]', state_vector: 'Sequence[complex]') -> 'None'
+SqrtISwapGate: class SqrtISwapGate(*, exponent: 'Any' = 0.5, global_shift: 'Any' = 0.0) -> 'None'
+SqrtIswapTargetGateset: class SqrtIswapTargetGateset(*, atol: 'float' = 1e-08, **kwargs: 'Any') -> 'None'
+    method decompose_two_qubit(self, matrix: 'Sequence[Sequence[complex]]', qubits: 'tuple[Qid, Qid]', *, atol: 'float | None' = None) -> 'list[Operation]'
+    method optimize_circuit(self, circuit: 'Circuit') -> 'Circuit'
+StabilizerChFormSimulationState: class StabilizerChFormSimulationState(*, qubits: 'Sequence[Qid]', prng: 'random.Random | None' = None, initial_state: 'Any' = 0) -> 'None'
+    method apply_operation(self, operation: 'Any') -> 'None'
+    method measure(self, qubits: 'Sequence[Qid]', key: 'str') -> 'int'
+    method state_vector(self) -> 'list[complex]'
+StabilizerSampler: class StabilizerSampler(*, seed: 'int | None' = None) -> 'None'
+    method run(self, program: 'Any', repetitions: 'int' = 1, **kwargs: 'Any') -> 'Any'
+    method sample(self, program: 'Any', repetitions: 'int' = 1, **kwargs: 'Any') -> 'Any'
+StabilizerSimulationState: class StabilizerSimulationState(*, tableau: 'Any', qubits: 'Sequence[Qid]', prng: 'random.Random | None' = None) -> 'None'
+StabilizerState: class StabilizerState(clifford_tableau: 'Any') -> 'None'
+    method density_matrix(self) -> 'Matrix'
+    method state_vector(self) -> 'list[complex]'
+    property clifford_tableau
+StabilizerStateChForm: class StabilizerStateChForm(state_vector: 'Sequence[complex]', num_qubits: 'int | None' = None) -> 'None'
+    method density_matrix(self) -> 'list[list[complex]]'
+    method state_vector(self) -> 'list[complex]'
+    property num_qubits
+StatePreparationChannel: class StatePreparationChannel(target_state: 'Sequence[complex]', *, name: 'str' = 'StatePreparation') -> 'None'
+    property state
+StateVector: class StateVector(state: 'Sequence[complex]', qubits: 'Sequence[Qid]', *, owner: 'Any' = None) -> 'None'
+    method dirac_notation(self, decimals: 'int' = 3) -> 'str'
+    method state_vector(self) -> 'Any'
+    property qubits
+StateVectorMixin: class StateVectorMixin()
+    method dirac_notation(self, decimals: 'int' = 3) -> 'str'
+StateVectorSimulationState: class StateVectorSimulationState(*, qubits: 'Sequence[Qid]', prng: 'random.Random | None' = None, initial_state: 'Any' = 0) -> 'None'
+    method apply_operation(self, operation: 'Any') -> 'None'
+    method measure(self, qubits: 'Sequence[Qid]', key: 'str') -> 'int'
+    method state_vector(self) -> 'list[complex]'
+StateVectorStepResult: class StateVectorStepResult(*, qubits: 'Sequence[Qid]', measurements: 'dict[str, Any]', state_vector: 'Sequence[complex]') -> 'None'
+    method bloch_vector_of(self, qubit: 'Qid') -> 'list[float]'
+    method density_matrix_of(self, qubits: 'Sequence[Qid] | None' = None) -> 'Any'
+StateVectorTrialResult: class StateVectorTrialResult(params: 'Any', measurements: 'dict[str, Any]', *, qubits: 'Sequence[Qid]', state_vector: 'Sequence[complex]') -> 'None'
+StepResult: class StepResult(*, qubits: 'Sequence[Qid]', measurements: 'dict[str, Any] | None' = None, state_vector: 'Sequence[complex] | None' = None, density_matrix: 'Sequence[Sequence[complex]] | None' = None) -> 'None'
+    method density_matrix(self) -> 'list[list[complex]]'
+    method dirac_notation(self, decimals: 'int' = 3) -> 'str'
+    method sample(self, qubits: 'Sequence[Qid]', repetitions: 'int' = 1, *, seed: 'int | None' = None) -> 'list[int]'
+    method sample_measurement_ops(self, measurement_ops: 'Sequence[Any]', repetitions: 'int' = 1, seed: 'Any' = None) -> 'dict[str, list[list[int]]]'
+    method set_state_vector(self, state: 'Sequence[complex]') -> 'None'
+    method state_vector(self) -> 'list[complex]'
+    property qubit_map
+    property qubits
+StepResultBase: class StepResultBase()
+    property qubits
+SumOfProducts: class SumOfProducts(qubits: 'Sequence[Qid]', terms: 'Sequence[Sequence[tuple[Qid, bool]]]') -> 'None'
+    method to_str(self) -> 'str'
+SuperconductingQubitsNoiseProperties: class SuperconductingQubitsNoiseProperties(*, gate_times_ns: 'Mapping[OpIdentifier, float] | None' = None, gate_error_1q: 'float' = 0.001, gate_error_2q: 'float' = 0.01, readout_error_rate: 'float' = 0.02) -> 'None'
+    method gate_error(self, op_id: 'OpIdentifier') -> 'float'
+    method readout_error(self, qubit: 'Qid') -> 'float'
+SupportsActOn: class SupportsActOn(*args, **kwargs)
+SupportsActOnQubits: class SupportsActOn(*args, **kwargs)
+SupportsApplyChannel: class SupportsApplyChannel(*args, **kwargs)
+SupportsApplyMixture: class SupportsApplyMixture(*args, **kwargs)
+SupportsApproximateEquality: class SupportsApproximateEquality(*args, **kwargs)
+SupportsCircuitDiagramInfo: class SupportsCircuitDiagramInfo(*args, **kwargs)
+SupportsCommutes: class SupportsCommutes(*args, **kwargs)
+SupportsConsistentApplyUnitary: class SupportsApplyUnitary(*args, **kwargs)
+SupportsControlKey: class SupportsControlKey(*args, **kwargs)
+SupportsDecompose: class SupportsDecompose(*args, **kwargs)
+SupportsDecomposeWithQubits: class SupportsDecomposeWithQubits(*args, **kwargs)
+SupportsEqualUpToGlobalPhase: class SupportsEqualUpToGlobalPhase(*args, **kwargs)
+SupportsExplicitHasUnitary: class SupportsExplicitHasUnitary(*args, **kwargs)
+SupportsExplicitNumQubits: class SupportsExplicitNumQubits(*args, **kwargs)
+SupportsExplicitQidShape: class SupportsExplicitQidShape(*args, **kwargs)
+SupportsJSON: class SupportsJSON(*args, **kwargs)
+SupportsKraus: class SupportsKraus(*args, **kwargs)
+SupportsMeasurementKey: class SupportsMeasurementKey(*args, **kwargs)
+SupportsMixture: class SupportsMixture(*args, **kwargs)
+SupportsParameterization: class SupportsParameterization(*args, **kwargs)
+SupportsPauliExpansion: class SupportsPauliExpansion(*args, **kwargs)
+SupportsPhase: class SupportsPhase(*args, **kwargs)
+SupportsQasm: class SupportsQasm(*args, **kwargs)
+SupportsQasmWithArgs: class SupportsQasmWithArgs(*args, **kwargs)
+SupportsQasmWithArgsAndQubits: class SupportsQasmWithArgsAndQubits(*args, **kwargs)
+SupportsTraceDistanceBound: class SupportsTraceDistanceBound(*args, **kwargs)
+SupportsUnitary: class SupportsUnitary(*args, **kwargs)
+SwapPowGate: class SwapPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+Sweep: class Sweep()
+    property param_resolvers
+Sweepable: class Any(*args, **kwargs)
+Sycamore: class Sycamore() -> 'None'
+SycamoreGate: class SycamoreGate()
+SympyCondition: class SympyCondition(sympy_expr: 'Any', sympy_symbol_map: 'Mapping[Any, Any] | None' = None) -> 'None'
+T: value ZPowGate
+TOFFOLI: value CCXPowGate
+TParamKey: class Any(*args, **kwargs)
+TParamVal: class Any(*args, **kwargs)
+TParamValComplex: class Any(*args, **kwargs)
+TRANSFORMER: value Callable
+TaggedOperation: class TaggedOperation(sub_operation: 'Operation', *tags: 'Any') -> 'None'
+    method untagged(self) -> 'Operation'
+    property gate
+    property qubits
+    property sub_operation
+    property tags
+TargetGateset: class TargetGateset(*, atol: 'float' = 1e-08) -> 'None'
+    method compile_operation(self, operation: 'Operation') -> 'list[Operation]'
+    method convert_two_qubit(self, operation: 'Operation') -> 'list[Operation] | None'
+    method optimize_circuit(self, circuit: 'Circuit') -> 'Circuit'
+    method synthesize_two_qubit(self, operation: 'Operation') -> 'list[Operation] | None'
+    method two_qubit_gates(self) -> 'tuple[type[Gate], ...]'
+TensoredConfusionMatrices: class TensoredConfusionMatrices(confusion_matrices: 'Sequence[Sequence[Sequence[float]]]', qubits: 'Sequence[Qid]', repetitions: 'int') -> 'None'
+    property confusion_matrices
+    property confusion_matrix
+TextDiagramDrawer: class TextDiagramDrawer() -> 'None'
+    method horizontal_line(self, x1: 'int', x2: 'int', y: 'int') -> 'None'
+    method render(self, *, horizontal_spacing: 'int' = 1, vertical_spacing: 'int' = 0) -> 'str'
+    method vertical_line(self, y1: 'int', y2: 'int', x: 'int') -> 'None'
+    method write(self, x: 'int', y: 'int', text: 'str') -> 'None'
+ThreeQubitDiagonalGate: class ThreeQubitDiagonalGate(diag_angles_radians: 'Sequence[Any]') -> 'None'
+TiltedSquareLattice: class TiltedSquareLattice(width: 'int', height: 'int') -> 'None'
+    property edges
+    property nodes
+Timestamp: class Timestamp(*, picos: 'int') -> 'None'
+    method raw_picos(self) -> 'int'
+TransformerContext: class TransformerContext(*, deep: 'bool' = False, logger: 'TransformerLogger | None' = None, tags_to_ignore: 'Iterable[Any]' = ()) -> 'None'
+TransformerLogger: class TransformerLogger(context: 'Any' = None, tags_to_ignore: 'Iterable[Any]' = ()) -> 'None'
+    method log(self, message: 'str', *args: 'Any', **kwargs: 'Any') -> 'None'
+    method messages(self) -> 'list[str]'
+TrialResult: class TrialResult(params: 'ParamResolver', measurements: 'dict[str, list[list[int]]]') -> 'None'
+    property params
+TwoQubitCompilationTargetGateset: class TwoQubitCompilationTargetGateset(*entanglers: 'Gate') -> 'None'
+    method decompose_two_qubit(self, matrix: 'Sequence[Sequence[complex]]', qubits: 'tuple[Qid, Qid]', *, atol: 'float' = 1e-08) -> 'list[Operation]'
+TwoQubitDiagonalGate: class TwoQubitDiagonalGate(diag_angles_radians: 'Sequence[Any]') -> 'None'
+TwoQubitGateTabulation: class TwoQubitGateTabulation(base_gate: 'Gate', max_infidelity: 'float' = 0.001, *, atol: 'float' = 1e-08) -> 'None'
+TwoQubitGateTabulationResult: class TwoQubitGateTabulationResult(operations: 'Sequence[Operation]', success: 'bool') -> 'None'
+TwoQubitInteractionHeatmap: class TwoQubitInteractionHeatmap(value_map: 'Mapping[Any, Any]', **kwargs: 'Any') -> 'None'
+    method plot(self, ax: 'Any' = None, **kwargs: 'Any') -> 'tuple[Any, Any]'
+UNCONSTRAINED_DEVICE: value _UnconstrainedDevice
+UNIT_SWEEP: value UnitSweep
+UniformSuperpositionGate: class UniformSuperpositionGate(m_value: 'int', num_qubits: 'int') -> 'None'
+    property m_value
+UnitSweep: class UnitSweep()
+    property param_resolvers
+VariableGridQid: class VariableGridQid(row: 'Any', col: 'Any') -> 'None'
+    property col
+    property row
+VariableLineQid: class VariableLineQid(x: 'Any') -> 'None'
+    property x
+VariableQid: class VariableQid(name: 'Any') -> 'None'
+    property name
+VirtualTag: class VirtualTag()
+WaitGate: class WaitGate(duration_nanos: 'float', num_qubits: 'int' = 1) -> 'None'
+    property duration_nanos
+X: value XPowGate
+XPowGate: class XPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+XX: value XXPowGate
+XXPowGate: class XXPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+XmonDevice: class XmonDevice(qubits: 'Iterable[GridQubit]', *, gate_durations: 'dict[str, Any] | None' = None) -> 'None'
+Y: value YPowGate
+YPowGate: class YPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+YY: value YYPowGate
+YYPowGate: class YYPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+Z: value ZPowGate
+ZPowGate: class ZPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+ZZ: value ZZPowGate
+ZZPowGate: class ZZPowGate(*, exponent: 'Any' = 1.0, global_shift: 'Any' = 0.0) -> 'None'
+ZerosSampler: class ZerosSampler(device: 'Any' = None) -> 'None'
+    method run(self, program: 'Circuit', repetitions: 'int' = 1, *, qubit_order: 'Any' = None, seed: 'int | None' = None) -> 'Result'
+    method run_sweep(self, program: 'Circuit', params: 'Any', repetitions: 'int' = 1) -> 'list[Result]'
+Zip: class Zip(*sweeps: 'Any') -> 'None'
+    property param_resolvers
+ZipLongest: class ZipLongest(*sweeps: 'Any') -> 'None'
+    property param_resolvers
+__version__: value str
+act_on: function act_on(action: 'Any', args: 'Any', qubits: 'Sequence[Qid] | None' = None, *, allow_decompose: 'bool' = True) -> 'Any'
+add_dynamical_decoupling: function add_dynamical_decoupling(circuit: 'Circuit', *, context: 'TransformerContext | None' = None, **kwargs: 'Any') -> 'Circuit'
+align_left: function align_left(circuit: 'Circuit') -> 'Circuit'
+align_right: function align_right(circuit: 'Circuit') -> 'Circuit'
+all_near_zero: function all_near_zero(a: 'Any', *, atol: 'float' = 1e-08) -> 'bool'
+all_near_zero_mod: function all_near_zero_mod(a: 'Any', period: 'float', *, atol: 'float' = 1e-08) -> 'bool'
+allclose_up_to_global_phase: function allclose_up_to_global_phase(a: 'Sequence[Sequence[complex]]', b: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, equal_nan: 'bool' = False) -> 'bool'
+alternative: function alternative(*args: 'Any', default: 'Any' = None) -> 'Any'
+amplitude_damp: function amplitude_damp(gamma: 'Any') -> 'AmplitudeDampingChannel'
+apply_channel: function apply_channel(channel: 'Any', args: 'ApplyChannelArgs', *, default: 'Any' = None) -> 'Any'
+apply_matrix_to_slices: function apply_matrix_to_slices(target: 'Sequence[complex]', matrix: 'Sequence[Sequence[complex]]', slices: 'Sequence[Any]', *, out: 'Any' = None) -> 'Any'
+apply_mixture: function apply_mixture(value: 'Any', args: 'ApplyMixtureArgs', *, default: 'Any' = None) -> 'Any'
+apply_unitaries: function apply_unitaries(unitaries: 'Iterable[Any]', args: 'ApplyUnitaryArgs', *, default: 'Any' = None) -> 'Any'
+apply_unitary: function apply_unitary(value: 'Any', state_vector: 'Sequence[complex]') -> 'list[complex]'
+approx_eq: function approx_eq(val1: 'Any', val2: 'Any', *, atol: 'float' = 1e-08) -> 'bool'
+asymmetric_depolarize: function asymmetric_depolarize(p_x: 'float | None' = None, p_y: 'float | None' = None, p_z: 'float | None' = None, error_probabilities: 'dict[str, float] | None' = None, tol: 'float' = 1e-08) -> 'AsymmetricDepolarizingChannel'
+axis_angle: function axis_angle(single_qubit_unitary: 'Sequence[Sequence[complex]]') -> 'Any'
+bidiagonalize_real_matrix_pair_with_symmetric_products: function bidiagonalize_real_matrix_pair_with_symmetric_products(mat1: 'Sequence[Sequence[complex]]', mat2: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, check_preconditions: 'bool' = True) -> 'tuple[Any, Any]'
+bidiagonalize_unitary_with_special_orthogonals: function bidiagonalize_unitary_with_special_orthogonals(mat: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, check_preconditions: 'bool' = True) -> 'tuple[Any, Any, Any]'
+big_endian_bits_to_int: function big_endian_bits_to_int(bits: 'Iterable[int]') -> 'int'
+big_endian_digits_to_int: function big_endian_digits_to_int(digits: 'Iterable[int]', *, base: 'int | Sequence[int]') -> 'int'
+big_endian_int_to_bits: function big_endian_int_to_bits(value: 'int', *, bit_count: 'int') -> 'list[int]'
+big_endian_int_to_digits: function big_endian_int_to_digits(value: 'int', *, base: 'int | Sequence[int]') -> 'list[int]'
+bit_flip: function bit_flip(probability: 'Any') -> 'BitFlipChannel'
+bit_phase_flip: function bit_phase_flip(probability: 'Any') -> 'BitPhaseFlipChannel'
+bloch_vector_from_state_vector: function bloch_vector_from_state_vector(state: 'Any', index: 'int') -> 'tuple[float, float, float]'
+block_diag: function block_diag(*blocks: 'Any') -> 'Any'
+canonicalize_half_turns: function canonicalize_half_turns(half_turns: 'float') -> 'float'
+choi_to_kraus: function choi_to_kraus(choi: 'Sequence[Sequence[complex]]', atol: 'float' = 1e-08) -> 'list[Matrix]'
+choi_to_superoperator: function choi_to_superoperator(choi: 'Sequence[Sequence[complex]]') -> 'Matrix'
+chosen_angle_to_canonical_half_turns: function chosen_angle_to_canonical_half_turns(angle: 'float', *, period: 'float' = 6.283185307179586) -> 'float'
+chosen_angle_to_half_turns: function chosen_angle_to_half_turns(angle: 'float', *, period: 'float' = 6.283185307179586) -> 'float'
+circuit_diagram_info: function circuit_diagram_info(value: 'Any', args: 'CircuitDiagramInfoArgs | None' = None) -> 'CircuitDiagramInfo'
+circuit_from_qasm: function circuit_from_qasm(source: 'str') -> 'Circuit'
+circuits: module vqubit.circuits
+cirq_type_from_json: function cirq_type_from_json(cirq_type: 'str') -> 'Any'
+commutes: function commutes(a: 'Any', b: 'Any', atol: 'float' = 1e-08) -> 'bool'
+compute_cphase_exponents_for_fsim_decomposition: function compute_cphase_exponents_for_fsim_decomposition(fsim_gate: 'FSimGate') -> 'tuple[float, float, float]'
+control_keys: function control_keys(value: 'Any') -> 'frozenset[MeasurementKey]'
+cphase: function cphase(radians: 'Any') -> 'CZPowGate'
+create_transformer_with_kwargs: function create_transformer_with_kwargs(func: 'Callable[..., Circuit]', kwargs: 'dict[str, Any]') -> 'Callable[..., Circuit]'
+dataclass_json_dict: function dataclass_json_dict(obj: 'Any') -> 'dict[str, Any]'
+decompose: function decompose(value: 'Any') -> 'list[Any]'
+decompose_clifford_tableau_to_operations: function decompose_clifford_tableau_to_operations(qubits: 'Sequence[Qid]', tableau: 'Any') -> 'list[Operation]'
+decompose_cphase_into_two_fsim: function decompose_cphase_into_two_fsim(q0: 'Qid', q1: 'Qid', *, fsim_gate: 'Any' = None, atol: 'float' = 1e-08) -> 'list[Operation]'
+decompose_multi_controlled_rotation: function decompose_multi_controlled_rotation(unitary: 'Sequence[Sequence[complex]]', controls: 'Sequence[Qid]', target: 'Qid', *, control_values: 'Sequence[bool] | None' = None, **kwargs: 'Any') -> 'list[Operation]'
+decompose_multi_controlled_x: function decompose_multi_controlled_x(controls: 'Sequence[Qid]', target: 'Qid', *, control_values: 'Sequence[bool] | None' = None, **kwargs: 'Any') -> 'list[Operation]'
+decompose_once: function decompose_once(value: 'Any') -> 'list[Any]'
+decompose_once_with_qubits: function decompose_once_with_qubits(value: 'Any', qubits: 'Sequence[Qid]', *, context: 'DecompositionContext | None' = None) -> 'list[Any]'
+decompose_two_qubit_interaction_into_four_fsim_gates: function decompose_two_qubit_interaction_into_four_fsim_gates(q0: 'Qid', q1: 'Qid', *, fsim_gate: 'Any' = None, **kwargs: 'Any') -> 'list[Operation]'
+deconstruct_single_qubit_matrix_into_angles: function deconstruct_single_qubit_matrix_into_angles(matrix: 'Sequence[Sequence[complex]]', *, atol: 'float' = 1e-08) -> 'tuple[float, float, float]'
+defer_measurements: function defer_measurements(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+definitely_commutes: function definitely_commutes(a: 'Any', b: 'Any', atol: 'float' = 1e-08) -> 'bool'
+density_matrix: function density_matrix(matrix: 'Any', *, qid_shape: 'Sequence[int] | None' = None) -> 'Matrix'
+density_matrix_from_state_vector: function density_matrix_from_state_vector(state_vector: 'Sequence[complex]', indices: 'Sequence[int] | None' = None) -> 'Any'
+density_matrix_kronecker_product: function density_matrix_kronecker_product(t1: 'Sequence[Sequence[complex]]', t2: 'Sequence[Sequence[complex]]') -> 'Any'
+dephase_measurements: function dephase_measurements(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+depolarize: function depolarize(probability: 'Any', num_qubits: 'int' = 1) -> 'DepolarizingChannel'
+devices: module vqubit.devices
+diagonalize_real_symmetric_and_sorted_diagonal_matrices: function diagonalize_real_symmetric_and_sorted_diagonal_matrices(symmetric_matrix: 'Sequence[Sequence[complex]]', diagonal_matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, check_preconditions: 'bool' = True) -> 'Any'
+diagonalize_real_symmetric_matrix: function diagonalize_real_symmetric_matrix(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, check_preconditions: 'bool' = True) -> 'Any'
+dict_to_product_sweep: function dict_to_product_sweep(factors: 'Mapping[Any, Sequence[Any]]') -> 'Sweep'
+dict_to_zip_sweep: function dict_to_zip_sweep(factors: 'Mapping[Any, Sequence[Any]]') -> 'Sweep'
+dirac_notation: function dirac_notation(state: 'Sequence[complex]', decimals: 'int' = 2) -> 'str'
+dot: function dot(*values: 'Any') -> 'Any'
+draw_gridlike: function draw_gridlike(graph: 'Any') -> 'str'
+draw_placements: function draw_placements(logical_graph: 'Any', placements: 'Sequence[Mapping[Any, Any]]', *, device_graph: 'Any' = None, **kwargs: 'Any') -> 'str'
+drop_diagonal_before_measurement: function drop_diagonal_before_measurement(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+drop_empty_moments: function drop_empty_moments(circuit: 'Circuit') -> 'Circuit'
+drop_negligible_operations: function drop_negligible_operations(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+drop_terminal_measurements: function drop_terminal_measurements(circuit: 'Circuit') -> 'Circuit'
+eject_phased_paulis: function eject_phased_paulis(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+eject_z: function eject_z(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+entanglement_fidelity: function entanglement_fidelity(state1: 'Any', state2: 'Any', qid_shape: 'Sequence[int] | None' = None) -> 'float'
+equal_up_to_global_phase: function equal_up_to_global_phase(val1: 'Any', val2: 'Any', *, atol: 'float' = 1e-08) -> 'bool'
+estimate_parallel_single_qubit_readout_errors: function estimate_parallel_single_qubit_readout_errors(measurement_results: 'Any') -> 'tuple[list[float], list[float]]'
+estimate_single_qubit_readout_errors: function estimate_single_qubit_readout_errors(measurement_results: 'Any') -> 'tuple[list[float], list[float]]'
+expand_composite: function expand_composite(circuit: 'Circuit') -> 'Circuit'
+expand_matrix_in_orthogonal_basis: function expand_matrix_in_orthogonal_basis(m: 'Any', basis: 'dict[str, Any]') -> 'dict[str, complex]'
+experiments: module vqubit.experiments
+eye_tensor: function eye_tensor(shape: 'Sequence[int]', *, dtype: 'Any' = None, split_index: 'int | None' = None) -> 'Any'
+fidelity: function fidelity(state1: 'Any', state2: 'Any') -> 'float'
+final_density_matrix: function final_density_matrix(result: 'Any') -> 'list[list[complex]]'
+final_state_vector: function final_state_vector(result: 'Any') -> 'list[complex]'
+flatten: function flatten(sweepable: 'Any') -> 'list[ParamResolver]'
+flatten_op_tree: function flatten_op_tree(op_tree: 'Any', preserve_moments: 'bool' = False) -> 'list[Any]'
+flatten_to_ops: function flatten_to_ops(op_tree: 'Any') -> 'list[Operation]'
+flatten_to_ops_or_moments: function flatten_to_ops_or_moments(op_tree: 'Any') -> 'list[Any]'
+flatten_with_params: function flatten_with_params(sweepable: 'Any') -> 'tuple[list[ParamResolver], dict[str, Any]]'
+flatten_with_sweep: function flatten_with_sweep(sweepable: 'Any') -> 'tuple[list[ParamResolver], Sweep]'
+freeze_op_tree: function freeze_op_tree(op_tree: 'Any', preserve_moments: 'bool' = False) -> 'tuple[Any, ...]'
+from_cirq: function from_cirq(circuit: 'Any') -> 'Circuit'
+generalized_amplitude_damp: function generalized_amplitude_damp(p: 'float', gamma: 'float') -> 'GeneralizedAmplitudeDampingChannel'
+get_engine: function get_engine(*, device: 'Device | None' = None, seed: 'int | None' = None, project_id: 'str | None' = None) -> 'Engine'
+get_placements: function get_placements(topology: 'NamedTopology', graph: 'Any', *, max_placements: 'int' = 10, **kwargs: 'Any') -> 'list[dict[Any, Any]]'
+get_state_histogram: function get_state_histogram(result: 'Any') -> 'Any'
+givens: function givens(angle_rads: 'Any') -> 'PhasedISwapPowGate'
+global_phase: function global_phase(exponent: 'Any') -> 'GlobalPhaseGate'
+global_phase_operation: function global_phase_operation(coefficient: 'complex') -> 'Any'
+has_kraus: function has_kraus(value: 'Any') -> 'bool'
+has_mixture: function has_mixture(value: 'Any') -> 'bool'
+has_stabilizer_effect: function has_stabilizer_effect(value: 'Any') -> 'bool'
+has_unitary: function has_unitary(value: 'Any') -> 'bool'
+hilbert_schmidt_inner_product: function hilbert_schmidt_inner_product(m1: 'Any', m2: 'Any') -> 'complex'
+hog_score_xeb_fidelity_from_probabilities: function hog_score_xeb_fidelity_from_probabilities(hilbert_space_dimension: 'int', probabilities: 'Sequence[float]') -> 'float'
+identity_each: function identity_each(*qubits: 'Qid') -> 'tuple[Any, ...]'
+index_tags: function index_tags(circuit: 'Circuit', *, start: 'int' = 0, prefix: 'str' = '') -> 'Circuit'
+integrated_histogram: function integrated_histogram(data: 'Any', ax: 'Any' = None, *, cdf_on_x: 'bool' = False, axis_label: 'str' = '', semilog: 'bool' = True, median_line: 'bool' = True, median_label: 'str | None' = 'median', mean_line: 'bool' = False, mean_label: 'str | None' = 'mean', show_zero: 'bool' = False, title: 'str | None' = None, **kwargs: 'Any') -> 'Any'
+interop: module vqubit.interop
+inverse: function inverse(value: 'Any') -> 'Any'
+ion: module vqubit.ion
+is_cptp: function is_cptp(*, kraus_ops: 'Sequence[Sequence[Sequence[complex]]]', rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+is_diagonal: function is_diagonal(matrix: 'Sequence[Sequence[complex]]', *, atol: 'float' = 1e-08) -> 'bool'
+is_hermitian: function is_hermitian(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+is_measurement: function is_measurement(value: 'Any') -> 'bool'
+is_native_neutral_atom_gate: function is_native_neutral_atom_gate(gate: 'Any') -> 'bool'
+is_native_neutral_atom_op: function is_native_neutral_atom_op(operation: 'Any') -> 'bool'
+is_negligible_turn: function is_negligible_turn(turns: 'float', tolerance: 'float' = 1e-05) -> 'bool'
+is_normal: function is_normal(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+is_orthogonal: function is_orthogonal(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+is_parameterized: function is_parameterized(value: 'Any') -> 'bool'
+is_special_orthogonal: function is_special_orthogonal(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+is_special_unitary: function is_special_unitary(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+is_unitary: function is_unitary(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+is_valid_placement: function is_valid_placement(logical_graph: 'Any', physical_qubits: 'Sequence[Qid]', device_graph: 'Any') -> 'bool'
+json_cirq_type: function json_cirq_type(value: 'Any') -> 'str'
+json_namespace: function json_namespace(value: 'Any') -> 'str'
+json_resolver_cache: module vqubit.json_resolver_cache
+kak_canonicalize_vector: function kak_canonicalize_vector(x: 'float', y: 'float', z: 'float', atol: 'float' = 1e-09) -> 'KakDecomposition'
+kak_decomposition: function kak_decomposition(matrix: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, check_preconditions: 'bool' = True) -> 'KakDecomposition'
+kak_vector: function kak_vector(unitary: 'Any', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, check_preconditions: 'bool' = True) -> 'Any'
+kraus: function kraus(value: 'Any') -> 'list[Matrix]'
+kraus_channel: function kraus_channel(kraus_operators: 'Sequence[Sequence[Sequence[complex]]]') -> 'list[Matrix]'
+kraus_to_choi: function kraus_to_choi(kraus_ops: 'Sequence[Sequence[Sequence[complex]]]') -> 'Matrix'
+kraus_to_superoperator: function kraus_to_superoperator(kraus_ops: 'Sequence[Sequence[Sequence[complex]]]') -> 'Matrix'
+kron: function kron(*factors: 'Any', shape_len: 'int' = 2) -> 'Any'
+kron_bases: function kron_bases(*bases: 'dict[str, Any]', repeat: 'int' = 1) -> 'dict[str, Matrix]'
+kron_factor_4x4_to_2x2s: function kron_factor_4x4_to_2x2s(matrix: 'Sequence[Sequence[complex]]', rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'tuple[complex, Matrix, Matrix]'
+kron_with_controls: function kron_with_controls(*factors: 'Any') -> 'Any'
+linalg: module vqubit.linalg
+linear_xeb_fidelity: function linear_xeb_fidelity(bitstrings: 'Iterable[int | float]', hilbert_space_dimension: 'int', *, bitstrings_are_probabilities: 'bool' = False) -> 'float'
+linear_xeb_fidelity_from_probabilities: function linear_xeb_fidelity_from_probabilities(hilbert_space_dimension: 'int', probabilities: 'Sequence[float]') -> 'float'
+list_of_dicts_to_zip: function list_of_dicts_to_zip(points: 'Sequence[Mapping[Any, Any]]') -> 'Sweep'
+log_xeb_fidelity: function log_xeb_fidelity(bitstrings: 'Iterable[int | float]', hilbert_space_dimension: 'int', *, bitstrings_are_probabilities: 'bool' = False) -> 'float'
+log_xeb_fidelity_from_probabilities: function log_xeb_fidelity_from_probabilities(hilbert_space_dimension: 'int', probabilities: 'Sequence[float]') -> 'float'
+map_clean_and_borrowable_qubits: function map_clean_and_borrowable_qubits(circuit: 'Circuit', **kwargs: 'Any') -> 'Circuit'
+map_eigenvalues: function map_eigenvalues(matrix: 'Sequence[Sequence[complex]]', func: 'Callable[[complex], complex]', *, atol: 'float' = 1e-08) -> 'Any'
+map_moments: function map_moments(circuit: 'Circuit', map_func: 'Callable[[Moment], Moment]') -> 'Circuit'
+map_operations: function map_operations(circuit: 'Circuit', map_func: 'Callable[[Operation], Any]') -> 'Circuit'
+map_operations_and_unroll: function map_operations_and_unroll(circuit: 'Circuit', map_func: 'Callable[[Operation], Any]') -> 'Circuit'
+match_global_phase: function match_global_phase(a: 'Sequence[Sequence[complex]]', b: 'Sequence[Sequence[complex]]') -> 'tuple[Matrix, Matrix]'
+matrix_commutes: function matrix_commutes(m1: 'Sequence[Sequence[complex]]', m2: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08) -> 'bool'
+matrix_from_basis_coefficients: function matrix_from_basis_coefficients(expansion: 'dict[str, Any]', basis: 'dict[str, Any]') -> 'Any'
+measure: function measure(*qubits: 'Qid | Iterable[Qid]', key: 'str | None' = None) -> 'GateOperation'
+measure_confusion_matrix: function measure_confusion_matrix(sampler: 'Any', qubits: 'Sequence[Qid]', repetitions: 'int' = 1000, **kwargs: 'Any') -> 'TensoredConfusionMatrices'
+measure_density_matrix: function measure_density_matrix(density_matrix: 'Sequence[Sequence[complex]]', indices: 'Sequence[int]', *, qid_shape: 'Sequence[int] | None' = None, out: 'Any' = None, seed: 'int | None' = None) -> 'tuple[list[list[complex]], int]'
+measure_each: function measure_each(*qubits: 'Qid', key_func: 'Any' = None) -> 'tuple[GateOperation, ...]'
+measure_paulistring_terms: function measure_paulistring_terms(pauli_sum: 'PauliSum', key: 'str | None' = None) -> 'list[GateOperation]'
+measure_single_paulistring: function measure_single_paulistring(pauli_string: 'PauliString', key: 'str | None' = None) -> 'GateOperation'
+measure_state_vector: function measure_state_vector(state: 'Sequence[complex]', indices: 'Sequence[int]', *, qid_shape: 'Sequence[int] | None' = None, out: 'Any' = None, seed: 'int | None' = None) -> 'tuple[list[complex], int]'
+measurement_key_name: function measurement_key_name(value: 'Any') -> 'str | None'
+measurement_key_names: function measurement_key_names(value: 'Any') -> 'set[str]'
+measurement_key_obj: function measurement_key_obj(value: 'Any') -> 'MeasurementKey | None'
+measurement_key_objs: function measurement_key_objs(value: 'Any') -> 'frozenset[MeasurementKey]'
+measurement_keys_touched: function measurement_keys_touched(value: 'Any') -> 'set[str]'
+merge_k_qubit_unitaries: function merge_k_qubit_unitaries(circuit: 'Circuit', k: 'int' = 1, *, atol: 'float' = 1e-08) -> 'Circuit'
+merge_k_qubit_unitaries_to_circuit_op: function merge_k_qubit_unitaries_to_circuit_op(circuit: 'Circuit', k: 'int' = 1, *, atol: 'float' = 1e-08) -> 'Circuit'
+merge_moments: function merge_moments(circuit: 'Circuit', merge_func: 'Callable[[Moment, Moment], Moment | None]', *, tags_to_ignore: 'Sequence[Any]' = (), deep: 'bool' = False) -> 'Circuit'
+merge_moments_batch: function merge_moments_batch(circuit: 'Circuit', merge_func: 'Callable[[Moment, Moment], Moment | None]', *, tags_to_ignore: 'Sequence[Any]' = (), deep: 'bool' = False) -> 'Circuit'
+merge_operations: function merge_operations(circuit: 'Circuit', merge_func: 'Callable[[Operation, Operation], Operation | None]', *, tags_to_ignore: 'Sequence[Any]' = (), deep: 'bool' = False) -> 'Circuit'
+merge_operations_to_circuit_op: function merge_operations_to_circuit_op(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+merge_single_qubit_gates_to_phased_x_and_z: function merge_single_qubit_gates_to_phased_x_and_z(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+merge_single_qubit_gates_to_phxz: function merge_single_qubit_gates_to_phxz(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+merge_single_qubit_gates_to_phxz_symbolized: function merge_single_qubit_gates_to_phxz_symbolized(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+merge_single_qubit_moments_to_phxz: function merge_single_qubit_moments_to_phxz(circuit: 'Circuit', *, atol: 'float' = 1e-08) -> 'Circuit'
+mixture: function mixture(value: 'Any') -> 'list[tuple[float, Any]] | None'
+ms: function ms(rads: 'Any') -> 'MSGate'
+mul: function mul(a: 'Any', b: 'Any', default: 'Any' = NotImplemented) -> 'Any'
+neutral_atoms: module vqubit.neutral_atoms
+num_cnots_required: function num_cnots_required(u: 'Sequence[Sequence[complex]]', atol: 'float' = 1e-08) -> 'int'
+num_qubits: function num_qubits(value: 'Any') -> 'int'
+obj_to_dict_helper: function obj_to_dict_helper(obj: 'Any', attribute_names: 'Iterable[str]', *, namespace: 'str | None' = None) -> 'dict[str, Any]'
+one_hot: function one_hot(index: 'Sequence[int]', shape: 'Sequence[int]', value: 'complex' = 1, dtype: 'Any' = None) -> 'Any'
+operation_to_choi: function operation_to_choi(operation: 'Any') -> 'Matrix'
+operation_to_superoperator: function operation_to_superoperator(operation: 'Any') -> 'Matrix'
+ops: module vqubit.ops
+optimize_for_target_gateset: function optimize_for_target_gateset(circuit: 'Circuit', gateset: 'TargetGateset | None' = None) -> 'Circuit'
+parallel_gate_op: function parallel_gate_op(sub_gate: 'Gate', *qubits: 'Qid') -> 'Any'
+parameter_names: function parameter_names(value: 'Any') -> 'set[str]'
+parameter_symbols: function parameter_symbols(value: 'Any') -> 'set[Parameter]'
+parameterized_2q_op_to_sqrt_iswap_operations: function parameterized_2q_op_to_sqrt_iswap_operations(operation: 'Operation', *, use_sqrt_iswap_inv: 'bool' = False) -> 'Any'
+partial_trace: function partial_trace(tensor: 'Sequence[Sequence[complex]]', keep_indices: 'Sequence[int]') -> 'Matrix'
+partial_trace_of_state_vector_as_mixture: function partial_trace_of_state_vector_as_mixture(state_vector: 'Sequence[complex]', keep_indices: 'Sequence[int]', *, atol: 'float' = 1e-08) -> 'tuple[tuple[float, Any], ...]'
+pauli_expansion: function pauli_expansion(value: 'Any', *, atol: 'float' = 1e-08) -> 'PauliSum'
+phase_by: function phase_by(value: 'Any', phase_exponent: 'float', qubit_index: 'int') -> 'MatrixGate'
+phase_damp: function phase_damp(gamma: 'Any') -> 'PhaseDampingChannel'
+phase_flip: function phase_flip(probability: 'Any') -> 'PhaseFlipChannel'
+plot_density_matrix: function plot_density_matrix(matrix: 'Any', ax: 'Any' = None, *, show_text: 'bool' = False, title: 'str | None' = None) -> 'Any'
+plot_state_histogram: function plot_state_histogram(data: 'Any', ax: 'Any' = None, *, tick_label: 'Sequence[str] | None' = None, xlabel: 'str | None' = 'qubit state', ylabel: 'str | None' = 'result count', title: 'str | None' = 'Result State Histogram') -> 'Any'
+pow: function pow(value: 'Any', exponent: 'float') -> 'Any'
+pow_pauli_combination: function pow_pauli_combination(ai: 'complex', ax: 'complex', ay: 'complex', az: 'complex', exponent: 'int') -> 'tuple[complex, complex, complex, complex]'
+prepare_two_qubit_state_using_cz: function prepare_two_qubit_state_using_cz(gate: 'Any', qubits: 'Sequence[Qid]', *, atol: 'float' = 1e-08, **kwargs: 'Any') -> 'list[Operation]'
+prepare_two_qubit_state_using_iswap: function prepare_two_qubit_state_using_iswap(gate: 'Any', qubits: 'Sequence[Qid]', *, atol: 'float' = 1e-08, **kwargs: 'Any') -> 'list[Operation]'
+prepare_two_qubit_state_using_sqrt_iswap: function prepare_two_qubit_state_using_sqrt_iswap(gate: 'Any', qubits: 'Sequence[Qid]', *, atol: 'float' = 1e-08, **kwargs: 'Any') -> 'list[Operation]'
+protocols: module vqubit.protocols
+q: function q(index: 'int') -> 'Qid'
+qasm: function qasm(value: 'Any') -> 'str'
+qft: function qft(*qubits: 'Qid', without_reverse: 'bool' = False, inverse: 'bool' = False) -> 'Any'
+qid_shape: function qid_shape(value: 'Any') -> 'tuple[int, ...]'
+qis: module vqubit.qis
+quantum_shannon_decomposition: function quantum_shannon_decomposition(qubits: 'Sequence[Qid]', matrix: 'Sequence[Sequence[complex]]', **kwargs: 'Any') -> 'list[Operation]'
+quantum_state: function quantum_state(state: 'Any', *, qid_shape: 'Sequence[int] | None' = None, dtype: 'Any' = None, atol: 'float' = 1e-07) -> 'QuantumState'
+quirk_json_to_circuit: function quirk_json_to_circuit(json_data: 'Any') -> 'Circuit'
+quirk_url: function quirk_url(circuit: 'Circuit') -> 'str'
+quirk_url_to_circuit: function quirk_url_to_circuit(url: 'str') -> 'Circuit'
+random_density_matrix: function random_density_matrix(num_qubits: 'int', *, seed: 'int | None' = None) -> 'Matrix'
+random_state_vector: function random_state_vector(num_qubits: 'int', *, seed: 'int | None' = None) -> 'list[complex]'
+read_json: function read_json(text: 'str') -> 'Any'
+read_json_gzip: function read_json_gzip(data: 'bytes') -> 'Any'
+reflection_matrix_pow: function reflection_matrix_pow(reflection_matrix: 'Sequence[Sequence[complex]]', exponent: 'float') -> 'Any'
+relative_luminance: function relative_luminance(color: 'Any') -> 'float'
+remove_tags: function remove_tags(circuit: 'Circuit', tags: 'Sequence[Any]') -> 'Circuit'
+reset: function reset(qubit: 'Qid') -> 'Any'
+reset_each: function reset_each(*qubits: 'Qid') -> 'tuple[Any, ...]'
+resolve_parameters: function resolve_parameters(value: 'Any', resolver: 'ParamResolver') -> 'Any'
+resolve_parameters_once: function resolve_parameters_once(value: 'Any', resolver: 'ParamResolver') -> 'Any'
+riswap: function riswap(rads: 'Any') -> 'ISwapPowGate'
+routed_circuit_with_mapping: function routed_circuit_with_mapping(circuit: 'Circuit', initial_mapper: 'AbstractInitialMapper | None' = None, device: 'Device | None' = None, **kwargs: 'Any') -> 'tuple[Circuit, dict[Qid, Qid]]'
+run: function run(program: 'Circuit', repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'Result'
+run_batch: function run_batch(program: 'Circuit', params: 'Any', repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'list[TrialResult]'
+run_sweep: function run_sweep(program: 'Circuit', params: 'Any', repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'list[Result]'
+rx: function rx(radians: 'Any') -> 'Gate'
+ry: function ry(radians: 'Any') -> 'Gate'
+rz: function rz(radians: 'Any') -> 'Gate'
+sample: function sample(program: 'Circuit', repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'Result'
+sample_density_matrix: function sample_density_matrix(density_matrix: 'Sequence[Sequence[complex]]', indices: 'Sequence[int]', repetitions: 'int' = 1, *, seed: 'int | None' = None, qid_shape: 'Sequence[int] | None' = None) -> 'list[int]'
+sample_state_vector: function sample_state_vector(state: 'Sequence[complex]', indices: 'Sequence[int]', repetitions: 'int' = 1, *, seed: 'int | None' = None, qid_shape: 'Sequence[int] | None' = None) -> 'list[int]'
+sample_sweep: function sample_sweep(program: 'Any', params: 'Any', repetitions: 'int' = 1, **kwargs: 'Any') -> 'Any'
+sampler: function sampler(program: 'Circuit', repetitions: 'int' = 1, *, qubit_order: 'Sequence[Qid] | None' = None, seed: 'int | None' = None) -> 'Result'
+scatter_plot_normalized_kak_interaction_coefficients: function scatter_plot_normalized_kak_interaction_coefficients(interactions: 'Any', *, include_frame: 'bool' = True, ax: 'Any' = None, **kwargs: 'Any') -> 'Any'
+sim: module vqubit.sim
+single_qubit_matrix_to_gates: function single_qubit_matrix_to_gates(matrix: 'Sequence[Sequence[complex]]', *, atol: 'float' = 1e-08) -> 'list[Gate]'
+single_qubit_matrix_to_operations: function single_qubit_matrix_to_operations(matrix: 'Sequence[Sequence[complex]]', qubit: 'Qid', *, atol: 'float' = 1e-08) -> 'list[GateOperation]'
+single_qubit_matrix_to_pauli_rotations: function single_qubit_matrix_to_pauli_rotations(matrix: 'Sequence[Sequence[complex]]', *, atol: 'float' = 1e-08) -> 'list[tuple[Pauli, float]]'
+single_qubit_matrix_to_phased_x_z: function single_qubit_matrix_to_phased_x_z(matrix: 'Sequence[Sequence[complex]]', *, atol: 'float' = 1e-08) -> 'list[Gate]'
+single_qubit_matrix_to_phxz: function single_qubit_matrix_to_phxz(matrix: 'Sequence[Sequence[complex]]', *, atol: 'float' = 1e-08) -> 'PhasedXZGate'
+single_qubit_op_to_framed_phase_form: function single_qubit_op_to_framed_phase_form(operation: 'Operation', *, atol: 'float' = 1e-08) -> 'tuple[float, PhasedXPowGate, ZPowGate]'
+slice_for_qubits_equal_to: function slice_for_qubits_equal_to(target_qubit_axes: 'Sequence[int]', little_endian_qureg_value: 'int' = 0, *, big_endian_qureg_value: 'int' = 0, num_qubits: 'int | None' = None, qid_shape: 'tuple[int, ...] | None' = None) -> 'tuple[Any, ...]'
+so4_to_magic_su2s: function so4_to_magic_su2s(mat: 'Sequence[Sequence[complex]]', *, rtol: 'float' = 1e-05, atol: 'float' = 1e-08, check_preconditions: 'bool' = True) -> 'tuple[Matrix, Matrix]'
+state_vector: function state_vector(state: 'Any', *, qid_shape: 'Sequence[int] | None' = None) -> 'list[complex]'
+state_vector_kronecker_product: function state_vector_kronecker_product(t1: 'Sequence[complex]', t2: 'Sequence[complex]') -> 'Any'
+state_vector_to_probabilities: function state_vector_to_probabilities(state_vector: 'Sequence[complex]') -> 'list[float]'
+stratified_circuit: function stratified_circuit(circuit: 'Circuit', *categories: 'Any') -> 'Circuit'
+study: module vqubit.study
+sub_state_vector: function sub_state_vector(state_vector: 'Any', keep_indices: 'Sequence[int]', *, default: 'Any' = None, atol: 'float' = 1e-06) -> 'Any'
+superoperator_to_choi: function superoperator_to_choi(superoperator: 'Sequence[Sequence[complex]]') -> 'Matrix'
+superoperator_to_kraus: function superoperator_to_kraus(superoperator: 'Sequence[Sequence[complex]]', atol: 'float' = 1e-08) -> 'list[Matrix]'
+symbol: function symbol(name: 'str') -> 'Parameter'
+symbolize_single_qubit_gates_by_indexed_tags: function symbolize_single_qubit_gates_by_indexed_tags(circuit: 'Circuit', **kwargs: 'Any') -> 'Circuit'
+synchronize_terminal_measurements: function synchronize_terminal_measurements(circuit: 'Circuit') -> 'Circuit'
+targeted_conjugate_about: function targeted_conjugate_about(tensor: 'Any', target: 'Any', indices: 'Sequence[int]', conj_indices: 'Sequence[int] | None' = None, buffer: 'Any' = None, out: 'Any' = None) -> 'Any'
+targeted_left_multiply: function targeted_left_multiply(left_matrix: 'Sequence[Sequence[complex]]', right_target: 'Any', target_axes: 'Sequence[int]', out: 'Any' = None) -> 'Any'
+testing: module vqubit.testing
+three_qubit_matrix_to_operations: function three_qubit_matrix_to_operations(qubits: 'Sequence[Qid]', matrix: 'Sequence[Sequence[complex]]', **kwargs: 'Any') -> 'list[Operation]'
+to_cirq: function to_cirq(circuit: 'Circuit') -> 'Any'
+to_json: function to_json(value: 'Any', *, indent: 'int | None' = None) -> 'str'
+to_json_gzip: function to_json_gzip(value: 'Any') -> 'bytes'
+to_resolvers: function to_resolvers(value: 'Any') -> 'list[ParamResolver]'
+to_special: function to_special(u: 'Sequence[Sequence[complex]]') -> 'Any'
+to_sweep: function to_sweep(value: 'Any') -> 'Sweep'
+to_sweeps: function to_sweeps(value: 'Any') -> 'list[Sweep]'
+to_valid_density_matrix: function to_valid_density_matrix(matrix: 'Any', qid_shape: 'Sequence[int]', *, atol: 'float' = 1e-08) -> 'Matrix'
+to_valid_state_vector: function to_valid_state_vector(state: 'Any', qid_shape: 'Sequence[int]', *, atol: 'float' = 1e-08) -> 'list[complex]'
+toggle_tags: function toggle_tags(circuit: 'Circuit', *tags: 'Any') -> 'Circuit'
+trace_distance_bound: function trace_distance_bound(value: 'Any') -> 'float'
+trace_distance_from_angle_list: function trace_distance_from_angle_list(angle_list: 'Sequence[float]') -> 'float'
+transform_op_tree: function transform_op_tree(op_tree: 'Any', op_transformation: 'Callable[[Operation], Any]', moment_transformation: 'Callable[[Moment], Any] | None' = None, iter_transformation: 'Callable[[Iterator[Any]], Any] | None' = None) -> 'Any'
+transformer: function transformer(func: 'Callable[..., Circuit]') -> 'Callable[..., Circuit]'
+transformers: module vqubit.transformers
+two_qubit_gate_product_tabulation: function two_qubit_gate_product_tabulation(base_gate: 'Gate', max_infidelity: 'float', *, atol: 'float' = 1e-08) -> 'TwoQubitGateTabulation'
+two_qubit_matrix_to_cz_isometry: function two_qubit_matrix_to_cz_isometry(q0: 'Qid', q1: 'Qid', mat: 'Sequence[Sequence[complex]]', allow_partial_czs: 'bool' = False, atol: 'float' = 1e-08, clean_operations: 'bool' = True) -> 'list[Operation]'
+two_qubit_matrix_to_cz_operations: function two_qubit_matrix_to_cz_operations(q0: 'Qid', q1: 'Qid', mat: 'Sequence[Sequence[complex]]', allow_partial_czs: 'bool' = False, atol: 'float' = 1e-08, clean_operations: 'bool' = True) -> 'list[Operation]'
+two_qubit_matrix_to_diagonal_and_cz_operations: function two_qubit_matrix_to_diagonal_and_cz_operations(q0: 'Qid', q1: 'Qid', mat: 'Sequence[Sequence[complex]]', allow_partial_czs: 'bool' = False, atol: 'float' = 1e-08, clean_operations: 'bool' = True) -> 'tuple[Any, list[Operation]]'
+two_qubit_matrix_to_ion_operations: function two_qubit_matrix_to_ion_operations(matrix: 'Sequence[Sequence[complex]]', *, qubits: 'tuple[Qid, Qid]', atol: 'float' = 1e-08, **kwargs: 'Any') -> 'list[Operation]'
+two_qubit_matrix_to_operations: function two_qubit_matrix_to_operations(matrix: 'Sequence[Sequence[complex]]', *, qubits: 'tuple[Qid, Qid]', atol: 'float' = 1e-08) -> 'list[Operation]'
+two_qubit_matrix_to_sqrt_iswap_operations: function two_qubit_matrix_to_sqrt_iswap_operations(matrix: 'Sequence[Sequence[complex]]', *, qubits: 'tuple[Qid, Qid]', use_sqrt_iswap_inv: 'bool' = False, atol: 'float' = 1e-08, **kwargs: 'Any') -> 'list[Operation]'
+unitary: function unitary(value: 'Any') -> 'Matrix'
+unitary_eig: function unitary_eig(matrix: 'Sequence[Sequence[complex]]', check_preconditions: 'bool' = True, atol: 'float' = 1e-08) -> 'tuple[Any, Any]'
+unroll_circuit_op: function unroll_circuit_op(circuit: 'Circuit', *, deep: 'bool' = False) -> 'Circuit'
+unroll_circuit_op_greedy_earliest: function unroll_circuit_op_greedy_earliest(circuit: 'Circuit', *, deep: 'bool' = False) -> 'Circuit'
+unroll_circuit_op_greedy_frontier: function unroll_circuit_op_greedy_frontier(circuit: 'Circuit', *, deep: 'bool' = False) -> 'Circuit'
+validate_density_matrix: function validate_density_matrix(density_matrix: 'Sequence[Sequence[complex]]', qid_shape: 'Sequence[int] | None' = None, dtype: 'Any' = None, atol: 'float' = 1e-07) -> 'None'
+validate_indices: function validate_indices(indices: 'Sequence[int]', shape: 'Sequence[int]') -> 'None'
+validate_mixture: function validate_mixture(mixture: 'Sequence[tuple[float, Any]]') -> 'None'
+validate_normalized_state_vector: function validate_normalized_state_vector(state_vector: 'Sequence[complex]', qid_shape: 'Sequence[int] | None' = None, dtype: 'Any' = None, atol: 'float' = 1e-07) -> 'None'
+validate_probability: function validate_probability(probability: 'float', prob_str: 'str | None' = None) -> 'float'
+validate_qid_shape: function validate_qid_shape(qid_shape: 'Sequence[int]', num_qubits: 'int | None' = None) -> 'None'
+value: module vqubit.value
+value_equality: function value_equality(cls: 'Any' = None, *, unhashable: 'bool' = False) -> 'Any'
+vis: module vqubit.vis
+von_neumann_entropy: function von_neumann_entropy(density: 'Matrix', *, base: 'float' = 2.0) -> 'float'
+wait: function wait(duration_nanos: 'float', num_qubits: 'int' = 1) -> 'WaitGate'
+with_debug: function with_debug(value: 'bool') -> 'Generator[None, None, None]'
+with_key_path: function with_key_path(key: 'Any', path: 'Sequence[str]') -> 'MeasurementKey'
+with_key_path_prefix: function with_key_path_prefix(key: 'Any', prefix: 'Sequence[str]') -> 'MeasurementKey'
+with_measurement_key_mapping: function with_measurement_key_mapping(value: 'Any', mapping: 'Any') -> 'Any'
+with_rescoped_keys: function with_rescoped_keys(key: 'Any', path: 'Sequence[str]', bindable_keys: 'Iterable[Any]' = ()) -> 'MeasurementKey'
+work: module vqubit.work
+xeb_fidelity: function xeb_fidelity(bitstrings: 'Iterable[int | float]', hilbert_space_dimension: 'int', *, bitstrings_are_probabilities: 'bool' = False) -> 'float'

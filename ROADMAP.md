@@ -359,11 +359,18 @@ Las divergencias `permanent` están explicadas en
 #### 6. Comunidad y gobernanza
 
 - [x] (0.2.0) `CONTRIBUTING.md`.
-- [ ] `CODE_OF_CONDUCT.md` y `SECURITY.md` (este último, con política de reporte
-      de vulnerabilidades en el stub nativo).
-- [ ] Plantillas de issue y PR; `CITATION.cff`.
-- [ ] Notas de release automáticas (`towncrier`) y disciplina de `CHANGELOG.md`.
-- [ ] Autoría y agradecimientos; etiquetas de «good first issue».
+- [x] **(0.9)** `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1) y
+      `SECURITY.md`, con ámbito explícito para el stub nativo y los parsers,
+      plazos de respuesta y qué queda fuera.
+- [x] **(0.9)** Plantillas de issue (fallo y propuesta, con criterio de
+      aceptación) y de PR (la lista completa de comprobaciones);
+      `CITATION.cff`.
+- [ ] Notas de release automáticas (`towncrier`): hoy la disciplina es Keep a
+      Changelog a mano, con una sección `[Unreleased]` en cada cambio. Criterio:
+      `towncrier` genera la sección de la versión a partir de los fragmentos, sin
+      perder las entradas escritas a mano.
+- [ ] Autoría y agradecimientos; etiquetas de «good first issue» (requiere
+      crear las etiquetas en GitHub).
 
 #### 7. Calidad y tooling (apoyo)
 
@@ -384,6 +391,13 @@ Las divergencias `permanent` están explicadas en
       lanzan `QasmParseError`/`ValueError`). Los *fuzzers* destaparon y se
       arreglaron los `KeyError`/`AttributeError`/`IndexError` que se escapaban
       de los importadores de Quirk y JSON.
+- [x] **(0.9)** Comprobación de documentación de la API con ratchet:
+      `tools/check_api_docs.py` exige docstring a todo símbolo público nuevo y
+      mantiene una línea base (`tools/undocumented.txt`) que solo encoge. Hoy
+      **775 de 1142 símbolos (68 %)** están documentados; criterio de cierre:
+      el 95 % y la línea base vacía. Se hizo sin `griffe` para no añadir una
+      dependencia al CI: la introspección en tiempo de ejecución ve lo mismo y
+      además los miembros de clase.
 - [ ] `mypy`/`pyright` en modo estricto junto a `ty`; escaneo semanal de
       dependencias y seguridad.
 
@@ -495,6 +509,10 @@ arreglarlo, el test pasa y hay que quitar el `xfail`.
 | 0.9 | Congelación | gobernanza, api-diff, SemVer, *release candidate* |
 | 1.0 | Estabilidad | garantía SemVer y soporte a largo plazo |
 
+La 1.0.0 se publica en dos pasos: primero `1.0.0rc1`, se instala la rueda en un
+entorno limpio y se corren la suite, `verify.py`, `parity.py` y los ejemplos de la
+documentación contra ella; si todo pasa, `1.0.0` sin cambios de código.
+
 **Solo se publican la 0.3.0 y la 1.0.0.** Los hitos 0.4 a 0.9 son *checkpoints
 internos*: sus puertas se comprueban en CI igual que antes, pero no se publica una
 versión por hito. Sustituir seis releases por dos evita que el número de versión
@@ -516,7 +534,7 @@ hecho:
 | 0.6 | benchmark de 20 qubits dentro del umbral fijado, y ese umbral vigilado en CI |
 | 0.7 | `pip install "vqubit[vis]"` funciona en un entorno limpio |
 | 0.8 | `mkdocs build --strict` y un ejemplo por símbolo público |
-| 0.9 | `griffe check` no reporta cambios sin declarar; el test de deprecación pasa |
+| 0.9 | `tools/check_api_surface.py` no reporta cambios sin declarar, `tools/check_api_docs.py` está en verde y pasan los tests de API pública (versión sincronizada con `vcraft.toml`, `__all__` limpio) |
 | 1.0 | la definición de terminado, entera |
 
 ### Definición de terminado (1.0.0)
@@ -890,11 +908,15 @@ blanket. The `permanent` divergences are explained in
 #### 6. Community and governance
 
 - [x] (0.2.0) `CONTRIBUTING.md`.
-- [ ] `CODE_OF_CONDUCT.md` and `SECURITY.md` (the latter with a vulnerability
-      reporting policy for the native stub).
-- [ ] Issue and PR templates; `CITATION.cff`.
+- [x] **(0.9)** `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1) and
+      `SECURITY.md`, with an explicit scope for the native stub and the parsers,
+      response targets and what is out of scope.
+- [x] **(0.9)** Issue templates (bug and feature, the latter asking for an
+      acceptance criterion) and a PR template (the full checklist);
+      `CITATION.cff`.
 - [ ] Automated release notes (`towncrier`) and `CHANGELOG.md` discipline.
-- [ ] Authorship and acknowledgements; "good first issue" labels.
+- [ ] Authorship and acknowledgements; "good first issue" labels (a GitHub
+      setting).
 
 #### 7. Quality and tooling (supporting)
 
@@ -1027,6 +1049,10 @@ is fixed the test passes and the `xfail` marker must be removed.
 | 0.9 | Freeze | governance, api-diff, SemVer, release candidate |
 | 1.0 | Stability | SemVer guarantee and long-term support |
 
+1.0.0 ships in two steps: `1.0.0rc1` first, installed into a clean environment
+and verified with the test suite, `verify.py`, `parity.py` and the documentation
+examples; if all pass, `1.0.0` without code changes.
+
 **Only 0.3.0 and 1.0.0 are published.** The 0.4 to 0.9 milestones are *internal
 checkpoints*: their gates are still checked in CI, but no version is released per
 milestone. Replacing six releases with two keeps the version number from
@@ -1047,7 +1073,7 @@ A milestone is delivered when its gate passes, not when the work looks done:
 | 0.6 | the 20-qubit benchmark inside the fixed threshold, and that threshold watched in CI |
 | 0.7 | `pip install "vqubit[vis]"` works in a clean environment |
 | 0.8 | `mkdocs build --strict` and one example per public symbol |
-| 0.9 | `griffe check` reports no undeclared changes; the deprecation test passes |
+| 0.9 | `tools/check_api_surface.py` reports no undeclared changes, `tools/check_api_docs.py` is green and the public-API tests pass (version in step with `vcraft.toml`, clean `__all__`) |
 | 1.0 | the whole definition of done |
 
 ### Definition of done (1.0.0)

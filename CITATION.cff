@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+
+title: "vqubit: a dependency-free quantum computing framework for Python, written in V"
+
+message: >-
+  If you use vqubit in academic work, please cite it using this file (GitHub
+  renders a "Cite this repository" button from it). The software is archived at
+  the GitHub tag of the version you used.
+
+abstract: >-
+  vqubit is a quantum-computing library for Python whose numerical core is
+  written in V and compiled to a native extension. It mirrors Cirq's API —the
+  same gates, circuits, simulators, transformers and protocols— while having no
+  runtime dependencies: the wheel needs only the standard library and the
+  compiled extension. It includes state-vector and density-matrix simulators, a
+  stabilizer simulator, a dependency-free OpenQASM 2.0 importer, Quirk and JSON
+  serialization, and harnesses that check its behaviour against cirq-core.
+
+authors:
+  - family-names: Robles Fernández
+    given-names: Ricardo
+    email: ricardo.robles.fernandez@gmail.com
+
+repository-code: "https://github.com/rroblf01/vqubit"
+url: "https://rroblf01.github.io/vqubit/"
+license: MIT
+license-url: "https://github.com/rroblf01/vqubit/blob/main/LICENSE"
+
+keywords:
+  - quantum computing
+  - quantum simulation
+  - cirq
+  - vlang
+  - python
+  - stabilizer
+  - density matrix
+  - openqasm
+
+version: 0.3.0
+date-released: "2026-10-19"
+
+preferred-citation:
+  type: software
+  title: "vqubit"
+  authors:
+    - family-names: Robles Fernández
+      given-names: Ricardo
+  version: 0.3.0
+  date-released: "2026-10-19"
+  url: "https://github.com/rroblf01/vqubit"

@@ -63,6 +63,8 @@ class Qubit(Qid):
 
 
 class LineQubit(Qubit):
+	"""A qubit at an integer position on a line: ``LineQubit(0)``."""
+
 	_TYPE_ORDER = 0
 
 	"""A qubit on a line, identified by a non-negative integer position."""
@@ -94,6 +96,8 @@ class LineQubit(Qubit):
 
 
 class GridQubit(Qubit):
+	"""A qubit at ``(row, col)`` on a two-dimensional grid."""
+
 	_TYPE_ORDER = 1
 
 	"""A qubit on a two-dimensional grid, identified by ``(row, col)``."""
@@ -150,6 +154,8 @@ class GridQubit(Qubit):
 
 
 class NamedQubit(Qubit):
+	"""A qubit with a name, for hardware that labels its qubits."""
+
 	_TYPE_ORDER = 2
 
 	"""A qubit identified by a name."""
@@ -174,6 +180,8 @@ class NamedQubit(Qubit):
 
 
 class LineQid(Qid):
+	"""A qudit at an integer position on a line, with the given dimension."""
+
 	_TYPE_ORDER = 3
 
 	"""A qid on a line, identified by a non-negative integer position."""
@@ -205,6 +213,8 @@ class LineQid(Qid):
 
 
 class GridQid(Qid):
+	"""A qudit at ``(row, col)`` on a grid, with the given dimension."""
+
 	_TYPE_ORDER = 4
 
 	"""A qid on a two-dimensional grid, identified by ``(row, col)``."""
@@ -234,6 +244,8 @@ class GridQid(Qid):
 
 
 class NamedQid(Qid):
+	"""A qudit with a name and a dimension."""
+
 	_TYPE_ORDER = 5
 
 	"""A qid identified by a name."""
@@ -258,6 +270,8 @@ class NamedQid(Qid):
 
 
 class VariableQid(Qid):
+	"""A symbolic qid: a name whose qubit is decided later."""
+
 	_TYPE_ORDER = 6
 
 	"""A qid whose index is a free variable (used by parameterized circuits)."""
@@ -280,6 +294,8 @@ class VariableQid(Qid):
 
 
 class VariableLineQid(Qid):
+	"""A symbolic qid on a line, resolved to a ``LineQid`` later."""
+
 	_TYPE_ORDER = 7
 
 	"""A line qid with a possibly-symbolic position."""
@@ -302,6 +318,8 @@ class VariableLineQid(Qid):
 
 
 class VariableGridQid(Qid):
+	"""A symbolic qid on a grid, resolved to a ``GridQid`` later."""
+
 	_TYPE_ORDER = 8
 
 	"""A grid qid with possibly-symbolic coordinates."""

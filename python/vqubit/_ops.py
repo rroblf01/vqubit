@@ -28,6 +28,10 @@ class Operation:
 	def gate(self) -> Gate:
 		raise NotImplementedError
 
+	def num_qubits(self) -> int:
+		"""The number of qubits this operation acts on (as in Cirq)."""
+		return len(self.qubits)
+
 	def _circuit_diagram_info_(self) -> tuple[str, ...]:
 		return (str(self),) * len(self.qubits)
 

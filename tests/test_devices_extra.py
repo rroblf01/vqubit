@@ -14,8 +14,16 @@ def test_no_noise_model() -> None:
 def test_constant_qubit_noise_model() -> None:
 	q0, q1 = vqubit.LineQubit.range(2)
 	model = vqubit.ConstantQubitNoiseModel(vqubit.X)
-	result = model.noisy_moment(vqubit.Moment([vqubit.H(q0)]), [q1])
-	assert any(operation.gate == vqubit.X for operation in result.operations)
+	# The moment comes back with a noise moment after it: the qubit the moment
+	# already uses cannot take the noise in the same instant.
+	moments = model.noisy_moment(vqubit.Moment([vqubit.H(q0)]), [q0, q1])
+	assert isinstance(moments, list)
+	assert len(moments) == 2
+	assert any(operation.gate == vqubit.X for operation in moments[1].operations)
+	assert {operation.qubits for operation in moments[1].operations} == {(q0,), (q1,)}
+	# ``noisy_moments`` flattens that into the circuit's moments.
+	circuit = vqubit.Circuit(model.noisy_moments([vqubit.Moment([vqubit.H(q0)])], [q0, q1]))
+	assert len(circuit.moments) == 2
 
 
 def test_op_identifier() -> None:

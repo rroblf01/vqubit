@@ -348,9 +348,13 @@ Las divergencias `permanent` están explicadas en
       (`docs/{en,es}/guide/cirq-differences.md`), hoy alineada con la lista de
       toleradas del arnés.
 - [ ] Documentación **versionada** por release (`mike`).
-- [ ] Guía «Migrar desde Cirq» (la página de diferencias es su materia prima).
-- [ ] Tutoriales y galería de ejemplos (Grover, estabilizadores/QEC, variacional).
-- [ ] Referencia de API completa con ejemplo por símbolo (mkdocstrings).
+- [x] **(0.8)** Guía «Migrar desde Cirq» (`guide/migrating-from-cirq.md`, ES y
+      EN).
+- [x] **(0.8)** Galería de ejemplos: estado de Bell, GHZ con ruido, valores
+      esperados/QAOA e importar y exportar. Grover y estabilizadores/QEC siguen
+      pendientes.
+- [ ] Referencia de API completa con ejemplo por símbolo (mkdocstrings): la
+      referencia existe, falta el ejemplo en cada símbolo.
 
 #### 6. Comunidad y gobernanza
 
@@ -873,10 +877,15 @@ blanket. The `permanent` divergences are explained in
 - [x] (0.2.1) An explicit page of limitations and differences from Cirq
       (`docs/{en,es}/guide/cirq-differences.md`), now kept in step with the
       harness's tolerated list.
-- [ ] **Versioned** docs per release (`mike`).
-- [ ] A "Migrating from Cirq" guide (the differences page is its raw material).
-- [ ] Tutorials and an examples gallery (Grover, stabilizers/QEC, variational).
-- [ ] Complete API reference with an example per symbol (mkdocstrings).
+- [ ] **Versioned** docs per release (`mike`): it needs GitHub Pages switched
+      from "GitHub Actions" to the `gh-pages` branch, a repository decision.
+- [x] **(0.8)** A "Migrating from Cirq" guide
+      (`guide/migrating-from-cirq.md`, ES and EN).
+- [x] **(0.8)** An examples gallery: Bell state, GHZ with noise, expectation
+      values/QAOA, import and export. Grover and stabilizers/QEC are still
+      pending.
+- [ ] Complete API reference with an example per symbol (mkdocstrings): the
+      reference exists, the per-symbol example does not.
 
 #### 6. Community and governance
 

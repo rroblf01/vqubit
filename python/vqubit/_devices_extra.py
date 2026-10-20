@@ -74,11 +74,25 @@ class SuperconductingQubitsNoiseProperties(NoiseProperties):
 class NoiseModel:
 	"""Base class for a noise model."""
 
-	def noisy_moment(self, moment: Moment, qubits: Sequence[Qid]) -> Moment:
+	def noisy_moment(self, moment: Moment, qubits: Sequence[Qid]) -> Moment | list[Moment]:
+		"""The moment with the noise added: one moment, or a list of them."""
 		raise NotImplementedError
 
 	def noisy_moments(self, moments: Iterable[Moment], qubits: Sequence[Qid]) -> list[Moment]:
-		return [self.noisy_moment(moment, qubits) for moment in moments]
+		"""Apply :meth:`noisy_moment` to each moment, flattening what it returns.
+
+		A model may answer with one moment or with a list (the moment plus the
+		noise that follows it), so the result is flattened here rather than
+		leaving a nested list to the caller.
+		"""
+		result: list[Moment] = []
+		for moment in moments:
+			noisy = self.noisy_moment(moment, qubits)
+			if isinstance(noisy, Moment):
+				result.append(noisy)
+			else:
+				result.extend(noisy)
+		return result
 
 	def noisy_operation(self, operation: Operation) -> Operation:
 		return operation
@@ -93,13 +107,14 @@ class ConstantQubitNoiseModel(NoiseModel):
 	def __init__(self, qubit_noise_gate: Gate) -> None:
 		self.qubit_noise_gate = qubit_noise_gate
 
-	def noisy_moment(self, moment: Moment, qubits: Sequence[Qid]) -> Moment:
-		operations = list(moment.operations)
-		operations.extend(self.qubit_noise_gate.on(qubit) for qubit in qubits)
-		try:
-			return Moment(operations)
-		except ValueError:
-			return moment
+	def noisy_moment(self, moment: Moment, qubits: Sequence[Qid]) -> list[Moment]:
+		"""The moment followed by one noise gate on every qubit.
+
+		The noise goes in its own moment: a qubit that the moment already uses
+		cannot take a second operation in the same instant, and dropping the
+		noise in that case would silently un-noise the circuit.
+		"""
+		return [moment, Moment(self.qubit_noise_gate.on(qubit) for qubit in qubits)]
 
 
 class _NoNoiseModel(NoiseModel):
@@ -121,8 +136,23 @@ class NoiseModelFromNoiseProperties(NoiseModel):
 	def noisy_operation(self, operation: Operation) -> Operation:
 		return operation
 
-	def noisy_moment(self, moment: Moment, qubits: Sequence[Qid]) -> Moment:
-		return moment
+	def noisy_moment(self, moment: Moment, qubits: Sequence[Qid]) -> list[Moment]:
+		"""The moment followed by a depolarizing channel per operation.
+
+		Each operation gets the device's gate error for its kind (one- or
+		two-qubit), applied on the same qubits. Readout error is a measurement
+		effect, not a gate, so it is left to the sampler.
+		"""
+		from ._channels import depolarize
+
+		noise: list[Operation] = []
+		for operation in moment.operations:
+			error = self.noise_properties.gate_error(OpIdentifier(type(operation.gate), operation.num_qubits()))
+			if error > 0:
+				noise.append(depolarize(error, num_qubits=operation.num_qubits()).on(*operation.qubits))
+		if not noise:
+			return [moment]
+		return [moment, Moment(noise)]
 
 
 class GridDeviceMetadata(DeviceMetadata):

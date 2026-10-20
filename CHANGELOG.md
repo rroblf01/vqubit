@@ -91,6 +91,16 @@ tests with coverage at 95 %.
   `dict[LineQubit, Pauli]` did not match `Mapping[Qid, …]` under an invariant
   key type, so a literal raised a type error in strict checkers.
 
+- **`ConstantQubitNoiseModel` no longer drops its noise.** When a moment already
+  used a qubit it caught the overlapping-operation error and returned the
+  moment untouched, silently un-noising the circuit; it now returns the moment
+  followed by a noise moment, and `NoiseModel.noisy_moments` flattens that.
+  `NoiseModelFromNoiseProperties` was a no-op and now inserts a depolarizing
+  channel per operation with the device's gate error.
+- **`Operation.num_qubits()`** exists, as in Cirq (the docs promised it, the
+  method did not), so `vq.H(q0).num_qubits() == 1` works while `vq.H.num_qubits`
+  stays the attribute.
+
 ### Tests (0.5)
 
 - Property tests with Hypothesis for the algebraic laws (powers, rotation sums,

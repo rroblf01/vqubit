@@ -67,8 +67,12 @@ plugins:
             Devices: Dispositivos
             Benchmarks: Benchmarks
             Differences from Cirq: Diferencias con Cirq
+            Migrating from Cirq: Migrar desde Cirq
             Examples: Ejemplos
             Bell state: Estado de Bell
+            GHZ with noise: GHZ con ruido
+            Expectation values: Valores esperados
+            Import and export: Importar y exportar
             API reference: Referencia de la API
         - locale: en
           name: English
@@ -115,6 +119,10 @@ nav:
       - Devices: guide/devices.md
       - Benchmarks: guide/benchmarks.md
       - Differences from Cirq: guide/cirq-differences.md
+      - Migrating from Cirq: guide/migrating-from-cirq.md
   - Examples:
       - Bell state: examples/bell-state.md
+      - GHZ with noise: examples/ghz-noise.md
+      - Expectation values: examples/expectation-values.md
+      - Import and export: examples/qasm-round-trip.md
   - API reference: api/index.md

@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_devices_extra.py
+# hypothesis_version: 6.140.3
+
+[0.001, 0.01, 0.02, 'GridDeviceMetadata', 'LineTopology', 'NOISE_MODEL_LIKE', 'NO_NOISE', 'NamedTopology', 'NoiseModel', 'NoiseProperties', 'OpIdentifier', 'TiltedSquareLattice', 'UNCONSTRAINED_DEVICE', 'draw_gridlike', 'draw_placements', 'get_placements', 'grid', 'is_valid_placement', 'line', 'neighbors', 'nodes']

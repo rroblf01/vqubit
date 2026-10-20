@@ -282,6 +282,7 @@ class CliffordTableau:
 
 	@property
 	def xs(self) -> Any:
+		"""The X bits of the tableau rows."""
 		return _bool_matrix(self._xs[:-1])
 
 	@xs.setter
@@ -292,6 +293,7 @@ class CliffordTableau:
 
 	@property
 	def zs(self) -> Any:
+		"""The Z bits of the tableau rows."""
 		return _bool_matrix(self._zs[:-1])
 
 	@zs.setter
@@ -302,6 +304,7 @@ class CliffordTableau:
 
 	@property
 	def rs(self) -> Any:
+		"""The sign bits of the tableau rows."""
 		return _bool_vector(self._rs[:-1])
 
 	@rs.setter
@@ -546,6 +549,7 @@ class CliffordTableau:
 		return int(self._rs[p])
 
 	def apply_x(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		"""Apply an X power to one axis of the tableau."""
 		if exponent % 2 == 0:
 			return
 		if exponent % 0.5 != 0.0:
@@ -566,6 +570,7 @@ class CliffordTableau:
 				self._xs[i][axis] ^= self._zs[i][axis]
 
 	def apply_y(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		"""Apply a Y power to one axis of the tableau."""
 		if exponent % 2 == 0:
 			return
 		if exponent % 0.5 != 0.0:
@@ -586,6 +591,7 @@ class CliffordTableau:
 				self._xs[i][axis], self._zs[i][axis] = self._zs[i][axis], self._xs[i][axis]
 
 	def apply_z(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		"""Apply a Z power to one axis of the tableau."""
 		if exponent % 2 == 0:
 			return
 		if exponent % 0.5 != 0.0:
@@ -606,6 +612,7 @@ class CliffordTableau:
 				self._zs[i][axis] ^= self._xs[i][axis]
 
 	def apply_h(self, axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		"""Apply a Hadamard to one axis of the tableau."""
 		if exponent % 2 == 0:
 			return
 		if exponent % 1 != 0:
@@ -614,6 +621,7 @@ class CliffordTableau:
 		self.apply_x(axis)
 
 	def apply_cz(self, control_axis: int, target_axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		"""Apply a CZ between two axes of the tableau."""
 		if exponent % 2 == 0:
 			return
 		if exponent % 1 != 0:
@@ -644,6 +652,7 @@ class CliffordTableau:
 			self._rs[i] ^= self._xs[i][target_axis] & self._zs[i][target_axis]
 
 	def apply_cx(self, control_axis: int, target_axis: int, exponent: float = 1, global_shift: float = 0) -> None:
+		"""Apply a CNOT between two axes of the tableau."""
 		if exponent % 2 == 0:
 			return
 		if exponent % 1 != 0:
@@ -660,6 +669,7 @@ class CliffordTableau:
 			self._zs[i][control_axis] ^= self._zs[i][target_axis]
 
 	def apply_global_phase(self, coefficient: Any) -> None:
+		"""Apply a global phase (a no-op on a stabilizer state)."""
 		pass
 
 	def measure(self, axes: Sequence[int], seed: Any = None) -> list[int]:
@@ -773,6 +783,7 @@ class CliffordTableau:
 
 	@property
 	def can_represent_mixed_states(self) -> bool:
+		"""Whether the tableau can hold mixed states."""
 		return False
 
 
@@ -793,17 +804,21 @@ class CliffordState:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the stabilizer state lives on."""
 		return self._qubits
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		return vector_from_flat(self._tableau.state_vector())
 
 	def stabilizers(self) -> list[Any]:
+		"""The stabilizer generators of the state."""
 		flat = self._tableau.stabilizer_tableau()
 		tableau = CliffordTableau.from_flat(flat, len(self._qubits))
 		return tableau.stabilizer_pauli_strings()
 
 	def dirac_notation(self, decimals: int = 3) -> str:
+		"""The state written in Dirac notation."""
 		from ._sim import StateVector
 
 		return StateVector(self.state_vector(), self._qubits).dirac_notation(decimals)
@@ -828,9 +843,11 @@ class CliffordSimulationResult:
 
 	@property
 	def final_state(self) -> CliffordState:
+		"""The stabilizer state at the end of the simulation."""
 		return self._final_state
 
 	def state_vector(self) -> list[complex]:
+		"""The final state as a flat vector of amplitudes."""
 		return self._final_state.state_vector()
 
 	def __repr__(self) -> str:
@@ -875,6 +892,7 @@ class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 		param_resolver: Any = None,
 		qubit_order: Sequence[Qid] | None = None,
 	) -> CliffordSimulationResult:
+		"""Simulate a Clifford circuit and return its final state."""
 		from ._sim import _resolve_program
 
 		program = _resolve_program(program, param_resolver)
@@ -902,6 +920,7 @@ class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 		qubit_order: Sequence[Qid] | None = None,
 		seed: int | None = None,
 	) -> Any:
+		"""Sample a Clifford circuit, recording its measurements."""
 		from ._sim import Result, _resolve_program
 
 		program = _resolve_program(program, param_resolver)

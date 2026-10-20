@@ -393,11 +393,11 @@ Las divergencias `permanent` están explicadas en
       de los importadores de Quirk y JSON.
 - [x] **(0.9)** Comprobación de documentación de la API con ratchet:
       `tools/check_api_docs.py` exige docstring a todo símbolo público nuevo y
-      mantiene una línea base (`tools/undocumented.txt`) que solo encoge. Hoy
-      **775 de 1142 símbolos (68 %)** están documentados; criterio de cierre:
-      el 95 % y la línea base vacía. Se hizo sin `griffe` para no añadir una
-      dependencia al CI: la introspección en tiempo de ejecución ve lo mismo y
-      además los miembros de clase.
+      mantiene una línea base (`tools/undocumented.txt`). **Cerrado al 100 %**:
+      1097 de 1097 símbolos documentados y línea base vacía. Se hizo sin
+      `griffe` para no añadir una dependencia al CI: la introspección en tiempo
+      de ejecución ve lo mismo y además los miembros de clase (los alias de tipo
+      y las constantes quedan fuera, porque Python no permite docstring ahí).
 - [ ] `mypy`/`pyright` en modo estricto junto a `ty`; escaneo semanal de
       dependencias y seguridad.
 
@@ -840,8 +840,9 @@ blanket. The `permanent` divergences are explained in
 - [x] **(0.8)** An examples gallery: Bell state, GHZ with noise, expectation
       values/QAOA, import and export. Grover and stabilizers/QEC are still
       pending.
-- [ ] Complete API reference with an example per symbol (mkdocstrings): the
-      reference exists, the per-symbol example does not.
+- [x] **(0.9)** The API is fully documented: **1097 of 1097 public symbols**
+      have a docstring, with the ratchet in `tools/check_api_docs.py` and an
+      empty baseline. A per-symbol example in the reference is still pending.
 
 #### 6. Community and governance
 

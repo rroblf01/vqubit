@@ -40,6 +40,10 @@ def public_members() -> dict[str, bool]:
 		value = getattr(vqubit, name, None)
 		if value is None:
 			continue
+		if not (inspect.isclass(value) or inspect.ismodule(value) or inspect.isroutine(value)):
+			# A type alias or a constant has nowhere to hold a docstring; Cirq
+			# has the same gap and documents them in the module instead.
+			continue
 		result[name] = documented(value)
 		if not inspect.isclass(value):
 			continue

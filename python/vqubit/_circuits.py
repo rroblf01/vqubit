@@ -55,6 +55,7 @@ class AbstractCircuit:
 
 	@property
 	def moments(self) -> tuple[Any, ...]:
+		"""The moments of the circuit, in time order."""
 		raise NotImplementedError
 
 
@@ -138,13 +139,16 @@ class Circuit(AbstractCircuit):
 
 	@property
 	def moments(self) -> tuple[Moment, ...]:
+		"""The moments of the circuit, in time order."""
 		return tuple(self._moments)
 
 	def all_operations(self) -> Iterator[Operation]:
+		"""Every operation in the circuit, moment by moment."""
 		for moment in self._moments:
 			yield from moment.operations
 
 	def all_qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the circuit uses, sorted."""
 		return tuple(sorted({q for moment in self._moments for q in moment.qubits_set}))
 
 	def findall_operations(self, predicate: Callable[[Operation], bool]) -> Iterator[tuple[int, Operation]]:
@@ -225,9 +229,11 @@ class FrozenCircuit(Circuit):
 		return frozen
 
 	def append(self, content: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> Circuit:
+		"""Return a new frozen circuit with the operations appended."""
 		raise TypeError("FrozenCircuit is immutable")
 
 	def insert(self, index: int, content: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> Circuit:
+		"""Return a new frozen circuit with the operations inserted at ``index``."""
 		raise TypeError("FrozenCircuit is immutable")
 
 
@@ -249,14 +255,17 @@ class CircuitOperation(Operation):
 
 	@property
 	def circuit(self) -> Circuit:
+		"""The circuit this operation runs."""
 		return self._circuit
 
 	@property
 	def repetitions(self) -> int:
+		"""How many times the circuit is run."""
 		return self._repetitions
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the wrapped circuit uses."""
 		return self._circuit.all_qubits()
 
 	def _num_qubits_(self) -> int:

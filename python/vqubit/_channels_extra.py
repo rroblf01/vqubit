@@ -83,14 +83,17 @@ class AsymmetricDepolarizingChannel(Gate):
 
 	@property
 	def p_x(self) -> float:
+		"""The probability of an X error."""
 		return self._error_probabilities.get("X", 0.0)
 
 	@property
 	def p_y(self) -> float:
+		"""The probability of a Y error."""
 		return self._error_probabilities.get("Y", 0.0)
 
 	@property
 	def p_z(self) -> float:
+		"""The probability of a Z error."""
 		return self._error_probabilities.get("Z", 0.0)
 
 	def __str__(self) -> str:
@@ -139,10 +142,12 @@ class GeneralizedAmplitudeDampingChannel(Gate):
 
 	@property
 	def p(self) -> float:
+		"""The excited-state population at equilibrium."""
 		return self._p
 
 	@property
 	def gamma(self) -> float:
+		"""The probability that the qubit decays."""
 		return self._gamma
 
 	def __str__(self) -> str:
@@ -272,10 +277,12 @@ class RandomGateChannel(Gate):
 
 	@property
 	def sub_gate(self) -> Gate:
+		"""The gate applied when the channel fires."""
 		return self._sub_gate
 
 	@property
 	def probability(self) -> Any:
+		"""The probability that the gate is applied."""
 		return self._probability
 
 	def _num_qubits_(self) -> int:
@@ -325,6 +332,7 @@ class StatePreparationChannel(Gate):
 
 	@property
 	def state(self) -> list[complex]:
+		"""The state the channel prepares."""
 		return list(self._state)
 
 	def _value_equality_values_(self) -> Any:

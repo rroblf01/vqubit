@@ -49,9 +49,11 @@ class Collector:
 	"""
 
 	def next_job(self) -> Any:
+		"""Return the next sampling job, or ``None`` when there is none."""
 		raise NotImplementedError
 
 	def on_job_result(self, job: CircuitSampleJob, result: Result) -> None:
+		"""Consume the result of a job this collector asked for."""
 		raise NotImplementedError
 
 	def collect(self, sampler: Sampler, *, concurrency: int = 2, max_total_samples: int | None = None) -> None:
@@ -104,6 +106,7 @@ class ZerosSampler(Sampler):
 		qubit_order: Any = None,
 		seed: int | None = None,
 	) -> Result:
+		"""Return all-zero outcomes, one per measured qubit."""
 		if self.device is not None:
 			self.device.validate_circuit(program)
 		shapes = _measurement_shapes(program)
@@ -111,6 +114,7 @@ class ZerosSampler(Sampler):
 		return Result(records)
 
 	def run_sweep(self, program: Circuit, params: Any, repetitions: int = 1) -> list[Result]:
+		"""Return all-zero outcomes for each set of parameters."""
 		return [self.run(program, repetitions=repetitions) for _ in to_resolvers(params)]
 
 
@@ -147,6 +151,7 @@ class PauliSumCollector(Collector):
 		self._total_samples_requested = 0
 
 	def next_job(self) -> CircuitSampleJob | None:
+		"""Return the next chunk of samples needed for the energy."""
 		index = self._total_samples_requested // self._samples_per_term
 		if index >= len(self._pauli_coef_terms):
 			return None
@@ -161,6 +166,7 @@ class PauliSumCollector(Collector):
 		)
 
 	def on_job_result(self, job: CircuitSampleJob, result: Result) -> None:
+		"""Add a chunk of samples to the energy estimate."""
 		parities = result.histogram(key="out", fold_func=lambda bits: sum(bits) % 2)
 		self._zeros[job.tag] = self._zeros.get(job.tag, 0) + parities.get(0, 0)
 		self._ones[job.tag] = self._ones.get(job.tag, 0) + parities.get(1, 0)

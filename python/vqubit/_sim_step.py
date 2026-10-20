@@ -172,6 +172,7 @@ class StateVectorMixin:
 	"""Mixin providing state-vector conveniences."""
 
 	def dirac_notation(self, decimals: int = 3) -> str:
+		"""The state written in Dirac notation."""
 		subject: Any = self
 		return StateVector(subject.state_vector(), subject.qubits).dirac_notation(decimals)
 
@@ -197,6 +198,7 @@ class StepResult(StepResultBase):
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the state, in order."""
 		return self._qubits
 
 	@property
@@ -205,22 +207,27 @@ class StepResult(StepResultBase):
 		return {qubit: index for index, qubit in enumerate(self._qubits)}
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		if self._state_vector is None:
 			raise ValueError("this step result has no state vector")
 		return asvector(self._state_vector)
 
 	def density_matrix(self) -> list[list[complex]]:
+		"""The state as a density matrix."""
 		if self._density_matrix is not None:
 			return asarray(self._density_matrix)
 		return density_matrix_from_state_vector(self.state_vector())
 
 	def set_state_vector(self, state: Sequence[complex]) -> None:
+		"""Replace the state with ``state``."""
 		self._state_vector = [complex(z) for z in state]
 
 	def dirac_notation(self, decimals: int = 3) -> str:
+		"""The state written in Dirac notation."""
 		return StateVector(self.state_vector(), self._qubits).dirac_notation(decimals)
 
 	def sample(self, qubits: Sequence[Qid], repetitions: int = 1, *, seed: int | None = None) -> list[int]:
+		"""Sample a measurement of the given qubits."""
 		indices = [self._qubits.index(q) for q in qubits]
 		return sample_state_vector(self.state_vector(), indices, repetitions, seed=seed)
 
@@ -295,6 +302,7 @@ class CliffordSimulatorStepResult(StepResult):
 
 	@property
 	def clifford_state(self) -> Any:
+		"""The stabilizer state after this step."""
 		return self._clifford_state
 
 
@@ -313,18 +321,23 @@ class SimulationState(SimulationStateBase):
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the state lives on."""
 		return self._qubits
 
 	def apply_operation(self, operation: Any) -> None:
+		"""Apply one operation to the state."""
 		raise NotImplementedError
 
 	def measure(self, qubits: Sequence[Qid], key: str) -> int:
+		"""Measure ``qubits`` and record the outcome under ``key``."""
 		raise NotImplementedError
 
 	def reset(self, qubits: Sequence[Qid]) -> None:
+		"""Reset ``qubits`` to ``|0>``."""
 		raise NotImplementedError
 
 	def create_merged_state(self) -> SimulationState:
+		"""Return a state that can hold a tensor product with this one."""
 		return self
 
 	def __repr__(self) -> str:
@@ -340,9 +353,11 @@ class StateVectorSimulationState(SimulationState):
 		self._state.set_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << len(self._qubits))))
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		return vector_from_flat(self._state.amplitudes())
 
 	def apply_operation(self, operation: Any) -> None:
+		"""Apply one operation to the state."""
 		gate = operation.gate
 		targets = [self._index[q] for q in operation.qubits]
 		if isinstance(gate, MeasurementGate):
@@ -355,6 +370,7 @@ class StateVectorSimulationState(SimulationState):
 		self._state.apply_gate(to_flat([list(row) for row in matrix]), targets)
 
 	def measure(self, qubits: Sequence[Qid], key: str) -> int:
+		"""Measure ``qubits`` and record the outcome under ``key``."""
 		targets = [self._index[q] for q in qubits]
 		outcome = self._state.measure(targets, self.prng.random())
 		self.log_of_measurement_results[key] = outcome
@@ -370,11 +386,13 @@ class DensityMatrixSimulationState(SimulationState):
 		self._state.set_from_amplitudes(vector_to_flat(_initial_state_vector(initial_state, 1 << len(self._qubits))))
 
 	def density_matrix(self) -> list[list[complex]]:
+		"""The state as a density matrix."""
 		dim = 1 << len(self._qubits)
 		flat = self._state.density_matrix()
 		return [[complex(flat[2 * (i * dim + j)], flat[2 * (i * dim + j) + 1]) for j in range(dim)] for i in range(dim)]
 
 	def apply_operation(self, operation: Any) -> None:
+		"""Apply one operation to the state."""
 		gate = operation.gate
 		targets = [self._index[q] for q in operation.qubits]
 		if isinstance(gate, MeasurementGate):
@@ -393,6 +411,7 @@ class DensityMatrixSimulationState(SimulationState):
 		self._state.apply_channel(flat, len(operators), targets)
 
 	def measure(self, qubits: Sequence[Qid], key: str) -> int:
+		"""Measure ``qubits`` and record the outcome under ``key``."""
 		targets = [self._index[q] for q in qubits]
 		outcome = self._state.measure(targets, self.prng.random())
 		self.log_of_measurement_results[key] = outcome
@@ -408,12 +427,15 @@ class CliffordTableauSimulationState(SimulationState):
 
 	@property
 	def tableau(self) -> Any:
+		"""The stabilizer tableau behind the state."""
 		return self._tableau
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		return vector_from_flat(self._tableau.state_vector())
 
 	def apply_operation(self, operation: Any) -> None:
+		"""Apply one Clifford operation to the tablea."""
 		from ._clifford import _instruction_code, _is_clifford_gate
 
 		gate = operation.gate
@@ -450,12 +472,15 @@ class StabilizerStateChForm:
 
 	@property
 	def num_qubits(self) -> int:
+		"""The number of qubits the state spans."""
 		return self._num_qubits
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		return list(self._state)
 
 	def density_matrix(self) -> list[list[complex]]:
+		"""The state as a density matrix."""
 		return density_matrix_from_state_vector(self._state)
 
 	def _value_equality_values_(self) -> Any:
@@ -478,6 +503,7 @@ class StabilizerChFormSimulationState(SimulationState):
 		self._state = StabilizerStateChForm(self._vector, len(self._qubits))
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		return self._state.state_vector()
 
 	def apply_operation(self, operation: Any) -> None:
@@ -500,6 +526,7 @@ class StabilizerChFormSimulationState(SimulationState):
 			self._state = StabilizerStateChForm(amplitudes, len(self._qubits))
 
 	def measure(self, qubits: Sequence[Qid], key: str) -> int:
+		"""Measure ``qubits`` and record the outcome under ``key``."""
 		outcome = self._measure_targets([self._index[q] for q in qubits])
 		self.log_of_measurement_results[key] = outcome
 		return outcome
@@ -521,6 +548,7 @@ class SimulationProductState:
 
 	@property
 	def states(self) -> tuple[SimulationStateBase, ...]:
+		"""The one state per qubit that make up the product."""
 		return self._states
 
 	def __repr__(self) -> str:
@@ -546,6 +574,7 @@ class SimulationTrialResult(SimulationTrialResultBase, StepResult):
 
 	@property
 	def params(self) -> Any:
+		"""The parameter resolver the simulation used."""
 		return self._params
 
 
@@ -567,6 +596,7 @@ class CliffordTrialResult(SimulationTrialResult):
 
 	@property
 	def final_state(self) -> Any:
+		"""The stabilizer state at the end of the simulation."""
 		return self._clifford_state
 
 
@@ -577,11 +607,13 @@ class StabilizerSampler:
 		self._seed = seed
 
 	def run(self, program: Any, repetitions: int = 1, **kwargs: Any) -> Any:
+		"""Run a stabilizer circuit and sample its measurements."""
 		from ._clifford import CliffordSimulator
 
 		return CliffordSimulator(seed=self._seed).run(program, repetitions=repetitions, **kwargs)
 
 	def sample(self, program: Any, repetitions: int = 1, **kwargs: Any) -> Any:
+		"""Run a stabilizer circuit and sample its measurements."""
 		return self.run(program, repetitions=repetitions, **kwargs)
 
 	sample_expectation_values = None

@@ -33,22 +33,27 @@ class ControlledOperation(Operation):
 
 	@property
 	def controls(self) -> tuple[Qid, ...]:
+		"""The control qubits."""
 		return self._controls
 
 	@property
 	def sub_operation(self) -> Operation:
+		"""The operation applied when the controls are satisfied."""
 		return self._sub_operation
 
 	@property
 	def control_values(self) -> Sequence[bool | int] | AbstractControlValues:
+		"""The control values (or formula) that fire the operation."""
 		return self._control_values
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The control qubits followed by the target qubits."""
 		return self._controls + self._sub_operation.qubits
 
 	@property
 	def gate(self) -> Gate:
+		"""The controlled gate equivalent to this operation."""
 		return ControlledGate(
 			self._sub_operation.gate,
 			num_controls=len(self._controls),
@@ -59,6 +64,7 @@ class ControlledOperation(Operation):
 		return self.gate._unitary_()
 
 	def with_qubits(self, *new_qubits: Qid) -> ControlledOperation:
+		"""Return the same controlled operation on ``new_qubits``."""
 		n = len(self._controls)
 		return ControlledOperation(
 			new_qubits[:n], self._sub_operation.with_qubits(*new_qubits[n:]), self._control_values

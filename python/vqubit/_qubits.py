@@ -78,6 +78,7 @@ class LineQubit(Qubit):
 
 	@property
 	def x(self) -> int:
+		"""The position of the qubit on the line."""
 		return self._x
 
 	def _comparison_key(self) -> int:
@@ -110,10 +111,12 @@ class GridQubit(Qubit):
 
 	@property
 	def row(self) -> int:
+		"""The row of the qubit on the grid."""
 		return self._row
 
 	@property
 	def col(self) -> int:
+		"""The column of the qubit on the grid."""
 		return self._col
 
 	def _comparison_key(self) -> tuple[int, int]:
@@ -167,6 +170,7 @@ class NamedQubit(Qubit):
 
 	@property
 	def name(self) -> str:
+		"""The name of the qubit."""
 		return self._name
 
 	def _comparison_key(self) -> str:
@@ -195,6 +199,7 @@ class LineQid(Qid):
 
 	@property
 	def x(self) -> int:
+		"""The position of the qid on the line."""
 		return self._x
 
 	def _comparison_key(self) -> int:
@@ -227,10 +232,12 @@ class GridQid(Qid):
 
 	@property
 	def row(self) -> int:
+		"""The row of the qid on the grid."""
 		return self._row
 
 	@property
 	def col(self) -> int:
+		"""The column of the qid on the grid."""
 		return self._col
 
 	def _comparison_key(self) -> tuple[int, int]:
@@ -257,6 +264,7 @@ class NamedQid(Qid):
 
 	@property
 	def name(self) -> str:
+		"""The name of the qid."""
 		return self._name
 
 	def _comparison_key(self) -> str:
@@ -281,6 +289,7 @@ class VariableQid(Qid):
 
 	@property
 	def name(self) -> Any:
+		"""The symbolic name of the qid."""
 		return self._name
 
 	def _comparison_key(self) -> Any:
@@ -305,6 +314,7 @@ class VariableLineQid(Qid):
 
 	@property
 	def x(self) -> Any:
+		"""The symbolic position of the qid on the line."""
 		return self._x
 
 	def _comparison_key(self) -> Any:
@@ -330,10 +340,12 @@ class VariableGridQid(Qid):
 
 	@property
 	def row(self) -> Any:
+		"""The symbolic row of the qid."""
 		return self._row
 
 	@property
 	def col(self) -> Any:
+		"""The symbolic column of the qid."""
 		return self._col
 
 	def _comparison_key(self) -> Any:

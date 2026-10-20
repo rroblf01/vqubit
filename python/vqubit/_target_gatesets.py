@@ -75,16 +75,19 @@ class CZTargetGateset(TargetGateset):
 	"""A gate set whose only entangling gate is ``CZ``."""
 
 	def two_qubit_gates(self) -> tuple[type[Gate], ...]:
+		"""The two-qubit gates the set accepts as they are."""
 		return (CZGate,)
 
 	def convert_two_qubit(self, operation: Operation) -> list[Operation] | None:
 		# CNOT = (I x H) CZ (I x H), the H on the target.
+		"""Rewrite a two-qubit operation as CZs, or return ``None``."""
 		if isinstance(operation.gate, CNOTGate) and is_plain_gate(operation.gate):
 			control, target = operation.qubits
 			return [H.on(target), CZGate().on(control, target), H.on(target)]
 		return None
 
 	def synthesize_two_qubit(self, operation: Operation) -> list[Operation] | None:
+		"""Synthesize an arbitrary two-qubit gate with CZs."""
 		from ._kak import two_qubit_matrix_to_cz_operations
 
 		matrix = operation.gate._unitary_()
@@ -102,16 +105,19 @@ class CNOTTargetGateset(TargetGateset):
 	"""A gate set whose only entangling gate is ``CNOT``."""
 
 	def two_qubit_gates(self) -> tuple[type[Gate], ...]:
+		"""The two-qubit gates the set accepts as they are."""
 		return (CNOTGate,)
 
 	def convert_two_qubit(self, operation: Operation) -> list[Operation] | None:
 		# CZ = (I x H) CNOT (I x H), the H on the target.
+		"""Rewrite a two-qubit operation as CNOTs, or return ``None``."""
 		if isinstance(operation.gate, CZGate) and is_plain_gate(operation.gate):
 			control, target = operation.qubits
 			return [H.on(target), CNOTGate().on(control, target), H.on(target)]
 		return None
 
 	def synthesize_two_qubit(self, operation: Operation) -> list[Operation] | None:
+		"""Synthesize an arbitrary two-qubit gate with CNOTs."""
 		from ._kak import two_qubit_matrix_to_operations
 
 		matrix = operation.gate._unitary_()

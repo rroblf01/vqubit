@@ -173,6 +173,11 @@ tests with coverage at 95 %.
   products were not diagonal. It also checks Cirq's preconditions (`mat1` and
   `mat2` real, `mat1 @ mat2.T` and `mat1.T @ mat2` symmetric).
 
+- **Every public symbol is documented.** 1097 of 1097 exports and public class
+  members have a docstring (up from 68 %), with `tools/check_api_docs.py` keeping
+  it that way: a new public symbol without one fails CI. Type aliases and plain
+  constants are exempt, since Python has nowhere to attach a docstring.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

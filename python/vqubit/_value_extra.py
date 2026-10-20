@@ -150,6 +150,7 @@ class LinearDict(MutableMapping):
 		return result
 
 	def copy(self) -> LinearDict:
+		"""Return a shallow copy of the dictionary."""
 		return LinearDict(self._items)
 
 	def __repr__(self) -> str:
@@ -167,12 +168,15 @@ class Duration:
 
 	@property
 	def picos(self) -> int:
+		"""The duration in picoseconds."""
 		return self._picos
 
 	def total_picos(self) -> int:
+		"""The duration in picoseconds."""
 		return self._picos
 
 	def total_nanos(self) -> float:
+		"""The duration in nanoseconds."""
 		return self._picos / 1000
 
 	def __add__(self, other: Duration) -> Duration:
@@ -205,6 +209,7 @@ class Timestamp:
 		self._picos = int(picos)
 
 	def raw_picos(self) -> int:
+		"""The timestamp in picoseconds, since the epoch."""
 		return self._picos
 
 	def __add__(self, other: Duration) -> Timestamp:
@@ -259,6 +264,7 @@ class ClassicalDataStoreReader:
 	"""Base class for reading from a classical data store."""
 
 	def keys(self) -> Iterable[str]:
+		"""The keys of the stored measurements."""
 		raise NotImplementedError
 
 
@@ -266,6 +272,7 @@ class ClassicalDataStore(ClassicalDataStoreReader):
 	"""Base class for a store of classical measurement data."""
 
 	def record(self, **kwargs: Any) -> None:
+		"""Record one measurement value under a key."""
 		raise NotImplementedError
 
 
@@ -281,15 +288,19 @@ class ClassicalDataDictionaryStore(ClassicalDataStore):
 		self._records: dict[str, list[Any]] = {key: list(values) for key, values in (records or {}).items()}
 
 	def keys(self) -> Iterable[str]:
+		"""The keys of the stored measurements."""
 		return self._measurements.keys()
 
 	def records(self, key: str) -> list[Any]:
+		"""The recorded values under a key."""
 		return list(self._records.get(key, []))
 
 	def measurements(self, key: str) -> list[Any]:
+		"""The stored measurements, keyed by name."""
 		return list(self._measurements.get(key, []))
 
 	def record(self, **kwargs: Any) -> None:
+		"""Record one measurement value under a key."""
 		for key, value in kwargs.items():
 			self._records.setdefault(key, []).append(value)
 
@@ -333,9 +344,11 @@ class ProductState:
 
 	@property
 	def states(self) -> list[list[complex]]:
+		"""The one state per subsystem that makes up the product."""
 		return [list(state) for state in self._states]
 
 	def state_vector(self) -> list[complex]:
+		"""The product state as a flat vector of amplitudes."""
 		vector = [1 + 0j]
 		for state in self._states:
 			vector = [a * b for a in vector for b in state]

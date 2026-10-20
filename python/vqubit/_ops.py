@@ -22,10 +22,12 @@ class Operation:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the operation acts on, in order."""
 		raise NotImplementedError
 
 	@property
 	def gate(self) -> Gate:
+		"""The gate this operation applies."""
 		raise NotImplementedError
 
 	def num_qubits(self) -> int:
@@ -61,10 +63,12 @@ class GateOperation(Operation):
 
 	@property
 	def gate(self) -> Gate:
+		"""The gate this operation applies."""
 		return self._gate
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the operation acts on, in order."""
 		return self._qubits
 
 	def _value_equality_values_(self) -> Any:
@@ -74,6 +78,7 @@ class GateOperation(Operation):
 		return self._gate._circuit_diagram_info_(self._qubits)
 
 	def with_qubits(self, *new_qubits: Qid) -> GateOperation:
+		"""Return the same operation on ``new_qubits``."""
 		return GateOperation(self._gate, new_qubits)
 
 	def __str__(self) -> str:
@@ -99,6 +104,7 @@ class Moment:
 
 	@property
 	def operations(self) -> tuple[Operation, ...]:
+		"""The operations in the moment."""
 		return self._operations
 
 	@property
@@ -108,6 +114,7 @@ class Moment:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the moment acts on, sorted."""
 		return tuple(sorted(self._qubits_set))
 
 	def __iter__(self) -> Iterator[Operation]:
@@ -164,18 +171,22 @@ class TaggedOperation(Operation):
 
 	@property
 	def sub_operation(self) -> Operation:
+		"""The operation the tags are attached to."""
 		return self._sub_operation
 
 	@property
 	def tags(self) -> tuple[Any, ...]:
+		"""The tags carried by the operation."""
 		return self._tags
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the wrapped operation."""
 		return self._sub_operation.qubits
 
 	@property
 	def gate(self) -> Gate:
+		"""The gate of the wrapped operation."""
 		return self._sub_operation.gate
 
 	def untagged(self) -> Operation:

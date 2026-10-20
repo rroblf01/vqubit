@@ -78,6 +78,7 @@ class BitFlipChannel(_Channel):
 
 	@property
 	def probability(self) -> Any:
+		"""The probability that the bit flips."""
 		return self._probability
 
 	def _kraus_(self) -> list[Matrix] | None:
@@ -112,6 +113,7 @@ class PhaseFlipChannel(_Channel):
 
 	@property
 	def probability(self) -> Any:
+		"""The probability that the phase flips."""
 		return self._probability
 
 	def _kraus_(self) -> list[Matrix] | None:
@@ -146,6 +148,7 @@ class BitPhaseFlipChannel(_Channel):
 
 	@property
 	def probability(self) -> Any:
+		"""The probability that the bit and phase flip."""
 		return self._probability
 
 	def _kraus_(self) -> list[Matrix] | None:
@@ -184,6 +187,7 @@ class DepolarizingChannel(_Channel):
 
 	@property
 	def probability(self) -> Any:
+		"""The probability that a Pauli error is applied."""
 		return self._probability
 
 	def _kraus_(self) -> list[Matrix] | None:
@@ -224,6 +228,7 @@ class AmplitudeDampingChannel(_Channel):
 
 	@property
 	def gamma(self) -> Any:
+		"""The probability that the qubit decays."""
 		return self._gamma
 
 	def _kraus_(self) -> list[Matrix] | None:
@@ -261,6 +266,7 @@ class PhaseDampingChannel(_Channel):
 
 	@property
 	def gamma(self) -> Any:
+		"""The probability that the phase is lost."""
 		return self._gamma
 
 	def _kraus_(self) -> list[Matrix] | None:

@@ -212,6 +212,7 @@ class CircuitDiagramInfo:
 	connected: bool = True
 
 	def with_wire_symbols(self, wire_symbols: Sequence[str]) -> CircuitDiagramInfo:
+		"""Return a copy with different wire symbols."""
 		return CircuitDiagramInfo(tuple(wire_symbols), self.exponent, self.connected)
 
 
@@ -227,6 +228,7 @@ class CircuitDiagramInfoArgs:
 	use_unicode_characters: bool = True
 
 	def format_real(self, value: Any) -> str:
+		"""Format a real number the way the diagram does."""
 		return str(value)
 
 

@@ -38,6 +38,7 @@ class Gate:
 
 	@property
 	def num_qubits(self) -> int:
+		"""The number of qubits the gate acts on."""
 		return self._num_qubits_()
 
 	def _qid_shape_(self) -> tuple[int, ...]:
@@ -45,6 +46,7 @@ class Gate:
 
 	@property
 	def qid_shape(self) -> tuple[int, ...]:
+		"""The dimension of each qid the gate acts on."""
 		return self._qid_shape_()
 
 	def _unitary_(self) -> Matrix | None:
@@ -187,10 +189,12 @@ class EigenGate(Gate):
 
 	@property
 	def exponent(self) -> float:
+		"""The exponent in each eigenvalue's ``e^{iπ·exponent·λ}``."""
 		return self._exponent
 
 	@property
 	def global_shift(self) -> float:
+		"""The global phase: ``e^{iπ·global_shift·exponent}``."""
 		return self._global_shift
 
 	def _eigen_components(self) -> list[tuple[float, Matrix]]:
@@ -662,14 +666,17 @@ class PhasedXPowGate(Gate):
 
 	@property
 	def phase_exponent(self) -> Any:
+		"""The Z conjugation: ``Z**phase_exponent · X**exponent · Z**-phase_exponent``."""
 		return self._phase_exponent
 
 	@property
 	def exponent(self) -> Any:
+		"""The exponent of the central X rotation."""
 		return self._exponent
 
 	@property
 	def global_shift(self) -> Any:
+		"""The global phase: ``e^{iπ·global_shift·exponent}``."""
 		return self._global_shift
 
 	def _num_qubits_(self) -> int:
@@ -756,14 +763,17 @@ class PhasedXZGate(Gate):
 
 	@property
 	def x_exponent(self) -> Any:
+		"""The exponent of the phased X rotation."""
 		return self._x_exponent
 
 	@property
 	def z_exponent(self) -> Any:
+		"""The exponent of the Z rotation applied after the X."""
 		return self._z_exponent
 
 	@property
 	def axis_phase_exponent(self) -> Any:
+		"""The phase of the X rotation's axis."""
 		return self._axis_phase_exponent
 
 	def _num_qubits_(self) -> int:
@@ -951,14 +961,17 @@ class MeasurementGate(Gate):
 
 	@property
 	def key(self) -> str:
+		"""The measurement key: the name a result is recorded under."""
 		return self._key
 
 	@property
 	def invert_mask(self) -> tuple[bool, ...]:
+		"""Whether each measured qubit's outcome is inverted."""
 		return self._invert_mask
 
 	@property
 	def full_invert_mask(self) -> tuple[bool, ...]:
+		"""The invert mask widened to one entry per qubit."""
 		return self._invert_mask + (False,) * (self._num_qubits - len(self._invert_mask))
 
 	def _num_qubits_(self) -> int:
@@ -1200,6 +1213,7 @@ class MatrixGate(Gate):
 
 	@property
 	def matrix(self) -> Matrix:
+		"""A copy of the unitary matrix that defines the gate."""
 		return [list(row) for row in self._matrix]
 
 	def _num_qubits_(self) -> int:
@@ -1259,14 +1273,17 @@ class ControlledGate(Gate):
 
 	@property
 	def sub_gate(self) -> Gate:
+		"""The gate that is applied when the controls are satisfied."""
 		return self._sub_gate
 
 	@property
 	def num_controls(self) -> int:
+		"""The number of control qubits."""
 		return self._num_controls
 
 	@property
 	def control_values(self) -> Sequence[bool] | AbstractControlValues:
+		"""The control values (or formula) that fire the gate."""
 		return self._control_values
 
 	def _num_qubits_(self) -> int:
@@ -1408,6 +1425,7 @@ class GlobalPhaseGate(Gate):
 
 	@property
 	def exponent(self) -> Any:
+		"""The phase in half turns: ``e^{iπ·exponent}``."""
 		return self._exponent
 
 	def _num_qubits_(self) -> int:
@@ -1451,6 +1469,7 @@ class WaitGate(Gate):
 
 	@property
 	def duration_nanos(self) -> float:
+		"""How long the gate waits, in nanoseconds."""
 		return self._duration
 
 	def _num_qubits_(self) -> int:
@@ -1487,10 +1506,12 @@ class FSimGate(Gate):
 
 	@property
 	def theta(self) -> Any:
+		"""The iSWAP angle of the fSim gate, in radians."""
 		return self._theta
 
 	@property
 	def phi(self) -> Any:
+		"""The controlled-phase angle of the fSim gate, in radians."""
 		return self._phi
 
 	def _num_qubits_(self) -> int:
@@ -1542,6 +1563,7 @@ class MSGate(Gate):
 
 	@property
 	def rads(self) -> Any:
+		"""The rotation angle of the Mølmer-Sørensen gate, in radians."""
 		return self._rads
 
 	def _num_qubits_(self) -> int:

@@ -36,9 +36,11 @@ class NoiseProperties:
 	"""Base class describing a device's per-operation noise."""
 
 	def gate_error(self, op_id: OpIdentifier) -> float:
+		"""The error rate of one kind of gate."""
 		raise NotImplementedError
 
 	def readout_error(self, qubit: Qid) -> float:
+		"""The readout error of one qubit."""
 		raise NotImplementedError
 
 	def __repr__(self) -> str:
@@ -62,11 +64,13 @@ class SuperconductingQubitsNoiseProperties(NoiseProperties):
 		self.readout_error_rate = float(readout_error_rate)
 
 	def gate_error(self, op_id: OpIdentifier) -> float:
+		"""The error rate the device declares for that gate."""
 		if op_id.num_qubits is not None and op_id.num_qubits >= 2:
 			return self.gate_error_2q
 		return self.gate_error_1q
 
 	def readout_error(self, qubit: Qid) -> float:
+		"""The readout error the device declares for that qubit."""
 		del qubit
 		return self.readout_error_rate
 
@@ -95,6 +99,7 @@ class NoiseModel:
 		return result
 
 	def noisy_operation(self, operation: Operation) -> Operation:
+		"""Return the operation with the model's noise applied."""
 		return operation
 
 	def __repr__(self) -> str:
@@ -134,6 +139,7 @@ class NoiseModelFromNoiseProperties(NoiseModel):
 		self.noise_properties = noise_properties
 
 	def noisy_operation(self, operation: Operation) -> Operation:
+		"""Return the operation with the device's noise applied."""
 		return operation
 
 	def noisy_moment(self, moment: Moment, qubits: Sequence[Qid]) -> list[Moment]:
@@ -197,14 +203,17 @@ class NamedTopology:
 
 	@property
 	def nodes(self) -> frozenset[Any]:
+		"""The qubits of the topology."""
 		return frozenset()
 
 	@property
 	def edges(self) -> frozenset[frozenset[Any]]:
+		"""The pairs of adjacent qubits."""
 		return frozenset()
 
 	@property
 	def graph(self) -> dict[Any, set[Any]]:
+		"""The adjacency of the topology, keyed by qubit."""
 		adjacency: dict[Any, set[Any]] = {node: set() for node in self.nodes}
 		for edge in self.edges:
 			first, second = tuple(edge)
@@ -228,10 +237,12 @@ class LineTopology(NamedTopology):
 
 	@property
 	def nodes(self) -> frozenset[Any]:
+		"""The qubits of the topology."""
 		return frozenset(range(self.length))
 
 	@property
 	def edges(self) -> frozenset[frozenset[Any]]:
+		"""The pairs of adjacent qubits."""
 		return frozenset(frozenset((i, i + 1)) for i in range(self.length - 1))
 
 
@@ -245,6 +256,7 @@ class TiltedSquareLattice(NamedTopology):
 
 	@property
 	def nodes(self) -> frozenset[Any]:
+		"""The qubits of the lattice."""
 		return frozenset(GridQubit(row, col) for row in range(self.height) for col in range(self.width))
 
 	def _is_node(self, row: int, col: int) -> bool:
@@ -252,6 +264,7 @@ class TiltedSquareLattice(NamedTopology):
 
 	@property
 	def edges(self) -> frozenset[frozenset[Any]]:
+		"""The pairs of adjacent qubits."""
 		edges: set[frozenset[Any]] = set()
 		for row in range(self.height):
 			for col in range(self.width):

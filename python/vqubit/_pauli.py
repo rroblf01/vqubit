@@ -188,13 +188,16 @@ class PauliString:
 
 	@property
 	def coefficient(self) -> complex:
+		"""The complex coefficient multiplying the string."""
 		return self._coefficient
 
 	def items(self) -> Iterator[tuple[Qid, Pauli]]:
+		"""Iterate ``(qubit, pauli)`` pairs in qubit order."""
 		return iter(sorted(self._map.items()))
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the string touches, sorted."""
 		return tuple(sorted(self._map))
 
 	def __getitem__(self, qubit: Qid) -> Pauli:
@@ -260,9 +263,11 @@ class PauliString:
 		return bool(self._map)
 
 	def keys(self) -> Any:
+		"""The qubits the string touches."""
 		return self._map.keys()
 
 	def values(self) -> Iterator[Pauli]:
+		"""The Pauli on each qubit the string touches."""
 		return iter([pauli for _, pauli in self.items()])
 
 	def get(self, key: Qid, default: Any = None) -> Any:
@@ -526,6 +531,7 @@ class PauliSum:
 		return self._terms.get(pauli_string, 0j)
 
 	def items(self) -> Iterator[tuple[PauliString, complex]]:
+		"""Iterate ``(pauli_string, coefficient)`` pairs."""
 		return iter(self._terms.items())
 
 	def __iter__(self) -> Iterator[PauliString]:
@@ -599,10 +605,12 @@ class DensePauliString:
 
 	@property
 	def paulis(self) -> tuple[Pauli, ...]:
+		"""The Pauli on every qubit, including the identities."""
 		return self._paulis
 
 	@property
 	def coefficient(self) -> complex:
+		"""The complex coefficient multiplying the dense string."""
 		return self._coefficient
 
 	def __len__(self) -> int:

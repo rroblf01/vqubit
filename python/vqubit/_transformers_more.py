@@ -32,9 +32,11 @@ class TransformerLogger:
 		self._messages: list[str] = []
 
 	def log(self, message: str, *args: Any, **kwargs: Any) -> None:
+		"""Record a message about one transformation."""
 		self._messages.append(message.format(*args) if args else message)
 
 	def messages(self) -> list[str]:
+		"""The messages recorded so far."""
 		return list(self._messages)
 
 	def __repr__(self) -> str:

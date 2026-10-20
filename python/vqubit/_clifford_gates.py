@@ -170,6 +170,7 @@ class SingleQubitCliffordGate(Gate):
 
 	@staticmethod
 	def from_pauli(pauli: Pauli, sqrt: bool = False) -> SingleQubitCliffordGate:
+		"""Return the Pauli gate, or its square root."""
 		prev_pauli = _relative_pauli(pauli, -1)
 		next_pauli = _relative_pauli(pauli, 1)
 		if sqrt:
@@ -181,6 +182,7 @@ class SingleQubitCliffordGate(Gate):
 
 	@staticmethod
 	def from_quarter_turns(pauli: Pauli, quarter_turns: int) -> SingleQubitCliffordGate:
+		"""Return a quarter turn about a Pauli axis."""
 		quarter_turns %= 4
 		if quarter_turns == 0:
 			return SingleQubitCliffordGate.I
@@ -273,10 +275,12 @@ class SingleQubitCliffordGate(Gate):
 		return self.merged_with(after).merged_with(self**-1)
 
 	def commutes_with_pauli(self, pauli: Pauli) -> bool:
+		"""Whether the gate leaves the Pauli axis unchanged."""
 		to, flip = self.pauli_tuple(pauli)
 		return to is pauli and not flip
 
 	def commutes_with_single_qubit_gate(self, gate: SingleQubitCliffordGate) -> bool:
+		"""Whether the two Cliffords commute."""
 		return self.merged_with(gate) == gate.merged_with(self)
 
 	def _unitary_(self) -> Matrix:

@@ -86,12 +86,15 @@ class Parameter(_Expression):
 
 	@property
 	def name(self) -> str:
+		"""The name of the parameter."""
 		return self._name
 
 	def names(self) -> set[str]:
+		"""The set of parameter names this expression uses."""
 		return {self._name}
 
 	def substitute(self, resolver: ParamResolver) -> Any:
+		"""Return the expression with the resolver's values substituted."""
 		return resolver.value_of(self)
 
 	def _value_equality_values_(self) -> Any:

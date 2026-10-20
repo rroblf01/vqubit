@@ -48,6 +48,7 @@ class CircuitFunction(Circuit):
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the function was called with."""
 		return self._qubits
 
 
@@ -115,6 +116,7 @@ class QasmOutput:
 		self.circuit = circuit
 
 	def qasm(self) -> str:
+		"""The OpenQASM 2.0 text of the circuit."""
 		from ._qasm import qasm
 
 		return qasm(self.circuit)
@@ -134,19 +136,23 @@ class TextDiagramDrawer:
 		self.height = 0
 
 	def write(self, x: int, y: int, text: str) -> None:
+		"""Write ``text`` at ``(x, y)`` on the grid."""
 		self._cells[(x, y)] = text
 		self.width = max(self.width, x + 1)
 		self.height = max(self.height, y + 1)
 
 	def horizontal_line(self, x1: int, x2: int, y: int) -> None:
+		"""Draw a horizontal wire between two columns."""
 		for x in range(min(x1, x2), max(x1, x2)):
 			self._horizontal.add((x, y))
 
 	def vertical_line(self, y1: int, y2: int, x: int) -> None:
+		"""Draw a vertical wire between two rows."""
 		for y in range(min(y1, y2), max(y1, y2)):
 			self._vertical.add((x, y))
 
 	def render(self, *, horizontal_spacing: int = 1, vertical_spacing: int = 0) -> str:
+		"""Render the grid as text."""
 		lines: list[str] = []
 		for y in range(self.height):
 			cells: list[str] = []

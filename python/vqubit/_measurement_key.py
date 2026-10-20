@@ -25,10 +25,12 @@ class MeasurementKey:
 
 	@property
 	def name(self) -> str:
+		"""The name of the key."""
 		return self._name
 
 	@property
 	def path(self) -> tuple[str, ...]:
+		"""The path that scopes the key."""
 		return self._path
 
 	def _value_equality_values_(self) -> Any:

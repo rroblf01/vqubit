@@ -53,10 +53,12 @@ class Device:
 
 	@property
 	def qubits(self) -> frozenset[Qid]:
+		"""The qubits the device offers, sorted."""
 		return self._qubits
 
 	@property
 	def qubit_set(self) -> frozenset[Qid]:
+		"""The qubits the device offers."""
 		return self._qubits
 
 	def neighbors(self, qubit: Qid) -> list[Qid]:
@@ -95,9 +97,11 @@ class GridDevice(Device):
 
 	@classmethod
 	def rect(cls, rows: int, cols: int, *, top: int = 0, left: int = 0) -> GridDevice:
+		"""The rectangular region the grid covers."""
 		return cls(GridQubit.rect(range(top, top + rows), range(left, left + cols)))
 
 	def neighbors(self, qubit: Qid) -> list[Qid]:
+		"""The qubits adjacent to ``qubit`` on the grid."""
 		if not isinstance(qubit, GridQubit):
 			return []
 		return [q for q in qubit.neighbors() if q in self._qubits]
@@ -110,6 +114,7 @@ class LineDevice(Device):
 		super().__init__(LineQubit.range(num_qubits))
 
 	def neighbors(self, qubit: Qid) -> list[Qid]:
+		"""The qubits adjacent to ``qubit`` on the line."""
 		if not isinstance(qubit, LineQubit):
 			return []
 		result: list[Qid] = []
@@ -186,6 +191,7 @@ class IonDevice(Device):
 		self._all_to_all = True
 
 	def neighbors(self, qubit: Qid) -> list[Qid]:
+		"""The qubits adjacent to ``qubit`` on the ion trap."""
 		return [q for q in self._qubits if q != qubit]
 
 
@@ -198,6 +204,7 @@ class NeutralAtomDevice(Device):
 		super().__init__(qubits, metadata=DeviceMetadata(name="NeutralAtom"))
 
 	def neighbors(self, qubit: Qid) -> list[Qid]:
+		"""The qubits adjacent to ``qubit`` on the atom grid."""
 		return [q for q in self._qubits if q != qubit]
 
 

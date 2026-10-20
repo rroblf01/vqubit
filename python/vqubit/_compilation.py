@@ -1070,12 +1070,15 @@ class CompilationTargetGateset(TargetGateset):
 
 	@property
 	def num_qubits(self) -> int:
+		"""The number of qubits the gate set targets."""
 		return 2
 
 	def preprocess_transformers(self) -> list[Any]:
+		"""The transformers to run before compiling with this gate set."""
 		return []
 
 	def postprocess_transformers(self) -> list[Any]:
+		"""The transformers to run after compiling with this gate set."""
 		return []
 
 
@@ -1088,6 +1091,7 @@ class TwoQubitCompilationTargetGateset(CompilationTargetGateset):
 	def decompose_two_qubit(
 		self, matrix: Sequence[Sequence[complex]], qubits: tuple[Qid, Qid], *, atol: float = 1e-8
 	) -> list[Operation]:
+		"""Decompose a two-qubit gate into the target gate set."""
 		raise NotImplementedError
 
 
@@ -1102,9 +1106,11 @@ class SqrtIswapTargetGateset(TwoQubitCompilationTargetGateset):
 	def decompose_two_qubit(
 		self, matrix: Sequence[Sequence[complex]], qubits: tuple[Qid, Qid], *, atol: float | None = None
 	) -> list[Operation]:
+		"""Decompose a two-qubit gate into the square root of iSWAP."""
 		return two_qubit_matrix_to_sqrt_iswap_operations(matrix, qubits=qubits, atol=atol or self._atol)
 
 	def optimize_circuit(self, circuit: Circuit) -> Circuit:
+		"""Compile a circuit onto this gate set."""
 		result = Circuit()
 		for operation in circuit.all_operations():
 			if (

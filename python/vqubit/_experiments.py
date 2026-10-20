@@ -117,10 +117,12 @@ class TensoredConfusionMatrices:
 
 	@property
 	def confusion_matrices(self) -> list[list[list[float]]]:
+		"""The confusion matrix of each qubit."""
 		return [[list(row) for row in matrix] for matrix in self._confusion_matrices]
 
 	@property
 	def confusion_matrix(self) -> Matrix:
+		"""The tensor product of the per-qubit matrices."""
 		result: Matrix = [[1 + 0j]]
 		for matrix in self._confusion_matrices:
 			result = _kron_real(result, matrix)

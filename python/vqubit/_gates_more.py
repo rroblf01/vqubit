@@ -65,6 +65,7 @@ class PhasedISwapPowGate(_PowGate):
 
 	@property
 	def phase_exponent(self) -> Any:
+		"""The Z conjugation applied around the iSWAP power."""
 		return self._phase_exponent
 
 	def _num_qubits_(self) -> int:
@@ -144,6 +145,7 @@ class DiagonalGate(Gate):
 
 	@property
 	def diag_angles_radians(self) -> tuple[Any, ...]:
+		"""The phase applied to each basis state, in radians."""
 		return self._diag_angles_radians
 
 	def _num_qubits_(self) -> int:
@@ -212,6 +214,7 @@ class QubitPermutationGate(Gate):
 
 	@property
 	def permutation(self) -> tuple[int, ...]:
+		"""The permutation the gate applies to its qubits."""
 		return self._permutation
 
 	def _num_qubits_(self) -> int:
@@ -365,6 +368,7 @@ class ParallelGate(Gate):
 
 	@property
 	def sub_gate(self) -> Gate:
+		"""The gate applied in parallel on each qubit pair."""
 		return self._sub_gate
 
 	def _num_qubits_(self) -> int:
@@ -420,6 +424,7 @@ class PhaseGradientGate(Gate):
 
 	@property
 	def exponent(self) -> Any:
+		"""The half-turn exponent of the phase gradient."""
 		return self._exponent
 
 	def _num_qubits_(self) -> int:
@@ -471,22 +476,27 @@ class PhasedFSimGate(Gate):
 
 	@property
 	def theta(self) -> Any:
+		"""The iSWAP angle of the gate, in radians."""
 		return self._theta
 
 	@property
 	def zeta(self) -> Any:
+		"""The single-qubit Z rotation angle on the second qubit."""
 		return self._zeta
 
 	@property
 	def chi(self) -> Any:
+		"""The conditional Z rotation angle, in radians."""
 		return self._chi
 
 	@property
 	def gamma(self) -> Any:
+		"""The single-qubit Z rotation angle on the first qubit."""
 		return self._gamma
 
 	@property
 	def phi(self) -> Any:
+		"""The controlled-phase angle of the gate, in radians."""
 		return self._phi
 
 	@staticmethod
@@ -501,10 +511,12 @@ class PhasedFSimGate(Gate):
 
 	@property
 	def rz_angles_before(self) -> tuple[Any, Any]:
+		"""The Z rotations applied before the fSim interaction."""
 		return ((-self.gamma + self.zeta + self.chi) / 2.0, (-self.gamma - self.zeta - self.chi) / 2.0)
 
 	@property
 	def rz_angles_after(self) -> tuple[Any, Any]:
+		"""The Z rotations applied after the fSim interaction."""
 		return ((-self.gamma + self.zeta - self.chi) / 2.0, (-self.gamma - self.zeta + self.chi) / 2.0)
 
 	def _num_qubits_(self) -> int:
@@ -571,6 +583,7 @@ class UniformSuperpositionGate(Gate):
 
 	@property
 	def m_value(self) -> int:
+		"""The size of the superposed range, ``[0, m_value)``."""
 		return self._m_value
 
 	def _num_qubits_(self) -> int:

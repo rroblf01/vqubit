@@ -68,9 +68,11 @@ class SetVariable(Operation):
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The variable assignment acts on no qubits."""
 		return ()
 
 	def with_qubits(self, *new_qubits: Qid) -> SetVariable:
+		"""Return the same assignment (it has no qubits to move)."""
 		return self
 
 	def _value_equality_values_(self) -> Any:
@@ -93,21 +95,26 @@ class ClassicallyControlledOperation(Operation):
 
 	@property
 	def conditions(self) -> tuple[Condition, ...]:
+		"""The classical conditions that must all hold."""
 		return self._conditions
 
 	@property
 	def sub_operation(self) -> Operation:
+		"""The operation applied when the conditions hold."""
 		return self._sub_operation
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the wrapped operation."""
 		return self._sub_operation.qubits
 
 	@property
 	def gate(self) -> Any:
+		"""The gate of the wrapped operation."""
 		raise TypeError("a classically controlled operation has no unitary")
 
 	def with_qubits(self, *new_qubits: Qid) -> ClassicallyControlledOperation:
+		"""Return the same conditional on ``new_qubits``."""
 		return ClassicallyControlledOperation(self._conditions, self._sub_operation.with_qubits(*new_qubits))
 
 	def _value_equality_values_(self) -> Any:

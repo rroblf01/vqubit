@@ -26,12 +26,15 @@ class AbstractInitialMapper:
 		self.device = device
 
 	def initial_mapping(self, circuit: Circuit) -> dict[Qid, Qid]:
+		"""Return the initial qubit mapping for a circuit."""
 		raise NotImplementedError
 
 	def map_operations(self, operation: Operation, mapping: Mapping[Qid, Qid]) -> Operation:
+		"""Map the circuit's operations onto the device's qubits."""
 		return operation.with_qubits(*[mapping[q] for q in operation.qubits])
 
 	def update_mapping(self, operations: Sequence[Operation], mapping: dict[Qid, Qid]) -> dict[Qid, Qid]:
+		"""Update the mapping after a moment has been routed."""
 		return mapping
 
 
@@ -43,6 +46,7 @@ class HardCodedInitialMapper(AbstractInitialMapper):
 		self._mapping = dict(mapping)
 
 	def initial_mapping(self, circuit: Circuit) -> dict[Qid, Qid]:
+		"""Return the mapping this mapper was built with."""
 		return dict(self._mapping)
 
 
@@ -50,6 +54,7 @@ class LineInitialMapper(AbstractInitialMapper):
 	"""Places logical qubits onto the device's qubits in order of appearance."""
 
 	def initial_mapping(self, circuit: Circuit) -> dict[Qid, Qid]:
+		"""Return the initial mapping along the line."""
 		if self.device is None:
 			raise ValueError("LineInitialMapper needs a device")
 		logical = list(circuit.all_qubits())
@@ -68,13 +73,16 @@ class MappingManager:
 
 	@property
 	def current_mapping(self) -> dict[Qid, Qid]:
+		"""The qubit map the mapper is building."""
 		return dict(self._mapping)
 
 	def initial_mapping(self, circuit: Circuit) -> dict[Qid, Qid]:
+		"""Return the initial qubit mapping for a circuit."""
 		self._mapping = LineInitialMapper(device=self.device).initial_mapping(circuit)
 		return dict(self._mapping)
 
 	def map_circuit(self, circuit: Circuit) -> Circuit:
+		"""Route a circuit through the device and return it."""
 		mapped, self._mapping = routed_circuit_with_mapping(circuit, LineInitialMapper(device=self.device), self.device)
 		return mapped
 
@@ -88,6 +96,7 @@ class RouteCQC:
 	def route_circuit(
 		self, circuit: Circuit, *, initial_mapper: AbstractInitialMapper | None = None, **kwargs: Any
 	) -> Circuit:
+		"""Route a circuit through the device's connectivity."""
 		mapped, _ = routed_circuit_with_mapping(circuit, initial_mapper, self.device, **kwargs)
 		return mapped
 

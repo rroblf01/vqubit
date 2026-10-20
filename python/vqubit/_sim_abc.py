@@ -67,6 +67,7 @@ class SimulationStateBase:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the state lives on."""
 		raise NotImplementedError
 
 
@@ -75,6 +76,7 @@ class StepResultBase:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the state, in order."""
 		raise NotImplementedError
 
 
@@ -83,6 +85,7 @@ class SimulationTrialResultBase:
 
 	@property
 	def params(self) -> Any:
+		"""The parameter resolver the simulation used."""
 		raise NotImplementedError
 
 

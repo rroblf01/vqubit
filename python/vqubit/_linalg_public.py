@@ -1182,6 +1182,7 @@ class AxisAngleDecomposition:
 		return AxisAngleDecomposition(axis=(x, y, z), angle=angle, global_phase=p)
 
 	def matrix(self) -> Any:
+		"""The rotation matrix this decomposition describes."""
 		x, y, z = self.axis
 		xm = [[0j, 1 + 0j], [1 + 0j, 0j]]
 		ym = [[0j, -1j], [1j, 0j]]
@@ -1230,6 +1231,7 @@ class KakDecomposition:
 		)
 
 	def matrix(self) -> Any:
+		"""The two-qubit unitary this decomposition describes."""
 		before = _la.kron(self.single_qubit_operations_before[0], self.single_qubit_operations_before[1])
 		after = _la.kron(self.single_qubit_operations_after[0], self.single_qubit_operations_after[1])
 		x, y, z = self.interaction_coefficients

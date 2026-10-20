@@ -364,6 +364,7 @@ class StateVector:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the state, in order."""
 		return self._qubits
 
 	def state_vector(self) -> Any:
@@ -417,6 +418,7 @@ class SimulationResult(SimulationTrialResultBase):
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the final state, in order."""
 		return self._qubits
 
 	@property
@@ -455,6 +457,7 @@ class SimulationResult(SimulationTrialResultBase):
 
 	@property
 	def final_state(self) -> StateVector:
+		"""The state at the end of the simulation."""
 		return self._final_state
 
 	@property
@@ -463,9 +466,11 @@ class SimulationResult(SimulationTrialResultBase):
 		return self._final_state.state_vector()
 
 	def state_vector(self) -> Any:
+		"""The final state as a flat vector of amplitudes."""
 		return self._final_state.state_vector()
 
 	def dirac_notation(self, decimals: int = 3) -> str:
+		"""The final state written in Dirac notation."""
 		return self._final_state.dirac_notation(decimals)
 
 	def __str__(self) -> str:
@@ -494,6 +499,7 @@ class Result:
 
 	@property
 	def measurements(self) -> dict[str, list[list[int]]]:
+		"""The measurement outcomes, keyed by measurement name."""
 		return self._measurements
 
 	def __len__(self) -> int:
@@ -611,6 +617,7 @@ class Simulator(
 		qubit_order: Sequence[Qid] | None = None,
 		initial_state: Any = 0,
 	) -> SimulationResult:
+		"""Simulate a circuit and return its final state."""
 		program = _resolve_program(program, param_resolver)
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
@@ -681,6 +688,7 @@ class Simulator(
 		initial_state: Any = 0,
 		seed: int | None = None,
 	) -> Result:
+		"""Run a circuit, sampling its measurements."""
 		program = _resolve_program(program, param_resolver)
 		if repetitions < 1:
 			raise ValueError("repetitions must be at least 1")
@@ -788,6 +796,7 @@ class DensityMatrix:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the density matrix, in order."""
 		return self._qubits
 
 	def density_matrix(self) -> Any:
@@ -797,6 +806,7 @@ class DensityMatrix:
 		return [list(row) for row in self._matrix]
 
 	def dirac_notation(self, decimals: int = 3) -> str:
+		"""The state written in Dirac notation."""
 		return StateVector(
 			[self._matrix[i][i].real ** 0.5 + 0j for i in range(len(self._matrix))], self._qubits
 		).dirac_notation(decimals)
@@ -827,6 +837,7 @@ class DensityMatrixTrialResult(SimulationTrialResultBase):
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits of the final state, in order."""
 		return self._qubits
 
 	@property
@@ -841,9 +852,11 @@ class DensityMatrixTrialResult(SimulationTrialResultBase):
 
 	@property
 	def final_density_matrix(self) -> DensityMatrix:
+		"""The density matrix at the end of the simulation."""
 		return self._final_density_matrix
 
 	def density_matrix(self) -> Any:
+		"""The final density matrix."""
 		return self._final_density_matrix.density_matrix()
 
 	def __repr__(self) -> str:
@@ -875,6 +888,7 @@ class DensityMatrixSimulator(
 		qubit_order: Sequence[Qid] | None = None,
 		initial_state: Any = 0,
 	) -> DensityMatrixTrialResult:
+		"""Simulate a circuit and return its final density matrix."""
 		program = _resolve_program(program, param_resolver)
 		qubits = _resolve_qubits(program, qubit_order)
 		index = {q: i for i, q in enumerate(qubits)}
@@ -934,6 +948,7 @@ class DensityMatrixSimulator(
 		initial_state: Any = 0,
 		seed: int | None = None,
 	) -> Result:
+		"""Run a circuit, sampling its measurements."""
 		program = _resolve_program(program, param_resolver)
 		if repetitions < 1:
 			raise ValueError("repetitions must be at least 1")

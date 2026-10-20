@@ -23,6 +23,7 @@ class BorrowableQubit(Qid):
 
 	@property
 	def qubit(self) -> Qid:
+		"""The qubit that was borrowed."""
 		return self._qubit
 
 	def _comparison_key(self) -> Any:
@@ -47,6 +48,7 @@ class CleanQubit(Qid):
 
 	@property
 	def qubit(self) -> Qid:
+		"""The qubit that was allocated."""
 		return self._qubit
 
 	def _comparison_key(self) -> Any:
@@ -100,6 +102,7 @@ class SimpleQubitManager(QubitManager):
 		self._next = len(self._qubits)
 
 	def qalloc(self) -> Qid:
+		"""Allocate a fresh qubit and mark it in use."""
 		if self._max_size is not None and self._next >= self._max_size:
 			raise ValueError("SimpleQubitManager exceeded max_size")
 		qubit = LineQubit(self._next)
@@ -107,16 +110,20 @@ class SimpleQubitManager(QubitManager):
 		return qubit
 
 	def qfree(self, qubit: Qid) -> None:
+		"""Mark an allocated qubit as free."""
 		return None
 
 	def qborrow(self) -> BorrowableQubit:
+		"""Borrow a fresh qubit, which starts in ``|0>``."""
 		return BorrowableQubit(self.qalloc())
 
 	def qrelease(self, qubit: Qid) -> None:
+		"""Release a borrowed qubit."""
 		return None
 
 	@property
 	def qubits(self) -> list[Qid]:
+		"""The qubits currently handed out."""
 		return list(self._qubits)
 
 
@@ -133,6 +140,7 @@ class GreedyQubitManager(QubitManager):
 		self._maximize_reuse = maximize_reuse
 
 	def qalloc(self) -> Qid:
+		"""Allocate a qubit, reusing a freed one according to the policy."""
 		if self._free_pool:
 			# Cirq's two modes: the qubit freed latest (LIFO) when reuse is
 			# maximised, the one freed earliest (FIFO) when it is not.
@@ -146,14 +154,17 @@ class GreedyQubitManager(QubitManager):
 		return qubit
 
 	def qfree(self, qubit: Qid) -> None:
+		"""Return an allocated qubit to the pool."""
 		if qubit in self._in_use:
 			self._in_use.discard(qubit)
 			self._free_pool.append(qubit)
 
 	def qborrow(self) -> BorrowableQubit:
+		"""Borrow a qubit, which starts in ``|0>``."""
 		return BorrowableQubit(self.qalloc())
 
 	def qrelease(self, qubit: Qid) -> None:
+		"""Release a borrowed qubit back to the pool."""
 		self.qfree(qubit)
 
 

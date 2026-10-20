@@ -29,10 +29,12 @@ class AbstractControlValues:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The control qubits the formula is written over."""
 		return self._qubits
 
 	@property
 	def terms(self) -> tuple[tuple[tuple[Qid, bool], ...], ...]:
+		"""The clauses of the formula."""
 		return self._terms
 
 	def _condition_index(self, conditions: Sequence[bool]) -> dict[Qid, bool]:
@@ -49,6 +51,7 @@ class AbstractControlValues:
 			raise ValueError(f"{conditions!r} is not a valid control assignment for {self.to_str()}")
 
 	def to_str(self) -> str:
+		"""The formula written in Cirq's notation."""
 		raise NotImplementedError
 
 	def _value_equality_values_(self) -> Any:
@@ -69,6 +72,7 @@ class SumOfProducts(AbstractControlValues):
 		return any(all(assignment[q] == v for q, v in clause) for clause in self._terms)
 
 	def to_str(self) -> str:
+		"""The formula written as an OR of AND clauses."""
 		clauses = ["&".join(("" if v else "!") + str(q) for q, v in clause) for clause in self._terms]
 		return "|".join(f"({c})" for c in clauses) or "0"
 
@@ -81,6 +85,7 @@ class ProductOfSums(AbstractControlValues):
 		return all(any(assignment[q] == v for q, v in clause) for clause in self._terms)
 
 	def to_str(self) -> str:
+		"""The formula written as an AND of OR clauses."""
 		clauses = ["|".join(("" if v else "!") + str(q) for q, v in clause) for clause in self._terms]
 		return "&".join(f"({c})" for c in clauses) or "1"
 

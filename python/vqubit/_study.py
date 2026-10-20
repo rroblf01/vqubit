@@ -23,6 +23,7 @@ class Sweep:
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""The parameter resolvers the sweep produces."""
 		raise NotImplementedError
 
 	def __iter__(self) -> Iterator[ParamResolver]:
@@ -48,6 +49,7 @@ class SingleSweep(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""One resolver per value of the parameter."""
 		return [ParamResolver({self._key: point}) for point in self._points]
 
 	def __len__(self) -> int:
@@ -78,6 +80,7 @@ class Zip(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""The factors' points zipped together."""
 		all_resolvers = [sweep.param_resolvers for sweep in self._sweeps]
 		length = len(all_resolvers[0])
 		for resolvers in all_resolvers:
@@ -96,6 +99,7 @@ class Product(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""The product of the factors' points."""
 		all_resolvers = [sweep.param_resolvers for sweep in self._sweeps]
 		return [_merge(combo) for combo in itertools.product(*all_resolvers)]
 
@@ -110,6 +114,7 @@ class Concat(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""The points of every sweep, one after the other."""
 		resolvers: list[ParamResolver] = []
 		for sweep in self._sweeps:
 			resolvers.extend(sweep.param_resolvers)
@@ -171,6 +176,7 @@ class Points(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""One resolver per point."""
 		return [ParamResolver(point) for point in self._points]
 
 	def __len__(self) -> int:
@@ -224,6 +230,7 @@ class Linspace(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""One resolver per point of the linear space."""
 		if self._length == 1:
 			return [ParamResolver(dict(self._start))]
 		# ``stop`` is included, as in Cirq: ``Linspace("t", 0, 1, 3)`` sweeps
@@ -253,6 +260,7 @@ class TrialResult(Result):
 
 	@property
 	def params(self) -> ParamResolver:
+		"""The parameter resolver the trial used."""
 		return self._params
 
 	def __repr__(self) -> str:
@@ -332,6 +340,7 @@ class Sampler:
 		qubit_order: Sequence[Qid] | None = None,
 		seed: int | None = None,
 	) -> Result:
+		"""Run a circuit and sample its measurements."""
 		return self._simulator.run(program, repetitions=repetitions, qubit_order=qubit_order, seed=seed)
 
 	sample = run
@@ -357,6 +366,7 @@ class UnitSweep(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""One empty resolver."""
 		return [ParamResolver({})]
 
 	def __repr__(self) -> str:
@@ -376,6 +386,7 @@ class ZipLongest(Sweep):
 
 	@property
 	def param_resolvers(self) -> list[ParamResolver]:
+		"""The factors' points zipped, padding the shorter ones."""
 		all_resolvers = [sweep.param_resolvers for sweep in self._sweeps]
 		length = max(len(resolvers) for resolvers in all_resolvers)
 		result: list[ParamResolver] = []

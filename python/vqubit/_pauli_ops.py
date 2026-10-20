@@ -38,6 +38,7 @@ class MutablePauliString:
 
 	@property
 	def coefficient(self) -> complex:
+		"""The coefficient, which can be reassigned."""
 		return self._coefficient
 
 	@coefficient.setter
@@ -46,6 +47,7 @@ class MutablePauliString:
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the string currently touches, sorted."""
 		return tuple(sorted(self._map))
 
 	def __getitem__(self, qubit: Qid) -> Pauli:
@@ -63,9 +65,11 @@ class MutablePauliString:
 		del self._map[qubit]
 
 	def items(self) -> Iterable[tuple[Qid, Pauli]]:
+		"""Iterate ``(qubit, pauli)`` pairs in qubit order."""
 		return iter(sorted(self._map.items()))
 
 	def to_pauli_string(self) -> PauliString:
+		"""Return an immutable copy of the string."""
 		return PauliString(self._map, self._coefficient)
 
 	def __str__(self) -> str:
@@ -85,6 +89,7 @@ class MutableDensePauliString(DensePauliString):
 
 	@property
 	def coefficient(self) -> complex:
+		"""The coefficient, which can be reassigned."""
 		return self._coefficient
 
 	@coefficient.setter
@@ -102,14 +107,17 @@ class PauliStringGateOperation(Operation):
 
 	@property
 	def pauli_string(self) -> PauliString:
+		"""The Pauli string the operation applies."""
 		return self._pauli_string
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the string acts on."""
 		return self._qubits
 
 	@property
 	def gate(self) -> Gate:
+		"""The gate that applies the string."""
 		from ._gates import MatrixGate
 
 		return MatrixGate(self._pauli_string.matrix())
@@ -118,6 +126,7 @@ class PauliStringGateOperation(Operation):
 		return self._pauli_string.matrix()
 
 	def with_qubits(self, *new_qubits: Qid) -> PauliStringGateOperation:
+		"""Return the same string applied to ``new_qubits``."""
 		return type(self)(self._pauli_string, new_qubits)
 
 	def _value_equality_values_(self) -> Any:
@@ -150,6 +159,7 @@ class SingleQubitPauliStringGateOperation(PauliStringGateOperation):
 
 	@property
 	def gate(self) -> Gate:
+		"""The Pauli gate for this qubit."""
 		from ._gates import MatrixGate
 
 		paulis = [self._pauli_string[q] for q in (self._qubits[0],)]
@@ -159,6 +169,7 @@ class SingleQubitPauliStringGateOperation(PauliStringGateOperation):
 		return MatrixGate(self._pauli_string.matrix())
 
 	def with_qubits(self, *new_qubits: Qid) -> SingleQubitPauliStringGateOperation:
+		"""Return the same string applied to ``new_qubit``."""
 		(qubit,) = new_qubits
 		return SingleQubitPauliStringGateOperation(self._pauli_string, qubit)
 
@@ -173,10 +184,12 @@ class PauliStringPhasorGate(Gate):
 
 	@property
 	def pauli_string(self) -> PauliString:
+		"""The Pauli string in the exponent."""
 		return self._pauli_string
 
 	@property
 	def half_turns(self) -> Any:
+		"""The angle of the phasor, in half turns."""
 		return self._half_turns
 
 	def _num_qubits_(self) -> int:
@@ -213,24 +226,29 @@ class PauliStringPhasor(Operation):
 
 	@property
 	def gate(self) -> PauliStringPhasorGate:
+		"""The gate that applies the phasor."""
 		return self._gate
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
+		"""The qubits the phasor acts on."""
 		return self._gate.pauli_string.qubits
 
 	@property
 	def pauli_string(self) -> PauliString:
+		"""The Pauli string in the exponent."""
 		return self._gate.pauli_string
 
 	@property
 	def half_turns(self) -> Any:
+		"""The angle of the phasor, in half turns."""
 		return self._gate.half_turns
 
 	def _unitary_(self) -> Matrix | None:
 		return self._gate._unitary_()
 
 	def with_qubits(self, *new_qubits: Qid) -> PauliStringPhasor:
+		"""Return the same phasor on ``new_qubits``."""
 		mapping = dict(zip(self.qubits, new_qubits, strict=True))
 		remapped = PauliString({mapping[q]: p for q, p in self.pauli_string.items()}, self.pauli_string.coefficient)
 		return PauliStringPhasor(remapped, half_turns=self.half_turns)
@@ -259,6 +277,7 @@ class PauliMeasurementGate(Gate):
 
 	@property
 	def pauli_string(self) -> PauliString:
+		"""The string whose axes are measured."""
 		return self._pauli_string
 
 	def _num_qubits_(self) -> int:
@@ -304,13 +323,16 @@ class PauliSumExponential:
 
 	@property
 	def pauli_sum(self) -> PauliSum:
+		"""The Hermitian sum in the exponent."""
 		return self._pauli_sum
 
 	@property
 	def exponent(self) -> Any:
+		"""The exponent multiplying the sum, in half turns."""
 		return self._exponent
 
 	def matrix(self) -> Matrix:
+		"""The unitary ``exp(iπ·exponent·H)``."""
 		from ._linalg_public import map_eigenvalues
 
 		dim = 1 << len({q for ps in self._pauli_sum for q in ps.qubits})
@@ -344,13 +366,16 @@ class ProjectorString:
 
 	@property
 	def pauli_string(self) -> PauliString:
+		"""The string projected onto its ``+1`` eigenspace."""
 		return self._pauli_string
 
 	@property
 	def coefficient(self) -> complex:
+		"""The coefficient multiplying the projector."""
 		return self._coefficient
 
 	def matrix(self) -> Matrix:
+		"""The matrix of the projector."""
 		matrix = self._pauli_string.matrix()
 		dim = len(matrix)
 		return [[(1 + 0j if i == j else 0j) + self._coefficient * matrix[i][j] for j in range(dim)] for i in range(dim)]
@@ -373,6 +398,7 @@ class ProjectorSum:
 		self._terms: dict[PauliString, complex] = dict(terms) if terms is not None else {}
 
 	def items(self) -> Iterable[tuple[PauliString, complex]]:
+		"""Iterate ``(projector, coefficient)`` pairs."""
 		return iter(self._terms.items())
 
 	def __iter__(self) -> Iterable[PauliString]:
@@ -400,9 +426,11 @@ class LinearCombinationOfGates:
 
 	@property
 	def terms(self) -> dict[Gate, complex]:
+		"""The ``(gate, coefficient)`` pairs of the combination."""
 		return dict(self._terms)
 
 	def matrix(self) -> Matrix:
+		"""The matrix of the linear combination."""
 		from ._protocols import unitary
 
 		first = next(iter(self._terms))
@@ -434,9 +462,11 @@ class LinearCombinationOfOperations:
 
 	@property
 	def terms(self) -> dict[Operation, complex]:
+		"""The ``(operation, coefficient)`` pairs of the combination."""
 		return dict(self._terms)
 
 	def matrix(self) -> Matrix:
+		"""The matrix of the linear combination."""
 		from ._protocols import unitary
 
 		first = next(iter(self._terms))
@@ -471,10 +501,12 @@ class PauliInteractionGate(Gate):
 
 	@property
 	def pauli0(self) -> Pauli:
+		"""The Pauli applied on the first qubit."""
 		return self._pauli0
 
 	@property
 	def pauli1(self) -> Pauli:
+		"""The Pauli applied on the second qubit."""
 		return self._pauli1
 
 	def _num_qubits_(self) -> int:

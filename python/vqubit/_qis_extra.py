@@ -245,9 +245,11 @@ class QuantumStateRepresentation:
 	"""Base class for the concrete representations of a quantum state."""
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		raise NotImplementedError
 
 	def density_matrix(self) -> Matrix:
+		"""The state as a density matrix."""
 		raise NotImplementedError
 
 
@@ -270,6 +272,7 @@ class QuantumState(QuantumStateRepresentation):
 			self._vector = to_valid_state_vector(state, shape, atol=atol)
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		if self._vector is not None:
 			return list(self._vector)
 		if self._representation is not None:
@@ -279,6 +282,7 @@ class QuantumState(QuantumStateRepresentation):
 		return [complex(math.sqrt(max(rho[i][i].real, 0.0))) for i in range(len(rho))]
 
 	def density_matrix(self) -> Matrix:
+		"""The state as a density matrix."""
 		if self._density is not None:
 			return [list(row) for row in self._density]
 		if self._representation is not None:
@@ -309,12 +313,15 @@ class StabilizerState(QuantumStateRepresentation):
 
 	@property
 	def clifford_tableau(self) -> Any:
+		"""The stabilizer tableau behind the state."""
 		return self._tableau
 
 	def state_vector(self) -> list[complex]:
+		"""The state as a flat vector of amplitudes."""
 		return list(self._tableau.state_vector())
 
 	def density_matrix(self) -> Matrix:
+		"""The state as a density matrix."""
 		return density_matrix_from_state_vector(self.state_vector())
 
 	def _value_equality_values_(self) -> Any:

@@ -514,14 +514,17 @@ hecho:
 - [ ] Paridad de nombres 607/607, con `benchmarks/parity_tolerated.toml`
       conteniendo **solo** entradas `permanent` y explicadas en la página de
       diferencias.
-- [ ] Cero `NotImplementedError` reales (los abstractos, como en Cirq, se quedan).
-- [ ] Cobertura ≥95 % con umbral en CI, y el umbral sube, no baja.
+- [x] Cero `NotImplementedError` reales: los que quedan son los abstractos
+      (los mismos que Cirq deja), comprobados por la auditoría de la 0.5.
+- [x] Cobertura ≥95 % con umbral en CI (95 %, `--fail-under=95`), y el umbral
+      solo sube.
 - [ ] `stubtest` limpio sobre `vqubit_native.pyi`.
 - [ ] Extras publicados, documentados y probados en un entorno limpio.
-- [ ] Documentación versionada por release, con la guía de migración desde Cirq.
-- [ ] Política SemVer y de deprecación con mecanismo y test.
-- [ ] `api-diff` en CI sobre la superficie pública.
-- [ ] Gobernanza completa: COC, SECURITY, plantillas, CITATION, notas de release.
+- [x] Guía de migración desde Cirq; la documentación **versionada** queda
+      pendiente del ajuste de Pages (`mike` está preparado).
+- [x] Política SemVer y de deprecación con mecanismo y test.
+- [x] `api-diff` en CI sobre la superficie pública (`tools/check_api_surface.py`).
+- [x] Gobernanza completa: COC, SECURITY, plantillas, CITATION, notas de release.
 - [ ] `benchmarks/verify.py` y `benchmarks/parity.py` verdes en los 3 SO.
 
 ### Fuera de alcance de la 1.0.0

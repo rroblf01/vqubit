@@ -90,6 +90,23 @@ The test suite must also pass **without** numpy, sympy or matplotlib: the
 matrix installs only the wheel and pytest, so import those lazily or guard
 them with `pytest.importorskip`. 
 
+## Publishing the documentation
+
+The site publishes from `main` with `actions/deploy-pages`. To keep a copy per
+release as well (**versioned docs**, the `mike` toolchain is already in the
+`docs` group):
+
+```console
+$ uv pip install --group docs
+$ mike deploy --push --update-aliases 1.0.0 latest
+$ mike set-default --push latest
+```
+
+`mike` writes to the `gh-pages` branch, so GitHub Pages has to be switched from
+"GitHub Actions" to "Deploy from a branch: `gh-pages`" in the repository
+settings; that is the one step a maintainer does in the browser. Until then the
+site keeps publishing `main` as it does today.
+
 ## Reporting issues
 
 Please open an issue at https://github.com/rroblf01/vqubit/issues. If the

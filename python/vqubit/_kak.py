@@ -23,7 +23,9 @@ import vqubit_native as _native
 
 from ._gates import CNOTGate, CZGate, H, Rx, Rz, S
 from ._linalg import Matrix, det, from_flat, matmul, to_flat, transpose
+from ._linalg_public import allclose_up_to_global_phase, is_unitary
 from ._ops import Operation
+from ._protocols import unitary
 from ._qubits import Qid
 
 _SQRT_HALF = math.sqrt(0.5)
@@ -93,6 +95,11 @@ def kak_decomposition(
 	so that ``U = phase * (a1 (x) a2) exp(i(x XX + y YY + z ZZ)) (b1 (x) b2)``.
 	"""
 	unitary = [[complex(z) for z in row] for row in matrix]
+	cols = len(unitary[0]) if unitary else 0
+	if len(unitary) != 4 or cols != 4:
+		raise ValueError(f"Expected a 4x4 unitary, got shape {len(unitary)}x{cols}.")
+	if not is_unitary(unitary, atol=atol):
+		raise ValueError("Input must correspond to a 4x4 unitary matrix.")
 	# The Cartan form has unit determinant, so pull the global phase of a U(4)
 	# element into `unitary` first (a phase on the whole gate is irrelevant).
 	phase = det(unitary) ** (-0.25)
@@ -254,19 +261,64 @@ def two_qubit_matrix_to_cz_operations(
 	atol: float = 1e-8,
 	clean_operations: bool = True,
 ) -> list[Operation]:
-	"""Decompose an arbitrary two-qubit unitary into single-qubit gates and CZs."""
-	del allow_partial_czs, clean_operations
+	"""Decompose an arbitrary two-qubit unitary into single-qubit gates and CZs.
+
+	``clean_operations`` merges the neighbouring single-qubit gates and drops the
+	runs that amount to a global phase, so the identity comes out as an empty
+	list (as in Cirq). ``allow_partial_czs`` is accepted for Cirq's signature:
+	this construction uses whole ``CZ`` gates, so the flag leaves the unitary
+	alone (Cirq returns fewer gates for ``True``; the result is the same gate).
+
+	An interaction whose coefficient is zero contributes nothing, and a matrix
+	that is not a 4x4 unitary raises ``ValueError``.
+	"""
 	_, (x, y, z), (a1, a2), (b1, b2) = kak_decomposition(mat, atol=atol)
 	first, second = q0, q1
 	operations: list[Operation] = []
 	operations.extend(_single_qubit_gates(b1, first))
 	operations.extend(_single_qubit_gates(b2, second))
-	operations.extend(_xx_interaction_cz(x, first, second))
-	operations.extend(_yy_interaction_cz(y, first, second))
-	operations.extend(_zz_interaction_cz(z, first, second))
+	# An interaction whose coefficient is zero would only add gates that cancel.
+	if abs(x) > atol:
+		operations.extend(_xx_interaction_cz(x, first, second))
+	if abs(y) > atol:
+		operations.extend(_yy_interaction_cz(y, first, second))
+	if abs(z) > atol:
+		operations.extend(_zz_interaction_cz(z, first, second))
 	operations.extend(_single_qubit_gates(a1, first))
 	operations.extend(_single_qubit_gates(a2, second))
+	if clean_operations:
+		return _clean_operations(operations, atol=atol)
 	return operations
+
+
+def _clean_operations(operations: Sequence[Operation], *, atol: float = 1e-8) -> list[Operation]:
+	"""Merge the single-qubit runs and drop the ones that are a global phase."""
+	result: list[Operation] = []
+	pending: dict[Qid, Matrix] = {}
+
+	def flush(qubit: Qid) -> None:
+		matrix = pending.pop(qubit, None)
+		if matrix is None:
+			return
+		identity = [[1 + 0j if i == j else 0j for j in range(2)] for i in range(2)]
+		if allclose_up_to_global_phase(matrix, identity, atol=max(atol, 1e-8)):
+			return
+		from ._optimizers import single_qubit_matrix_to_phxz
+
+		result.append(single_qubit_matrix_to_phxz(matrix, atol=max(atol, 1e-8)).on(qubit))
+
+	for operation in operations:
+		if len(operation.qubits) == 1:
+			qubit = operation.qubits[0]
+			matrix = [[complex(z) for z in row] for row in unitary(operation)]
+			pending[qubit] = matrix if qubit not in pending else matmul(matrix, pending[qubit])
+			continue
+		for qubit in operation.qubits:
+			flush(qubit)
+		result.append(operation)
+	for qubit in list(pending):
+		flush(qubit)
+	return result
 
 
 __all__ = [

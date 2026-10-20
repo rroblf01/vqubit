@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_kak.py
+# hypothesis_version: 6.140.3
+
+[-0.25, 0.0, 1e-08, 0.5, 1.0, 'CZGate', 'X', 'Y', 'Z', 'a', 'b', 'g_im', 'g_re', 'kak_decomposition', 'values', 'vectors']

@@ -214,6 +214,22 @@ tests with coverage at 95 %.
   `pytest --doctest-modules --pyargs vqubit`, so the documentation cannot drift
   from the code.
 
+- **`two_qubit_matrix_to_cz_operations` validates and cleans**: a matrix that is
+  not a 4x4 unitary raises `ValueError` instead of panicking in the V core, an
+  interaction whose coefficient is zero no longer emits gates that cancel, and
+  `clean_operations` really merges the single-qubit runs (the identity comes
+  back as no operations at all, as in Cirq). Its docstring also says what
+  `allow_partial_czs` does here: the construction uses whole CZs, so the flag
+  leaves the gate alone.
+- **`TwoQubitCompilationTargetGateset` advertises its entanglers**, so
+  `SqrtIswapTargetGateset().two_qubit_gates()` is `(ISwapPowGate,)` instead of
+  an empty tuple.
+- **Dependabot** (`.github/dependabot.yml`) watches the actions and the
+  development toolchain weekly.
+- **`mike` is ready**: the toolchain is in the docs group and CONTRIBUTING has
+  the two commands plus the one repository setting (Pages from `gh-pages`) it
+  needs.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

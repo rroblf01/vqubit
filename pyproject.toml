@@ -46,6 +46,7 @@ docs = [
 	"mkdocs-static-i18n==1.3.1",
 	"mkdocstrings[python]==1.0.7",
 	"mkdocstrings-python==2.0.9",
+	"mike==2.2.0",
 ]
 # Optional interoperability, tested by a dedicated CI job: with numpy installed
 # the public API returns ndarray results. The published wheel never depends on it.

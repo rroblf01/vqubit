@@ -791,6 +791,7 @@ TrialResult: class TrialResult(params, measurements)
     property params
 TwoQubitCompilationTargetGateset: class TwoQubitCompilationTargetGateset(*entanglers)
     method decompose_two_qubit(self, matrix, qubits, *, atol=1e-08)
+    method two_qubit_gates(self)
 TwoQubitDiagonalGate: class TwoQubitDiagonalGate(diag_angles_radians)
 TwoQubitGateTabulation: class TwoQubitGateTabulation(base_gate, max_infidelity=0.001, *, atol=1e-08)
 TwoQubitGateTabulationResult: class TwoQubitGateTabulationResult(operations, success)

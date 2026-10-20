@@ -267,10 +267,11 @@ Las divergencias `permanent` están explicadas en
       Queda `get_state_containing_qubit` en el resultado de **matriz de
       densidad**: necesita cargar una matriz en el estado nativo y vcraft no
       expone `set_density_matrix` (`UPSTREAM.md` §7c).
-- [ ] **`Simulator.sample` devuelve un `Result`, no un `DataFrame`.** Cirq
-      devuelve un `pandas.DataFrame` y acepta `params=` (un barrido); vqubit no
-      puede devolver un `DataFrame` sin depender de pandas, así que devuelve su
-      `Result` y el barrido se escribe con `run_sweep`.
+- [x] **`Simulator.sample` devuelve un `Result`, no un `DataFrame`** —
+      **divergencia permanente y documentada** (sin pandas no hay `DataFrame`:
+      devuelve su `Result` y el barrido se escribe con `run_sweep`). Está en
+      `docs/{es,en}/guide/cirq-differences.md` y en la lista de diferencias de la
+      guía de migración, que es lo que exige la regla del proyecto.
 - [x] **(0.9)** **`simulate_moment_steps` del simulador de Clifford.** Como
       vcraft no expone `NativeTableau.copy` (`UPSTREAM.md` §7a), cada paso se
       reconstruye reaplicando las operaciones vistas hasta ese momento: es
@@ -300,8 +301,14 @@ Las divergencias `permanent` están explicadas en
       en `verify.py`. Queda ampliar la rejilla a los transformers con Hypothesis
       cuando el trabajo de paridad los instale. **Medido:** 197 nombres
       compartidos siguen sin una prueba directa (muchos son alias de tipado).
-- [ ] Cobertura de casos límite en síntesis de dos qubits y
-      `optimize_for_target_gateset`.
+- [x] **(0.9)** Casos límite de la síntesis de dos qubits y de
+      `optimize_for_target_gateset` (`tests/test_synthesis_edges.py`): identidad,
+      diagonal, `CZ`, `iSWAP`, `SWAP`, `XX`, matrices no unitarias (que ahora dan
+      `ValueError` en vez de reventar en el núcleo V), interacciones con
+      coeficiente cero, los cuatro gatesets con la unitaria intacta y los
+      circuitos vacíos o de solo medidas. De paso: `clean_operations` ya limpia
+      de verdad (la identidad sale como cero operaciones, como en Cirq) y
+      `TwoQubitCompilationTargetGateset` declara sus entanglers.
 - [x] (0.2.0) Modernizar la API nativa: `jacobi_eig`, `simultaneous_diag` y
       `kron_factor` devuelven *structs* con nombre, y `NativeTableau.apply` toma
       un `CliffordOp`. (Estuvo bloqueado por vcraft hasta la 1.4.2.)
@@ -424,9 +431,9 @@ Las divergencias `permanent` están explicadas en
       errores** (sobre todo varianza de `list[...]`), así que el modo estricto
       sigue abierto: **criterio:** `mypy --strict` sin errores y `pyright` en
       modo estricto, con la misma configuración que `ty`.
-- [ ] Escaneo semanal de dependencias y seguridad (Dependabot/`pip-audit`): el
-      proyecto no tiene dependencias de ejecución, así que cubre el toolchain de
-      desarrollo.
+- [x] **(0.9)** Escaneo semanal de dependencias y seguridad con Dependabot
+      (`.github/dependabot.yml`): acciones y toolchain de desarrollo, ya que no
+      hay dependencias de ejecución.
 
 #### 9. Deuda de compilación y transformadores (auditoría de 0.5) — **cerrada**
 

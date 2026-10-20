@@ -1,0 +1,25 @@
+version: 2
+
+# The project has no runtime dependencies, so what is left to watch is the
+# development toolchain and the actions the workflows run.
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"
+    # The groups are pinned on purpose (pyproject.toml), so a bump is a
+    # deliberate change that has to be tested against the pinned toolchain.
+    open-pull-requests-limit: 3

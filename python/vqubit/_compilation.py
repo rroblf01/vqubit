@@ -1088,6 +1088,10 @@ class TwoQubitCompilationTargetGateset(CompilationTargetGateset):
 	def __init__(self, *entanglers: Gate) -> None:
 		self.entanglers = tuple(entanglers)
 
+	def two_qubit_gates(self) -> tuple[type[Gate], ...]:
+		"""The kinds of the entanglers this target can run."""
+		return tuple(type(entangler) for entangler in self.entanglers)
+
 	def decompose_two_qubit(
 		self, matrix: Sequence[Sequence[complex]], qubits: tuple[Qid, Qid], *, atol: float = 1e-8
 	) -> list[Operation]:

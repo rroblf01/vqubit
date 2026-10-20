@@ -145,4 +145,18 @@ def test_other_compilation_helpers_run() -> None:
 	diagonal, operations = vqubit.two_qubit_matrix_to_diagonal_and_cz_operations(q0, q1, vqubit.unitary(vqubit.CNOT))
 	assert diagonal.num_qubits == 2
 	assert len(operations) > 0
-	assert len(vqubit.two_qubit_matrix_to_cz_isometry(q0, q1, [[1, 0], [0, 1], [0, 0], [0, 0]])) > 0
+	# An isometry that completes to the identity needs no operations at all; its
+	# columns are what the circuit has to preserve.
+	isometry = [[1, 0], [0, 1], [0, 0], [0, 0]]
+	operations = vqubit.two_qubit_matrix_to_cz_isometry(q0, q1, isometry)
+	completed = (
+		vqubit.unitary(vqubit.Circuit(operations))
+		if operations
+		else [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+	)
+	for column in range(2):
+		actual = [completed[row][column] for row in range(4)]
+		reference = [isometry[row][column] for row in range(4)]
+		index = next(i for i, value in enumerate(reference) if abs(value) > 1e-9)
+		phase = actual[index] / reference[index]
+		assert all(abs(actual[i] - phase * reference[i]) < 1e-8 for i in range(4))

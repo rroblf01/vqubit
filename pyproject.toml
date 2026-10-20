@@ -23,6 +23,7 @@ strict = false
 # same stub, so nothing goes untyped overall.
 module = ["vqubit_native"]
 ignore_errors = true
+ignore_missing_imports = true
 
 [tool.ty.environment]
 extra-paths = ["./python"]

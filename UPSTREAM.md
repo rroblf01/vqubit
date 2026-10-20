@@ -22,10 +22,11 @@ project `vqubit` (zero runtime dependencies, single `abi3` wheel per platform).
 ## 1. The generated `.pyi` declares enum members as annotations
 
 > **Workaround in the project (0.9):** `pyproject.toml` tells mypy to
-> `ignore_errors` for the `vqubit_native` module, so the enum diagnostic does
-> not mask the rest of the check; `ty` reads the same stub and passes. The fix
-> still belongs upstream (`member = value`), because the stub is also what users
-> see when they inspect the extension.
+> `ignore_errors` and `ignore_missing_imports` for the `vqubit_native` module,
+> so the enum diagnostic (and the case where the generated stub is not in the
+> checkout) does not mask the rest of the check; `ty` reads the same stub and
+> passes. The fix still belongs upstream (`member = value`), because the stub is
+> also what users see when they inspect the extension.
 
 **What happens.** For a V enum returned across the FFI boundary, the generated
 stub writes one annotated attribute per member:

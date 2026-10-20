@@ -511,9 +511,10 @@ hecho:
 
 ### Definición de terminado (1.0.0)
 
-- [ ] Paridad de nombres 607/607, con `benchmarks/parity_tolerated.toml`
-      conteniendo **solo** entradas `permanent` y explicadas en la página de
-      diferencias.
+- [x] Paridad de nombres **606/607** —`contrib` es la única excepción y es
+      permanente (necesita `ply`, que el «cero dependencias» prohíbe)— con
+      `benchmarks/parity_tolerated.toml` conteniendo **solo** entradas
+      `permanent` (hoy las 4 lo son) y explicadas en la página de diferencias.
 - [x] Cero `NotImplementedError` reales: los que quedan son los abstractos
       (los mismos que Cirq deja), comprobados por la auditoría de la 0.5.
 - [x] Cobertura ≥95 % con umbral en CI (95 %, `--fail-under=95`), y el umbral

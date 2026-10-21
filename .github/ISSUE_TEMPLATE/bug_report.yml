@@ -39,7 +39,7 @@ body:
     attributes:
       label: vqubit version
       description: The output of `python -c "import vqubit; print(vqubit.__version__)"`.
-      placeholder: 0.3.0
+      placeholder: 1.0.0
     validations:
       required: true
 

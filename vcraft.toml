@@ -1,6 +1,6 @@
 [package]
 name = "vqubit"
-version = "0.3.0"
+version = "1.0.0"
 module = "vqubit_native"
 description = "A dependency-free quantum computing framework for Python, written in V."
 license = "MIT"
@@ -10,7 +10,7 @@ keywords = ["quantum", "quantum-computing", "qubit", "circuit", "simulator", "ci
 authors = ["Ricardo Robles Fernández <ricardo.r.f@hotmail.com>"]
 maintainers = ["Ricardo Robles Fernández <ricardo.r.f@hotmail.com>"]
 classifiers = [
-	"Development Status :: 3 - Alpha",
+	"Development Status :: 5 - Production/Stable",
 	"Intended Audience :: Developers",
 	"Intended Audience :: Science/Research",
 	"License :: OSI Approved :: MIT License",

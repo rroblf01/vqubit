@@ -4,11 +4,10 @@ vqubit follows [SemVer 2.0](https://semver.org/) and this page says exactly what
 that means here, what counts as public API, and how something is removed without
 breaking your code.
 
-!!! info "Before 1.0"
-    The published version today is **0.3.0**, and the surface freezes at
-    **1.0.0**; until then an incompatible change may arrive in a *minor* version
-    (0.4, 0.5…), always recorded in the `CHANGELOG`. From 1.0.0 the full rule
-    applies.
+!!! info "Since 1.0.0"
+    **1.0.0** froze the public surface: from here removing a name or changing its
+    behaviour incompatibly needs a **major** version, and anything that goes away
+    first spends a deprecation cycle with its `DeprecationWarning`.
 
 ## What counts as public API
 

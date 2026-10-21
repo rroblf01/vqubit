@@ -96,6 +96,32 @@ The test suite must also pass **without** numpy, sympy or matplotlib: the
 matrix installs only the wheel and pytest, so import those lazily or guard
 them with `pytest.importorskip`. 
 
+## Releasing a version
+
+CI checks everything before the tag; the release itself is a tag, a GitHub
+release and one click on PyPI's side.
+
+1. **Bump the version** in `vcraft.toml` and the string returned by
+   `src/vqubit_native.v` (`version()`); `tests/test_deprecation_and_release.py`
+   fails if the two disagree with `vqubit.__version__`.
+2. **Close the changelog**: rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`
+   and update `CITATION.cff`.
+3. **Run the gate** from the checks above, then let CI finish green on `main`.
+4. **Tag and push**: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+5. **Publish the GitHub release** for that tag. `release.yml` builds the wheels
+   and the sdist, verifies each `RECORD`, attests the artifacts and uploads to
+   PyPI with Trusted Publishing.
+6. **Verify what PyPI serves**: `python -m venv /tmp/check &&
+   /tmp/check/bin/python -m pip install vqubit==X.Y.Z`, then import it and run
+   `python tools/check_wheel.py dist/*.whl` on what `pip download` fetched.
+7. **Deploy the versioned docs** (below) and start the next `## [Unreleased]`
+   section.
+
+A release candidate is optional: the `sdist` job already builds a wheel from the
+published sdist and installs it in a clean virtualenv, and the matrix installs
+the wheel on three systems and five Pythons, so `1.0.0rc1` only adds a manual
+look at PyPI's metadata. The roadmap keeps it as a fallback.
+
 ## Publishing the documentation
 
 The site publishes from `main` with `actions/deploy-pages`. To keep a copy per

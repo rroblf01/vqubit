@@ -55,12 +55,17 @@ qubit?" and builds up to circuits and simulation.
 
 ## Status
 
-vqubit is **alpha** (0.3.0). It exports every one of cirq-core's top-level
-names, and the simulators, optimizers, transformers and devices are in place;
-the call conventions that still differ are listed in
+vqubit is **1.0.0**, and from here the public API follows
+[SemVer](https://semver.org/): nothing that works today is removed without a
+deprecation cycle first, and an incompatible change means a major version (the
+policy is written down in
+[Stability and versions](https://rroblf01.github.io/vqubit/en/guide/stability/)).
+It exports every one of cirq-core's top-level names except `contrib`, and the
+simulators, optimizers, transformers and devices are in place; the call
+conventions that still differ are listed in
 [Differences from Cirq](https://rroblf01.github.io/vqubit/en/guide/cirq-differences/).
-See [CHANGELOG.md](CHANGELOG.md) for the full list. The API may still change
-before 1.0; [ROADMAP.md](ROADMAP.md) tracks the path to it.
+See [CHANGELOG.md](CHANGELOG.md) for the full list and
+[ROADMAP.md](ROADMAP.md) for what comes next.
 
 It ships wheels for Linux (x86-64 and ARM), macOS (ARM) and Windows (x86-64),
 plus a source distribution, and is built with

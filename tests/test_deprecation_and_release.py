@@ -70,18 +70,23 @@ def test_the_changelog_fragments_feed_the_changelog() -> None:
 	del towncrier
 	fragments = ROOT / "changelog.d"
 	assert (fragments / "README.md").exists()
-	entries = [path for path in fragments.iterdir() if path.suffix == ".md" and path.name != "README.md"]
-	assert entries, "the release notes need at least one fragment to be generated"
-	result = subprocess.run(
-		[sys.executable, "-m", "towncrier", "build", "--draft", "--version", "0.0.0"],
-		cwd=ROOT,
-		capture_output=True,
-		text=True,
-		check=False,
-	)
+	# A released tree has no pending fragments, so the test brings its own: the
+	# point is the mechanism, not that there is work waiting.
+	fragment = fragments / "+test.added.md"
+	fragment.write_text("A fragment the test wrote.\n", encoding="utf-8")
+	try:
+		result = subprocess.run(
+			[sys.executable, "-m", "towncrier", "build", "--draft", "--version", "0.0.0"],
+			cwd=ROOT,
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+	finally:
+		fragment.unlink()
 	assert result.returncode == 0, result.stderr
 	# The draft carries the fragment text, which is what the release will say.
 	assert "### Added" in result.stdout
-	assert entries[0].read_text(encoding="utf-8").strip().splitlines()[0][:40] in result.stdout
+	assert "A fragment the test wrote." in result.stdout
 	# Drafting must not touch the changelog.
 	assert "## [0.0.0]" not in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

@@ -36,8 +36,8 @@ keywords:
   - density matrix
   - openqasm
 
-version: 0.3.0
-date-released: "2026-10-19"
+version: 1.0.0
+date-released: "2026-10-21"
 
 preferred-citation:
   type: software
@@ -45,6 +45,6 @@ preferred-citation:
   authors:
     - family-names: Robles Fernández
       given-names: Ricardo
-  version: 0.3.0
-  date-released: "2026-10-19"
+  version: 1.0.0
+  date-released: "2026-10-21"
   url: "https://github.com/rroblf01/vqubit"

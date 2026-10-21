@@ -4,11 +4,11 @@ vqubit sigue [SemVer 2.0](https://semver.org/lang/es/) y esta página dice
 exactamente qué significa aquí, qué se considera API pública y cómo se retira
 algo sin romper el código de nadie.
 
-!!! info "Antes del 1.0"
-    La versión publicada hoy es la **0.3.0**. La superficie se congela en la
-    **1.0.0**; hasta entonces un cambio incompatible puede llegar en una versión
-    *menor* (0.4, 0.5…), siempre anotado en el `CHANGELOG`. A partir de la 1.0.0
-    rige la regla completa.
+!!! info "Desde la 1.0.0"
+    La **1.0.0** congeló la superficie pública: a partir de aquí quitar un nombre
+    o cambiar su comportamiento de forma incompatible exige una versión
+    **mayor**, y todo lo que se retira pasa antes por un ciclo de deprecación con
+    su `DeprecationWarning`.
 
 ## Qué es API pública
 

@@ -538,9 +538,14 @@ de reventar en el núcleo V).
 | 0.9 | Congelación | gobernanza, api-diff, SemVer, *release candidate* |
 | 1.0 | Estabilidad | garantía SemVer y soporte a largo plazo |
 
-La 1.0.0 se publica en dos pasos: primero `1.0.0rc1`, se instala la rueda en un
-entorno limpio y se corren la suite, `verify.py`, `parity.py` y los ejemplos de la
-documentación contra ella; si todo pasa, `1.0.0` sin cambios de código.
+La 1.0.0 se publica en un paso: el tag `v1.0.0` y la release de GitHub. La
+verificación en entorno limpio que pedía el plan de dos pasos (`1.0.0rc1`) ya la
+hace CI con los artefactos exactos: la matriz instala la rueda en 3 SO × 5
+Python, el job `sdist` construye una rueda **desde la sdist publicada** y la
+instala en un virtualenv limpio, `stubtest` la mira con el `.pyi` que viaja
+dentro y cada rueda pasa `tools/check_wheel.py`. La RC queda como opcional en
+`CONTRIBUTING.md` por si se prefiere mirar los metadatos en PyPI antes del tag
+final.
 
 **Solo se publican la 0.3.0 y la 1.0.0.** Los hitos 0.4 a 0.9 son *checkpoints
 internos*: sus puertas se comprueban en CI igual que antes, pero no se publica una
@@ -1088,17 +1093,23 @@ shape/unitarity validation of the decomposition helpers (they now raise
 | 0.9 | Freeze | governance, api-diff, SemVer, release candidate |
 | 1.0 | Stability | SemVer guarantee and long-term support |
 
-1.0.0 ships in two steps: `1.0.0rc1` first, installed into a clean environment
-and verified with the test suite, `verify.py`, `parity.py` and the documentation
-examples; if all pass, `1.0.0` without code changes.
+1.0.0 ships in one step: the `v1.0.0` tag and the GitHub release. The clean
+environment check the two-step plan wanted (`1.0.0rc1`) is already done by CI
+with the exact artifacts: the matrix installs the wheel on 3 OSes x 5 Pythons,
+the `sdist` job builds a wheel **from the published sdist** and installs it in a
+clean virtualenv, `stubtest` looks at it with the `.pyi` that ships inside, and
+every wheel goes through `tools/check_wheel.py`. The RC stays optional in
+`CONTRIBUTING.md` in case the PyPI metadata should be inspected before the final
+tag.
 
 **Only 0.3.0 and 1.0.0 are published.** The 0.4 to 0.9 milestones are *internal
 checkpoints*: their gates are still checked in CI, but no version is released per
 milestone. Replacing six releases with two keeps the version number from
-promising more than is verified (the 1.0 definition of done requires three things
-that depend on vcraft: a clean `stubtest`, extras and the 20-qubit benchmark; see
-`UPSTREAM.md` §1–§4), and leaves the number for the moment the contract is
-actually frozen.
+promising more than is verified. Of the three things the definition of done left
+to vcraft, two are settled without it (`stubtest` with six numbered exceptions,
+and no extras by design) and the third — the 20-qubit benchmark — still waits for
+huge pages (`UPSTREAM.md` §4) and no longer blocks the API contract, only a
+performance goal.
 
 ### Acceptance gates per milestone
 

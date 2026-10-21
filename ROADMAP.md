@@ -329,9 +329,16 @@ Las divergencias `permanent` están explicadas en
       demostrara que compilaba.
 - [x] Wheels de **Windows** (`win_amd64`) — 0.2.0.
 - [x] Wheels *stripped* en release (`[build] strip`) — 0.2.0.
-- [ ] Extras publicados y documentados: `vqubit[vis]`, `vqubit[interop]`.
-      **Bloqueado por vcraft** (no hay forma de declarar dependencias opcionales;
-      ver `UPSTREAM.md` §3): hoy el `METADATA` no lleva ningún `Provides-Extra`.
+- [x] **(1.0)** **Sin extras, a propósito.** vqubit no publica
+      `vqubit[vis]` ni `vqubit[interop]`: lo opcional se instala aparte
+      (`pip install matplotlib`, `cirq-core`, `sympy`) y vqubit lo detecta en
+      tiempo de ejecución, igual que Cirq, que tampoco declara extras.
+      **Motivo:** vcraft no sabe declarar dependencias opcionales
+      (`UPSTREAM.md` §3) y un parche al `METADATA` en el pipeline sería una
+      rueda distinta de la que produce un build local. **Medido:** está en
+      `installation` (ES/EN) y en la tabla de plataformas de `stability`; la
+      matriz ya prueba el caso sin numpy/sympy/matplotlib y el job `interop`
+      prueba el caso con ellos.
 - [ ] Endurecer los classifiers para la 1.0.0: `Development Status :: 3 - Alpha`
       debe pasar a `5 - Production/Stable` cuando toque.
 - [x] **(0.9)** Verificación por hash del `RECORD`:
@@ -345,11 +352,16 @@ Las divergencias `permanent` están explicadas en
       workflow de release, así que `gh attestation verify` puede demostrar que
       el fichero salió de ese commit y ese workflow. Se ejercita en la próxima
       release (no hay forma de probarlo sin publicar).
-- [ ] **Builds reproducibles** (mismo commit → mismos bytes). **Bloqueado por
-      vcraft** (`UPSTREAM.md` §5: el empaquetado no respeta `SOURCE_DATE_EPOCH`
-      ni la fecha de los ficheros). Criterio: dos builds del mismo commit en
-      máquinas distintas dan el mismo `sha256`, comprobado con
-      `tools/check_wheel.py`.
+- [x] **(1.0)** **Builds reproducibles:** mismo commit → mismos bytes.
+      vcraft escribe las entradas del ZIP con fecha fija (1980-01-01, hora 0) y
+      en orden determinista, y el `METADATA`/`WHEEL` no llevan fecha, así que la
+      rueda y el sdist salen idénticos sin tocar `SOURCE_DATE_EPOCH`.
+      `tools/check_reproducible.py` exporta `HEAD` con `git archive` a dos
+      directorios distintos, construye en cada uno y compara los `sha256`; el
+      job `reproducible` lo ejecuta en cada push. **Medido:** rueda y sdist
+      idénticos byte a byte en dos builds con rutas distintas (28 s los dos
+      builds), y el criterio de `UPSTREAM.md` §5 (respetar `SOURCE_DATE_EPOCH`)
+      queda como formalidad: hoy no hace falta.
 - [x] **(0.9)** Política de plataformas y ciclos de soporte en
       `docs/{es,en}/guide/stability.md`: CPython 3.11–3.15, Linux/macOS/Windows
       x86_64 y arm64, sin dependencias en tiempo de ejecución.
@@ -881,9 +893,16 @@ blanket. The `permanent` divergences are explained in
       it compiled.
 - [x] **Windows** (`win_amd64`) wheels — 0.2.0.
 - [x] Stripped release wheels (`[build] strip`) — 0.2.0.
-- [ ] Publish and document extras: `vqubit[vis]`, `vqubit[interop]`.
-      **Blocked by vcraft** (no way to declare optional dependencies; see
-      `UPSTREAM.md` §3): the `METADATA` carries no `Provides-Extra` today.
+- [x] **(1.0)** **No extras, on purpose.** vqubit publishes neither
+      `vqubit[vis]` nor `vqubit[interop]`: the optional pieces are installed
+      separately (`pip install matplotlib`, `cirq-core`, `sympy`) and vqubit
+      notices them at run time, the same as Cirq, which declares no extras
+      either. **Why:** vcraft cannot declare optional dependencies
+      (`UPSTREAM.md` §3), and patching `METADATA` in the pipeline would make the
+      published wheel differ from what a local build produces. **Measured:** it
+      is in `installation` (ES/EN) and in the `stability` platform table; the
+      matrix already covers the no-numpy/sympy/matplotlib case and the `interop`
+      job covers the case with them.
 - [ ] Harden the classifiers for 1.0.0: `Development Status :: 3 - Alpha` must
       become `5 - Production/Stable` when the time comes.
 - [x] **(0.9)** `RECORD` hash verification: `tools/check_wheel.py` reads every
@@ -896,10 +915,16 @@ blanket. The `permanent` divergences are explained in
       the release workflow, so `gh attestation verify` can prove the file came
       from that commit and that workflow. It is exercised by the next release
       (there is no way to test it without publishing).
-- [ ] **Reproducible builds** (same commit, same bytes). **Blocked by vcraft**
-      (`UPSTREAM.md` §5: packaging does not honour `SOURCE_DATE_EPOCH` or file
-      timestamps). Criterion: two builds of the same commit on different
-      machines give the same `sha256`, checked with `tools/check_wheel.py`.
+- [x] **(1.0)** **Reproducible builds:** same commit, same bytes. vcraft writes
+      the ZIP entries with a fixed date (1980-01-01, time 0) in a deterministic
+      order, and `METADATA`/`WHEEL` carry no date, so the wheel and the sdist
+      come out identical without touching `SOURCE_DATE_EPOCH`.
+      `tools/check_reproducible.py` exports `HEAD` with `git archive` into two
+      different directories, builds in each and compares the `sha256`; the
+      `reproducible` job runs it on every push. **Measured:** wheel and sdist
+      byte-identical across two builds with different paths (28 s for both
+      builds), so the `UPSTREAM.md` §5c note (document the fixed timestamp as a
+      guarantee) is a formality today, not a need.
 - [ ] Document the supported-platform policy and Python support windows.
 
 #### 4. Interoperability

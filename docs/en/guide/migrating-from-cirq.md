@@ -172,7 +172,7 @@ vqubit with cirq-core 1.7.0:
 
 ```bash
 python benchmarks/parity.py    # 1867 API checks
-python benchmarks/verify.py    # 619 numerical checks
+python benchmarks/verify.py    # 650 numerical checks
 ```
 
 `benchmarks/parity_tolerated.toml` is the closed list of deliberate

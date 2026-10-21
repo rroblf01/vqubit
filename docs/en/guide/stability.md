@@ -73,7 +73,7 @@ so a change of message is noticed.
 | Python | CPython **3.11 – 3.15** (an `abi3` wheel for 3.11) |
 | Systems | Linux, macOS and Windows, x86_64 and arm64 |
 | Dependencies | **none** at runtime: only the compiled extension |
-| Optional | `numpy`, `sympy`, `matplotlib` and `cirq` (`interop` and `vis` groups) |
+| Optional | `numpy`, `sympy`, `matplotlib` and `cirq`, installed separately: vqubit declares no extras |
 
 Every release is tested on the three systems and five Python versions
 (`test.yml`), and the numbers are compared with Cirq in a separate job. A
@@ -82,10 +82,12 @@ work.
 
 ## How the project checks it
 
-- `benchmarks/verify.py`: 619 numerical checks against closed forms.
+- `benchmarks/verify.py`: 650 numerical checks against closed forms.
 - `benchmarks/parity.py`: 1873 contract checks against cirq-core 1.7.0.
 - `tools/check_api_surface.py`: the public surface cannot change undeclared.
 - `tools/check_api_docs.py`: every public symbol has a docstring.
+- `tools/check_wheel.py`: the published wheel holds exactly what its `RECORD` says.
+- `tools/check_reproducible.py`: two builds of the same commit give the same bytes.
 - `CHANGELOG.md`: what changed and in which version.
 
 **Versioned** documentation per release (`mike`) is prepared but waiting on one

@@ -80,9 +80,10 @@ $ pytest --cov --cov-fail-under=95   # CI also enforces 95 % coverage
 $ ruff check .
 $ ruff format --check .
 $ ty check
-$ python benchmarks/verify.py   # 619 numerical checks
+$ python benchmarks/verify.py   # 650 numerical checks
 $ python benchmarks/parity.py   # 1873 API checks against cirq-core 1.7.0
 $ python benchmarks/perf.py     # four workloads against the ceilings
+$ python tools/check_reproducible.py  # two builds, same bytes
 $ python tools/check_api_docs.py # new public API must be documented
 $ mkdocs build --strict         # both languages
 ```

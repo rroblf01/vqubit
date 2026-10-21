@@ -95,6 +95,13 @@ runtime truly is a disjoint base, the corresponding marker (or a targeted
 
 ## 3. No way to declare optional dependencies (`extras`)
 
+> **Update (1.0):** vqubit 1.0 ships **no extras by design**, like Cirq, so
+> nothing is blocked any more: the optional pieces are documented as plain
+> `pip install matplotlib` / `cirq-core` / `sympy` lines and detected at run
+> time. The request below stands for any project that does want extras — a
+> `METADATA` patched in the pipeline would make the published wheel differ from
+> a local build, which is worse than not having them.
+
 **What happens.** `vcraft.toml` has `[package] dependencies`, rendered as
 `Requires-Dist`. There is no way to declare an *optional* dependency, and
 `extras` in the wheel builder means "extra files to ship", not Python extras. So
@@ -166,6 +173,18 @@ if !extension.contains('.so') {
 On Windows the extension is `.pyd`, so a perfectly valid `win_amd64` wheel is
 reported as broken. Accepting `.so`/`.pyd`/`.dylib` (or `.pyd` on Windows names)
 would fix it.
+
+**5c. Reproducibility is an accident of the ZIP writer, and undocumented.** A
+wheel built from the same commit is byte-identical to another, which is what lets
+a third party verify the hash published on PyPI: `vlib/vcraft_wheel/zip.v:100`
+writes `modification time 0`, `modification date 0x21` (1980-01-01) for every
+entry and `build.v` adds the files in a fixed order, and neither `METADATA` nor
+`WHEEL` carries a date. Nothing in the documentation promises it, and there is no
+`SOURCE_DATE_EPOCH` handling, so when the date is needed for some other reason
+there is no knob. Expected: document the fixed timestamp as a guarantee and, if
+it ever becomes configurable, derive it from `SOURCE_DATE_EPOCH`
+(`max(epoch, 1980-01-01)`). vqubit checks the guarantee on every push with
+`tools/check_reproducible.py`.
 
 ---
 

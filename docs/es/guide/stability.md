@@ -72,7 +72,7 @@ para fijar el aviso, de modo que un cambio de mensaje se note.
 | Python | CPython **3.11 – 3.15** (rueda `abi3` para 3.11) |
 | Sistemas | Linux, macOS y Windows, x86_64 y arm64 |
 | Dependencias | **ninguna** en tiempo de ejecución: solo la extensión compilada |
-| Opcionales | `numpy`, `sympy`, `matplotlib` y `cirq` (grupos `interop` y `vis`) |
+| Opcionales | `numpy`, `sympy`, `matplotlib` y `cirq`, que se instalan aparte: vqubit no declara extras |
 
 Cada versión publicada se prueba en los tres sistemas y las cinco versiones de
 Python (`test.yml`), y los números se comparan con Cirq en un trabajo aparte.
@@ -81,10 +81,12 @@ funcionar.
 
 ## Cómo lo comprueba el proyecto
 
-- `benchmarks/verify.py`: 619 comprobaciones numéricas contra formas cerradas.
+- `benchmarks/verify.py`: 650 comprobaciones numéricas contra formas cerradas.
 - `benchmarks/parity.py`: 1873 comprobaciones de contrato contra cirq-core 1.7.0.
 - `tools/check_api_surface.py`: la superficie pública no cambia sin declararlo.
 - `tools/check_api_docs.py`: todo símbolo público tiene docstring.
+- `tools/check_wheel.py`: la rueda publicada contiene exactamente lo que dice su `RECORD`.
+- `tools/check_reproducible.py`: dos builds del mismo commit dan los mismos bytes.
 - `CHANGELOG.md`: qué cambió y en qué versión.
 
 La documentación **versionada** por release (`mike`) está preparada pero

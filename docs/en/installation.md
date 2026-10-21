@@ -27,6 +27,24 @@ $ python -c "import vqubit; print(vqubit.__version__)"
     lifting is compiled into the native extension, so you do not even need a
     compiler to use it.
 
+## Optional integrations
+
+vqubit **declares no extras** (`vqubit[vis]`, `vqubit[interop]`): the optional
+pieces are installed separately, under names you already know, and vqubit
+notices them at run time. It is the same story as Cirq, which publishes no
+extras either.
+
+```console
+$ pip install matplotlib   # vqubit.vis
+$ pip install cirq-core    # to_cirq / from_cirq
+$ pip install sympy        # ParamResolver keys that are sympy.Symbols
+```
+
+Everything else keeps working without them; the functions that need one say so
+when called, with the missing `pip install` in the message. The `interop` and
+`vis` groups in `pyproject.toml` are for developing vqubit and are not part of
+the published API.
+
 ## Install from source
 
 If you want to build vqubit yourself (for example, to contribute), you need:

@@ -258,6 +258,20 @@ tests with coverage at 95 %.
   `numpy` installed so the sampling case takes the same vectorised fast path the
   budget was taken in.
 
+### Added (1.0: distribution)
+
+- **Reproducible builds, checked on every push.** Two builds of the same commit
+  produce byte-identical wheels and sdists (vcraft writes the archive entries
+  with a fixed 1980-01-01 timestamp in a deterministic order), so the hashes on
+  PyPI can be verified by anyone who rebuilds from the tag.
+  `tools/check_reproducible.py` exports `HEAD` into two different directories,
+  builds in each and compares; the `reproducible` CI job runs it.
+- **No extras, on purpose.** vqubit does not publish `vqubit[vis]` or
+  `vqubit[interop]`: the optional pieces are installed with plain
+  `pip install matplotlib` / `cirq-core` / `sympy` lines and detected at run
+  time, as Cirq does (it declares no extras either). Documented in
+  `installation` (ES/EN) and in the `stability` platform table.
+
 ### Added (1.0: the Clifford gate set)
 
 - **The stabilizer simulator takes the whole stim gate set.** `X ** 0.5`,

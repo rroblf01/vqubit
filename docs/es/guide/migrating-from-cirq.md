@@ -173,7 +173,7 @@ comparan vqubit con cirq-core 1.7.0:
 
 ```bash
 python benchmarks/parity.py    # 1867 comprobaciones de API
-python benchmarks/verify.py    # 619 comprobaciones numéricas
+python benchmarks/verify.py    # 650 comprobaciones numéricas
 ```
 
 `benchmarks/parity_tolerated.toml` es la lista cerrada de divergencias

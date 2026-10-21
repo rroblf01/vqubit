@@ -200,6 +200,28 @@ jobs:
           print("sdist build works:", vq.__version__)
           PYTHON
 
+  # The same commit has to produce the same bytes, or the hashes on PyPI cannot
+  # be checked by anyone who rebuilds from the tag.
+  reproducible:
+    name: reproducible builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: install vcraft
+        run: python -m pip install "vcraft==1.4.5"
+
+      - name: install the pinned V toolchain
+        run: vcraft toolchain install
+
+      - name: build twice and compare
+        run: python tools/check_reproducible.py
+
   # A coarse regression gate for the native kernels: the ceilings in
   # benchmarks/perf_budget.json are about five times the time measured on a
   # development machine, so a shared runner cannot fail it, but a kernel that

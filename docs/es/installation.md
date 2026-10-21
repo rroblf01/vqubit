@@ -27,6 +27,24 @@ $ python -c "import vqubit; print(vqubit.__version__)"
     compilada dentro de la extensión nativa, así que no hace falta ni siquiera un
     compilador para usarla.
 
+## Integraciones opcionales
+
+vqubit **no declara extras** (`vqubit[vis]`, `vqubit[interop]`): lo que es
+opcional se instala aparte, con nombres que ya conoces, y vqubit lo detecta en
+tiempo de ejecución si está. Es la misma historia que Cirq, que tampoco publica
+extras.
+
+```console
+$ pip install matplotlib   # vqubit.vis
+$ pip install cirq-core    # to_cirq / from_cirq
+$ pip install sympy        # claves de ParamResolver con sympy.Symbol
+```
+
+Sin ellos todo lo demás sigue funcionando; las funciones que los necesitan lo
+dicen al llamarlas, con el `pip install` que falta en el mensaje. Los grupos
+`interop` y `vis` del `pyproject.toml` son para el desarrollo de vqubit, no
+forman parte de la API publicada.
+
 ## Instalar desde el código fuente
 
 Si quieres compilar vqubit tú mismo (por ejemplo, para contribuir), necesitas:

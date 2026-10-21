@@ -230,6 +230,17 @@ tests with coverage at 95 %.
   the two commands plus the one repository setting (Pages from `gh-pages`) it
   needs.
 
+- **The numerical and contract harnesses run on all three platforms**: the
+  parity job is now an `ubuntu`/`macos`/`windows` matrix that installs the wheel,
+  cirq-core and pytest and runs `benchmarks/verify.py`, `benchmarks/parity.py`
+  and their tests, so a native rounding or endianness difference cannot hide on
+  one OS.
+- **A performance gate**: `benchmarks/perf.py` times four workloads (16-qubit
+  state vector, 8-qubit density matrix, 100-qubit stabilizer, 16-qubit sampling)
+  against the ceilings in `benchmarks/perf_budget.json` (about five times a
+  development machine, so a shared runner cannot fail it but a ten-times-slower
+  kernel does). A `performance` job runs it on every push.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

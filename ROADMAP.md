@@ -464,7 +464,14 @@ de reventar en el núcleo V).
 - [x] **(0.9)** `-march=…` es un **opt-in documentado** para un build propio
       (`docs/{es,en}/installation.md`, sección «builds más rápidos») y no se
       hornea en la rueda publicada, para no divergir del artefacto testeado.
-- [ ] Benchmarks en CI con umbrales de regresión.
+- [x] **(0.9)** Benchmarks en CI con umbrales de regresión:
+      `benchmarks/perf.py` mide cuatro cargas (vector de estado 16q, matriz de
+      densidad 8q, estabilizadores 100q y muestreo 16q) y las compara con
+      `benchmarks/perf_budget.json`, que guarda un techo por caso a ~5× lo medido
+      en una máquina de desarrollo. El factor es ancho a propósito: en un runner
+      compartido el ruido es alto, así que la puerta caza un kernel que se ha
+      vuelto diez veces más lento, no un 5 %. Re-basar con `--write` y un build
+      `--release`. **Medido:** los cuatro casos pasan con 5× de margen.
 - [ ] Evaluar más SIMD/OpenMP en los kernels V; densidad a mayor anchura.
 
 ### Hitos
@@ -526,7 +533,9 @@ hecho:
 - [x] Política SemVer y de deprecación con mecanismo y test.
 - [x] `api-diff` en CI sobre la superficie pública (`tools/check_api_surface.py`).
 - [x] Gobernanza completa: COC, SECURITY, plantillas, CITATION, notas de release.
-- [ ] `benchmarks/verify.py` y `benchmarks/parity.py` verdes en los 3 SO.
+- [x] `benchmarks/verify.py` y `benchmarks/parity.py` verdes en los **3 SO**:
+      el trabajo de paridad es ahora una matriz `ubuntu`/`macos`/`windows` que
+      instala la rueda, cirq-core y pytest y corre los dos arneses y sus tests.
 
 ### Fuera de alcance de la 1.0.0
 
@@ -956,7 +965,11 @@ shape/unitarity validation of the decomposition helpers (they now raise
 - [ ] `-march=…` stays a **documented opt-in** for a local build; it is not
       baked into the published wheel (portability, and not diverging from the
       tested artifact).
-- [ ] Benchmarks in CI with regression thresholds.
+- [x] **(0.9)** Benchmarks in CI with regression thresholds:
+      `benchmarks/perf.py` times four workloads and compares them with
+      `benchmarks/perf_budget.json` (about five times the development-machine
+      time per case, so a shared runner cannot fail it but an order-of-magnitude
+      regression can). Re-baseline with `--write` and a `--release` build.
 - [ ] Evaluate more SIMD/OpenMP in the V kernels; density matrices at larger
       widths.
 

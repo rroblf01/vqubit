@@ -142,6 +142,53 @@ jobs:
       - name: run the parity harness self-tests
         run: pytest tests/test_parity_harness.py tests/test_differential_cirq.py
 
+  # The sdist is published next to the wheels, so prove that it really builds:
+  # unpack it, build a wheel from it and install that.
+  sdist:
+    name: build from the sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: install vcraft
+        run: python -m pip install "vcraft==1.4.5"
+
+      - name: write the sdist
+        run: vcraft sdist
+
+      - name: check the sdist
+        run: python tools/check_wheel.py dist/*.tar.gz
+
+      - name: build a wheel from the unpacked sdist
+        shell: bash
+        run: |
+          mkdir -p /tmp/sdist
+          tar -xzf dist/*.tar.gz -C /tmp/sdist
+          cd /tmp/sdist/vqubit-*
+          vcraft build --release --abi3 3.11
+          python "$GITHUB_WORKSPACE/tools/check_wheel.py" dist/*.whl
+
+      - name: install it in a clean environment and use it
+        shell: bash
+        run: |
+          python -m venv /tmp/sdist-venv
+          /tmp/sdist-venv/bin/python -m pip install --upgrade pip
+          /tmp/sdist-venv/bin/python -m pip install /tmp/sdist/vqubit-*/dist/*.whl
+          /tmp/sdist-venv/bin/python - <<'PYTHON'
+          import vqubit as vq
+
+          q0, q1 = vq.LineQubit.range(2)
+          result = vq.Simulator().simulate(vq.Circuit(vq.H(q0), vq.CNOT(q0, q1)))
+          probabilities = [abs(amplitude) ** 2 for amplitude in result.state_vector()]
+          assert [round(value, 6) for value in probabilities] == [0.5, 0.0, 0.0, 0.5], probabilities
+          print("sdist build works:", vq.__version__)
+          PYTHON
+
   # A coarse regression gate for the native kernels: the ceilings in
   # benchmarks/perf_budget.json are about five times the time measured on a
   # development machine, so a shared runner cannot fail it, but a kernel that

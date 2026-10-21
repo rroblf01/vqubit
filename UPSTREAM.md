@@ -284,6 +284,19 @@ has them) in `CliffordOp`, applied by `NativeTableau.apply`. With those, vqubit'
 `has_stabilizer_effect` and `CliffordSimulator` would answer like Cirq's for the
 whole stim gate set, and `benchmarks/verify.py` could compare them gate by gate.
 
+**7e. `NativeState` has no `apply_channel`, and a failed allocation aborts.**
+The state-vector simulator now samples channels one Kraus trajectory per
+repetition (as `cirq.Simulator` does), but it has to do the bookkeeping in
+Python: the built-in channels read the native marginals (`probabilities`) because
+their effects are diagonal, and a general `KrausChannel` costs one Python pass
+over the amplitudes to build the reduced density matrix of its qubits. A native
+`NativeState.apply_channel(operators, num_operators, targets)` — the method
+`NativeDensity` already has — would make the common case a single native call.
+Related: asking for an absurd allocation (a state vector of 40 qubits, say) aborts
+the process instead of raising; `buffer_new_*` should raise, so the Python side
+can turn it into a `MemoryError`. vqubit guards the two places it controls
+(`CliffordState.state_vector` above 26 qubits) but not the general case.
+
 **7d. `NativeTableau` cannot apply an arbitrary Clifford.** It applies one of the
 ten instruction codes, so a `vqubit.CliffordGate` — a gate kept as a unitary,
 the way `cirq.CliffordGate` is — cannot be run on the stabilizer simulator, even

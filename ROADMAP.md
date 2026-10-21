@@ -11,6 +11,24 @@ PyPI) hasta la **1.0.0**, el momento en el que la API pública queda congelada y
 el proyecto ofrece garantías de estabilidad. Es un documento vivo: se actualiza
 a medida que avanzan los hitos.
 
+> **Actualización (1.0.0, 2026-10-21, auditoría de circuitos).** Una campaña de
+> pruebas diferenciales contra Cirq y de barridos de rendimiento encontró seis
+> fallos reales que no estaban en ninguna lista: el `state_vector()` del
+> simulador de Clifford era O(2³ⁿ) y **mataba el proceso** a partir de 12 qubits;
+> el simulador de vector de estado **no aceptaba ningún canal** ni `reset`; un
+> `CircuitOperation` hacía fallar `simulate`/`run`; `eject_z` **se colgaba** con
+> `Z` seguido de `T`; `stratified_circuit` **cambiaba la unitaria**; y el JSON no
+> sabía escribir canales, esperas, matrices, `FSimGate` ni operaciones
+> etiquetadas. Todos están arreglados y con test, más una docena de formas de
+> llamada de Cirq que fallaban (`final_state_vector(circuito)`,
+> `measure_state_vector` con el orden de Cirq, `Circuit + Circuit`,
+> `with_tags`, `to_text_diagram(qubit_order=)`…). Lo que se comprobó y está bien:
+> 400 circuitos aleatorios con 42 familias de puertas, matriz de densidad con
+> canales, medidas y resets, 60 idas y vueltas de JSON, orden de qubits
+> barajado, barridos y los diez transformadores (unitarias intactas); y los
+> tiempos escalan como deben (lineales en puertas, 4× por dos qubits en vector
+> de estado, 4× por qubit en matriz de densidad).
+>
 > **Actualización (1.0.0, 2026-10-21).** La **1.0.0 está lista para publicar**:
 > `main` lleva la versión 1.0.0, los classifiers `Production/Stable` y el CI
 > completo en verde (27 jobs). De las 49 casillas que la 0.3 dejó abiertas
@@ -634,6 +652,23 @@ This roadmap charts the path from **0.1.0** (the first PyPI release) to
 **1.0.0**, when the public API is frozen and the project offers stability
 guarantees. It is a living document, updated as milestones land.
 
+> **Update (1.0.0, 2026-10-21, circuit audit).** A campaign of differential
+> tests against Cirq plus scaling probes found six real bugs that no list had:
+> the Clifford simulator's `state_vector()` was O(2**3n) and **killed the
+> process** above eleven qubits; the state-vector simulator **accepted no
+> channels** and no `reset`; a `CircuitOperation` made `simulate`/`run` fail;
+> `eject_z` **looped forever** on `Z` followed by `T`; `stratified_circuit`
+> **changed the unitary**; and JSON could not write channels, waits, matrices,
+> `FSimGate` or tagged operations. All are fixed and tested, together with a
+> dozen Cirq calling forms that used to fail (`final_state_vector(circuit)`,
+> `measure_state_vector` in Cirq's argument order, `Circuit + Circuit`,
+> `with_tags`, `to_text_diagram(qubit_order=)`...). What came out clean: 400
+> random circuits over 42 gate families, the density matrix with channels,
+> measurements and resets, 60 JSON round trips, shuffled qubit orders, sweeps and
+> the ten transformers (unitaries intact); and the timings scale as they should
+> (linear in gates, 4x per two qubits for the state vector, 4x per qubit for the
+> density matrix).
+>
 > **Update (1.0.0, 2026-10-21).** **1.0.0 is ready to publish**: `main` carries
 > version 1.0.0, the `Production/Stable` classifiers and a fully green CI (27
 > jobs). Of the 49 items 0.3 left open, four remain, and **none blocks

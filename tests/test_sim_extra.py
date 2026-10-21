@@ -164,17 +164,17 @@ def test_density_simulator_accepts_initial_states() -> None:
 	assert_matrix_close(steps[-1].density_matrix(), [[1, 0], [0, 0]])
 
 
-def test_simulate_rejects_a_non_unitary_operation() -> None:
+def test_simulate_runs_a_channel_as_one_trajectory() -> None:
 	q0 = vqubit.LineQubit(0)
-	# A reset is a channel: it has Kraus operators but no unitary, so the
-	# state-vector simulator must refuse it instead of guessing.
-	with pytest.raises(TypeError, match="has no unitary"):
-		vqubit.Simulator().simulate(vqubit.Circuit(vqubit.reset(q0)))
+	# A reset is a channel: no unitary, but Kraus operators, so the state-vector
+	# simulator samples one trajectory (here it always ends in |0>).
+	state = vqubit.Simulator(seed=0).simulate(vqubit.Circuit(vqubit.X(q0), vqubit.reset(q0))).state_vector()
+	assert [abs(z) for z in state] == [1.0, 0.0]
 
 
-def test_run_rejects_a_gate_without_a_unitary() -> None:
+def test_run_rejects_a_gate_without_a_unitary_or_kraus_operators() -> None:
 	q0 = vqubit.LineQubit(0)
-	with pytest.raises(TypeError, match="has no unitary"):
+	with pytest.raises(TypeError, match="neither a unitary nor Kraus"):
 		vqubit.Simulator().run(vqubit.Circuit(_NoUnitaryGate().on(q0)))
 
 
@@ -408,11 +408,12 @@ def test_stabilizer_sampler_sample_matches_run() -> None:
 def test_measurement_helpers_can_write_into_an_output_buffer() -> None:
 	bell = [SQRT_HALF, 0, 0, SQRT_HALF]
 	out: list[complex] = []
-	collapsed, outcome = vqubit.measure_state_vector(bell, [0], out=out, seed=0)
+	# Cirq's order: the outcomes first, then the collapsed state.
+	outcomes, collapsed = vqubit.measure_state_vector(bell, [0], out=out, seed=0)
 	assert out == collapsed
-	assert outcome in (0, 1)
+	assert all(outcome in (0, 1) for outcome in outcomes)
 	rho = vqubit.density_matrix_from_state_vector(bell)
 	rho_out: list[list[complex]] = []
-	collapsed_rho, rho_outcome = vqubit.measure_density_matrix(rho, [0], out=rho_out, seed=0)
+	rho_outcomes, collapsed_rho = vqubit.measure_density_matrix(rho, [0], out=rho_out, seed=0)
 	assert rho_out == collapsed_rho
-	assert rho_outcome in (0, 1)
+	assert all(outcome in (0, 1) for outcome in rho_outcomes)

@@ -1434,8 +1434,16 @@ def Rz(radians: Any) -> RzGate:
 	return RzGate(radians)
 
 
-def measure(*qubits: Qid | Iterable[Qid], key: str | None = None) -> GateOperation:
-	"""Return a measurement of ``qubits`` into the classical key ``key``."""
+def measure(
+	*qubits: Qid | Iterable[Qid],
+	key: str | None = None,
+	invert_mask: Sequence[bool] = (),
+) -> GateOperation:
+	"""Return a measurement of ``qubits`` into the classical key ``key``.
+
+	``invert_mask`` flips the recorded bit of the qubits where it is true, as in
+	Cirq; it is the same mask :class:`MeasurementGate` takes.
+	"""
 	flat: list[Qid] = []
 	for q in qubits:
 		if isinstance(q, Qid):
@@ -1446,7 +1454,7 @@ def measure(*qubits: Qid | Iterable[Qid], key: str | None = None) -> GateOperati
 		raise ValueError("measure() needs at least one qubit")
 	if key is None:
 		key = "".join(str(q) for q in flat)
-	return MeasurementGate(key, num_qubits=len(flat)).on(*flat)
+	return MeasurementGate(key, num_qubits=len(flat), invert_mask=tuple(invert_mask)).on(*flat)
 
 
 def measure_each(*qubits: Qid, key_func: Any = None) -> tuple[GateOperation, ...]:

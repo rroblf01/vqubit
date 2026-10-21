@@ -71,8 +71,14 @@ class Circuit(AbstractCircuit):
 	2
 	"""
 
-	def __init__(self, *contents: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> None:
+	def __init__(
+		self,
+		*contents: Any,
+		strategy: InsertStrategy = InsertStrategy.EARLIEST,
+		tags: Any = (),
+	) -> None:
 		self._moments: list[Moment] = []
+		self._tags = tuple(tags)
 		for content in contents:
 			self.append(content, strategy=strategy)
 
@@ -126,7 +132,7 @@ class Circuit(AbstractCircuit):
 		return self
 
 	@classmethod
-	def from_moments(cls, *moments: Any) -> Circuit:
+	def from_moments(cls, *moments: Any, tags: Any = ()) -> Circuit:
 		"""Build a circuit from explicit moments, keeping their boundaries.
 
 		``Circuit.from_moments(m1, m2)`` is Cirq's calling form; a single
@@ -143,7 +149,7 @@ class Circuit(AbstractCircuit):
 		for moment in moments:
 			if not isinstance(moment, Moment):
 				raise TypeError(f"from_moments expects Moment instances, got {type(moment).__name__}")
-		circuit = cls()
+		circuit = cls(tags=tags)
 		# Assign the list directly: appending operation by operation would let two
 		# independent moments collapse into one.
 		circuit._moments = [Moment(list(moment.operations)) for moment in moments]
@@ -187,11 +193,73 @@ class Circuit(AbstractCircuit):
 
 		return unitary(self)
 
-	def to_text_diagram(self) -> str:
-		"""Return an ASCII diagram of the circuit."""
+	def to_text_diagram(
+		self,
+		*,
+		use_unicode_characters: bool = True,
+		transpose: bool = False,
+		include_tags: Any = True,
+		precision: int | None = 3,
+		qubit_order: Any = None,
+	) -> str:
+		"""Return an ASCII diagram of the circuit.
+
+		``qubit_order`` decides the order of the lines (any iterable of qubits, or
+		a :class:`~vqubit.QubitOrder`); the other arguments are accepted for
+		compatibility and only ``use_unicode_characters`` and ``precision``
+		change the output today: the renderer is always one line per qubit.
+		"""
 		from ._diagram import to_text_diagram
 
-		return to_text_diagram(self)
+		if qubit_order is not None and not isinstance(qubit_order, (list, tuple)):
+			order = getattr(qubit_order, "order_for", None)
+			if order is not None:
+				qubit_order = order(self.all_qubits())
+		del transpose, include_tags
+		return to_text_diagram(
+			self,
+			qubit_order=qubit_order,
+			use_unicode_characters=use_unicode_characters,
+			precision=precision,
+		)
+
+	@property
+	def tags(self) -> tuple[Any, ...]:
+		"""The tags carried by the circuit, empty when it has none."""
+		return self._tags
+
+	def with_tags(self, *tags: Any) -> Circuit:
+		"""Return a copy of the circuit carrying ``tags``, as Cirq does."""
+		return Circuit.from_moments(self._moments, tags=(*self._tags, *tags))
+
+	def __add__(self, other: Any) -> Circuit:
+		"""Concatenate a circuit, or append an operation as ``cirq.Circuit`` does."""
+		if isinstance(other, Circuit):
+			return Circuit.from_moments([*self._moments, *other._moments], tags=self._tags)
+		if isinstance(other, (Moment, Operation, list, tuple)):
+			result = Circuit.from_moments(self._moments, tags=self._tags)
+			result.append(other)
+			return result
+		return NotImplemented
+
+	def __radd__(self, other: Any) -> Circuit:
+		if other == 0:  # ``sum([circuit, ...])``
+			return self
+		if isinstance(other, Circuit):
+			return Circuit.from_moments([*other._moments, *self._moments], tags=self._tags)
+		if isinstance(other, (Moment, Operation, list, tuple)):
+			result = Circuit.from_moments(self._moments, tags=self._tags)
+			result.append(other)
+			return result
+		return NotImplemented
+
+	def __mul__(self, repetitions: int) -> Circuit:
+		if not isinstance(repetitions, int) or isinstance(repetitions, bool):
+			return NotImplemented
+		return Circuit.from_moments([*self._moments] * repetitions, tags=self._tags)
+
+	def __rmul__(self, repetitions: int) -> Circuit:
+		return self.__mul__(repetitions)
 
 	def __iter__(self) -> Iterator[Moment]:
 		return iter(self._moments)
@@ -236,15 +304,22 @@ class FrozenCircuit(Circuit):
 	:class:`Circuit` are disabled.
 	"""
 
-	def __init__(self, *contents: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> None:
-		built = Circuit(*contents, strategy=strategy)
+	def __init__(
+		self,
+		*contents: Any,
+		strategy: InsertStrategy = InsertStrategy.EARLIEST,
+		tags: Any = (),
+	) -> None:
+		built = Circuit(*contents, strategy=strategy, tags=tags)
 		self._moments = list(built._moments)
+		self._tags = built._tags
 
 	@classmethod
-	def from_moments(cls, *moments: Any) -> FrozenCircuit:
+	def from_moments(cls, *moments: Any, tags: Any = ()) -> FrozenCircuit:
 		"""Build a frozen circuit from explicit moments, keeping their boundaries."""
-		frozen = cls()
-		frozen._moments = list(Circuit.from_moments(*moments)._moments)
+		built = Circuit.from_moments(*moments, tags=tags)
+		frozen = cls(tags=tags)
+		frozen._moments = list(built._moments)
 		return frozen
 
 	def append(self, content: Any, strategy: InsertStrategy = InsertStrategy.EARLIEST) -> Circuit:
@@ -264,7 +339,17 @@ class CircuitOperation(Operation):
 	times in a row.
 	"""
 
-	def __init__(self, circuit: Circuit, *, repetitions: int = 1) -> None:
+	def __init__(
+		self,
+		circuit: Circuit,
+		*,
+		repetitions: int = 1,
+		param_resolver: Any = None,
+	) -> None:
+		if param_resolver is not None:
+			from ._protocols import resolve_parameters
+
+			circuit = resolve_parameters(circuit, param_resolver)
 		if not isinstance(circuit, Circuit):
 			raise TypeError("CircuitOperation needs a Circuit")
 		if repetitions < 1:
@@ -298,6 +383,10 @@ class CircuitOperation(Operation):
 		for _ in range(self._repetitions - 1):
 			result = matmul(matrix, result)
 		return result
+
+	def repeat(self, repetitions: int) -> CircuitOperation:
+		"""Return a copy that runs the circuit ``repetitions`` more times."""
+		return CircuitOperation(self._circuit, repetitions=self._repetitions * int(repetitions))
 
 	def _circuit_diagram_info_(self) -> tuple[str, ...]:
 		return ("CircuitOperation",) * len(self.qubits)

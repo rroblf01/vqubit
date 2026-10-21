@@ -35,10 +35,21 @@ circuit = vq.Circuit(
     vq.bit_flip(0.02)(q1),
 )
 
-# Only the density-matrix simulator runs channels
+# The density-matrix simulator follows the exact mixture
 result = vq.DensityMatrixSimulator().simulate(circuit)
 print(result.density_matrix()[0][0])   # population of |00>
+
+# The state-vector one samples one *trajectory* per shot, as Cirq does
+measurements = vq.Simulator(seed=0).run(
+    circuit + vq.measure(q0, key="m"), repetitions=1000
+)
+print(measurements.histogram(key="m"))
 ```
+
+Both are right and answer different questions: the density-matrix simulator gives
+the exact mixed state (and therefore exact expectation values), and the
+state-vector one draws one Kraus operator per repetition, which is what
+`cirq.Simulator` does and costs a vector of memory instead of a matrix.
 
 ## Inspecting the operators
 

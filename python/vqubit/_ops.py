@@ -26,6 +26,22 @@ class Operation:
 		raise NotImplementedError
 
 	@property
+	def tags(self) -> tuple[Any, ...]:
+		"""The tags carried by the operation, empty when it has none."""
+		return ()
+
+	def with_tags(self, *tags: Any) -> Operation:
+		"""Return a copy of the operation carrying ``tags``, as Cirq does."""
+		if not tags:
+			return self
+		existing = getattr(self, "tags", ())
+		return TaggedOperation(self, (*existing, *tags))
+
+	def without_tags(self) -> Operation:
+		"""Return the operation with no tags at all."""
+		return self
+
+	@property
 	def gate(self) -> Gate:
 		"""The gate this operation applies."""
 		raise NotImplementedError
@@ -178,6 +194,12 @@ class TaggedOperation(Operation):
 	def tags(self) -> tuple[Any, ...]:
 		"""The tags carried by the operation."""
 		return self._tags
+
+	def with_tags(self, *tags: Any) -> Operation:
+		"""Return a copy carrying these tags as well."""
+		if not tags:
+			return self
+		return TaggedOperation(self._sub_operation, (*self._tags, *tags))
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:

@@ -13,6 +13,8 @@ silently miscompiled.
 
 from __future__ import annotations
 
+from typing import Any
+
 from ._circuits import Circuit
 from ._gates import CNOTGate, CZGate, Gate, H, is_plain_gate
 from ._ops import Operation
@@ -72,7 +74,28 @@ class TargetGateset:
 
 
 class CZTargetGateset(TargetGateset):
-	"""A gate set whose only entangling gate is ``CZ``."""
+	"""A gate set whose only entangling gate is ``CZ``.
+
+	``allow_partial_czs`` is Cirq's switch for accepting ``CZ ** t`` as it is
+	instead of synthesizing it from whole CZs; the rest of Cirq's arguments are
+	accepted and do not change the result here (the synthesis always produces
+	whole CZs and keeps the moments it is given).
+	"""
+
+	def __init__(
+		self,
+		*,
+		atol: float = DEFAULT_ATOL,
+		allow_partial_czs: bool = False,
+		additional_gates: Any = (),
+		preserve_moment_structure: bool = True,
+		reorder_operations: bool = False,
+	) -> None:
+		super().__init__(atol=atol)
+		self.allow_partial_czs = allow_partial_czs
+		self.additional_gates = tuple(additional_gates)
+		self.preserve_moment_structure = preserve_moment_structure
+		self.reorder_operations = reorder_operations
 
 	def two_qubit_gates(self) -> tuple[type[Gate], ...]:
 		"""The two-qubit gates the set accepts as they are."""

@@ -396,12 +396,54 @@ def test_eject_z_moves_rotations_through_commuting_gates() -> None:
 	circuit = vqubit.Circuit(vqubit.Z(q0), vqubit.CZ(q0, q1), vqubit.CZ(q1, q2))
 	ejected = vqubit.eject_z(circuit)
 	operations = list(ejected.all_operations())
+	# The same output Cirq gives: the Z crosses both CZs and lands at the end.
 	assert isinstance(operations[0].gate, vqubit.CZPowGate)
 	assert operations[0].qubits == (q0, q1)
-	assert isinstance(operations[1].gate, vqubit.ZPowGate)
-	assert operations[1].qubits == (q0,)
+	assert isinstance(operations[1].gate, vqubit.CZPowGate)
+	assert operations[1].qubits == (q1, q2)
+	assert isinstance(operations[2].gate, vqubit.ZPowGate)
+	assert operations[2].qubits == (q0,)
 	assert up_to_phase(vqubit.unitary(ejected), vqubit.unitary(circuit))
 	assert vqubit.eject_phased_paulis(circuit) == ejected
+
+
+def test_eject_z_merges_rotations_instead_of_swapping_them_forever() -> None:
+	# ``Z`` followed by ``T`` used to swap the two for ever: both are Z-type, so
+	# each pass made the other look ejectable. They have to merge instead.
+	q0 = vqubit.LineQubit(0)
+	for second, exponent in ((vqubit.T, 1.25), (vqubit.S, 1.5)):
+		circuit = vqubit.Circuit(vqubit.Z(q0), second(q0))
+		operations = list(vqubit.eject_z(circuit).all_operations())
+		assert len(operations) == 1, operations
+		assert operations[0].gate == vqubit.ZPowGate(exponent=exponent)
+	# Two full turns are the identity and disappear.
+	assert list(vqubit.eject_z(vqubit.Circuit(vqubit.Z(q0), vqubit.Z(q0))).all_operations()) == []
+
+
+def test_eject_z_absorbs_rotations_into_a_measurement_and_swaps_them() -> None:
+	q0, q1 = vqubit.LineQubit.range(2)
+	# A Z before a computational-basis measurement cannot change its outcome.
+	measured = vqubit.Circuit(vqubit.Z(q0), vqubit.measure(q0, key="m"))
+	assert [operation.gate for operation in vqubit.eject_z(measured).all_operations()] == [
+		operation.gate for operation in measured.all_operations() if isinstance(operation.gate, vqubit.MeasurementGate)
+	]
+	# A swap carries the rotation to the other qubit, where it cancels the one
+	# that was already there.
+	swapped = vqubit.Circuit(vqubit.T(q0), vqubit.SWAP(q0, q1), (vqubit.T**-1)(q1))
+	assert len(list(vqubit.eject_z(swapped).all_operations())) == 1
+	assert up_to_phase(vqubit.unitary(vqubit.eject_z(swapped)), vqubit.unitary(swapped))
+
+
+def test_eject_z_terminates_on_every_mix_of_z_gates() -> None:
+	# The old implementation looped forever on a circuit that had two Z-type
+	# gates in a row; a sweep over the combinations is cheap and catches it.
+	q0 = vqubit.LineQubit(0)
+	pool = [vqubit.Z, vqubit.S, vqubit.T, vqubit.Z**-1, vqubit.X, vqubit.H, vqubit.S**-1]
+	for first in pool:
+		for second in pool:
+			circuit = vqubit.Circuit(first(q0), second(q0))
+			ejected = vqubit.eject_z(circuit)
+			assert len(list(ejected.all_operations())) <= 2
 
 
 def test_eject_z_leaves_non_commuting_and_leading_rz_gates_alone() -> None:

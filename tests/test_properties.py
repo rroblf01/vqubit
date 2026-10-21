@@ -116,7 +116,7 @@ def test_the_circuit_unitary_is_what_the_simulator_applies(circuit: vqubit.Circu
 @given(random_circuit())
 def test_the_density_matrix_is_the_pure_state(circuit: vqubit.Circuit) -> None:
 	state = vqubit.Simulator().simulate(circuit).state_vector()
-	density = vqubit.DensityMatrixSimulator().simulate(circuit).final_density_matrix.density_matrix()
+	density = vqubit.DensityMatrixSimulator().simulate(circuit).final_density_matrix
 	for i in range(4):
 		for j in range(4):
 			assert abs(density[i][j] - state[i] * state[j].conjugate()) < 1e-9

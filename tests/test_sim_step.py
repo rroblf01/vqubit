@@ -85,14 +85,14 @@ def test_stabilizer_sampler() -> None:
 
 def test_measure_and_sample_functions() -> None:
 	bell = [1 / math.sqrt(2), 0, 0, 1 / math.sqrt(2)]
-	collapsed, outcome = vqubit.measure_state_vector(bell, [0], seed=0)
-	assert outcome in (0, 1)
+	outcomes, collapsed = vqubit.measure_state_vector(bell, [0], seed=0)
+	assert all(outcome in (0, 1) for outcome in outcomes)
 	assert abs(sum(abs(z) ** 2 for z in collapsed) - 1) < 1e-9
 	outcomes = vqubit.sample_state_vector(bell, [0, 1], repetitions=10, seed=0)
 	assert all(o in (0, 3) for o in outcomes)
 	rho = vqubit.density_matrix_from_state_vector(bell)
-	collapsed_rho, outcome_rho = vqubit.measure_density_matrix(rho, [0], seed=0)
-	assert outcome_rho in (0, 1)
+	rho_outcomes, collapsed_rho = vqubit.measure_density_matrix(rho, [0], seed=0)
+	assert all(outcome in (0, 1) for outcome in rho_outcomes)
 	assert len(collapsed_rho) == 4
 	assert len(vqubit.sample_density_matrix(rho, [0], repetitions=5, seed=0)) == 5
 

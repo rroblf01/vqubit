@@ -7,7 +7,7 @@ and stable: the same circuit always produces the same text.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
 	from ._circuits import Circuit
@@ -17,9 +17,21 @@ _CONNECTOR_GAP = "   "
 _CONNECTOR = "│"
 
 
-def to_text_diagram(circuit: Circuit) -> str:
-	"""Return an ASCII diagram of ``circuit``."""
-	qubits = circuit.all_qubits()
+def to_text_diagram(
+	circuit: Circuit,
+	*,
+	qubit_order: Any = None,
+	use_unicode_characters: bool = True,
+	precision: int | None = 3,
+) -> str:
+	"""Return an ASCII diagram of ``circuit``.
+
+	``qubit_order`` decides the order of the lines; ``use_unicode_characters``
+	and ``precision`` are accepted for Cirq compatibility — the renderer is ASCII
+	already and the labels are the gates' own, which carry no float to round.
+	"""
+	del use_unicode_characters, precision
+	qubits = tuple(qubit_order) if qubit_order is not None else circuit.all_qubits()
 	if not qubits:
 		return ""
 

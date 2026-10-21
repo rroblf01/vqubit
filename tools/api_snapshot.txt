@@ -77,28 +77,31 @@ CZ: value CZPowGate
 CZGate: class CZPowGate(*, exponent=1.0, global_shift=0.0)
 CZPowGate: class CZPowGate(*, exponent=1.0, global_shift=0.0)
 CZSWAP: value CliffordGate
-CZTargetGateset: class CZTargetGateset(*, atol=1e-08)
+CZTargetGateset: class CZTargetGateset(*, atol=1e-08, allow_partial_czs=False, additional_gates=(), preserve_moment_structure=True, reorder_operations=False)
     method convert_two_qubit(self, operation)
     method synthesize_two_qubit(self, operation)
     method two_qubit_gates(self)
-Circuit: class Circuit(*contents, strategy=<InsertStrategy.EARLIEST: 0>)
-    classmethod from_moments(cls, *moments)
+Circuit: class Circuit(*contents, strategy=<InsertStrategy.EARLIEST: 0>, tags=())
+    classmethod from_moments(cls, *moments, tags=())
     method all_operations(self)
     method all_qubits(self)
     method append(self, content, strategy=<InsertStrategy.EARLIEST: 0>)
     method findall_operations(self, predicate)
     method findall_operations_with_gate_type(self, gate_type)
     method insert(self, index, content, strategy=<InsertStrategy.EARLIEST: 0>)
-    method to_text_diagram(self)
+    method to_text_diagram(self, *, use_unicode_characters=True, transpose=False, include_tags=True, precision=3, qubit_order=None)
     method unitary(self)
+    method with_tags(self, *tags)
     property moments
+    property tags
 CircuitDiagramInfo: class CircuitDiagramInfo(wire_symbols, exponent=1, connected=True)
     method with_wire_symbols(self, wire_symbols)
 CircuitDiagramInfoArgs: class CircuitDiagramInfoArgs(known_qubits=None, known_qubit_count=None, qubit_map=None, precision=None, qubit_map_entries=None, use_unicode_characters=True)
     method format_real(self, value)
 CircuitFunction: class CircuitFunction(function, qubits)
     property qubits
-CircuitOperation: class CircuitOperation(circuit, *, repetitions=1)
+CircuitOperation: class CircuitOperation(circuit, *, repetitions=1, param_resolver=None)
+    method repeat(self, repetitions)
     property circuit
     property qubits
     property repetitions
@@ -223,6 +226,7 @@ DensityMatrixSimulator: class DensityMatrixSimulator(*, seed=None)
 DensityMatrixStepResult: class DensityMatrixStepResult(*, qubits, measurements, density_matrix)
 DensityMatrixTrialResult: class DensityMatrixTrialResult(qubits, density, params=None, measurements=None)
     method density_matrix(self)
+    method dirac_notation(self, decimals=3)
     property final_density_matrix
     property measurements
     property params
@@ -259,8 +263,8 @@ FREDKIN: value CSWAPGate
 FSimGate: class FSimGate(theta, phi)
     property phi
     property theta
-FrozenCircuit: class FrozenCircuit(*contents, strategy=<InsertStrategy.EARLIEST: 0>)
-    classmethod from_moments(cls, *moments)
+FrozenCircuit: class FrozenCircuit(*contents, strategy=<InsertStrategy.EARLIEST: 0>, tags=())
+    classmethod from_moments(cls, *moments, tags=())
     method append(self, content, strategy=<InsertStrategy.EARLIEST: 0>)
     method insert(self, index, content, strategy=<InsertStrategy.EARLIEST: 0>)
 Gate: class Gate()
@@ -358,7 +362,7 @@ LinearDict: class LinearDict(values=None)
 Linspace: class Linspace(key, start=None, stop=None, length=None, *, metadata=None)
     property param_resolvers
 ListSweep: class ListSweep(resolvers)
-M: function measure(*qubits, key=None)
+M: function measure(*qubits, key=None, invert_mask=())
 MEASUREMENT_KEY_SEPARATOR: value str
 MSGate: class MSGate(*, rads)
     property rads
@@ -418,8 +422,11 @@ OpIdentifier: class OpIdentifier(gate_type, num_qubits=None)
 Operation: class Operation()
     method num_qubits(self)
     method with_qubits(self, *new_qubits)
+    method with_tags(self, *tags)
+    method without_tags(self)
     property gate
     property qubits
+    property tags
 PAULI_BASIS: value dict
 PAULI_GATE_LIKE: class Any(*args, **kwargs)
 PAULI_STATES: value dict
@@ -759,6 +766,7 @@ TParamValComplex: class Any(*args, **kwargs)
 TRANSFORMER: value Callable
 TaggedOperation: class TaggedOperation(sub_operation, *tags)
     method untagged(self)
+    method with_tags(self, *tags)
     property gate
     property qubits
     property sub_operation
@@ -918,8 +926,8 @@ experiments: module vqubit.experiments
 extract_right_diag: function extract_right_diag(u, atol=1e-08)
 eye_tensor: function eye_tensor(shape, *, dtype=None, split_index=None)
 fidelity: function fidelity(state1, state2)
-final_density_matrix: function final_density_matrix(result)
-final_state_vector: function final_state_vector(result)
+final_density_matrix: function final_density_matrix(program, *, noise=None, initial_state=0, param_resolver=None, qubit_order=None, dtype=None, seed=None, ignore_measurement_results=True)
+final_state_vector: function final_state_vector(program, *, initial_state=0, param_resolver=None, qubit_order=None, ignore_terminal_measurements=False, dtype=None, seed=None)
 flatten: function flatten(sweepable)
 flatten_op_tree: function flatten_op_tree(op_tree, preserve_moments=False)
 flatten_to_ops: function flatten_to_ops(op_tree)
@@ -989,7 +997,7 @@ map_operations_and_unroll: function map_operations_and_unroll(circuit, map_func)
 match_global_phase: function match_global_phase(a, b)
 matrix_commutes: function matrix_commutes(m1, m2, *, rtol=1e-05, atol=1e-08)
 matrix_from_basis_coefficients: function matrix_from_basis_coefficients(expansion, basis)
-measure: function measure(*qubits, key=None)
+measure: function measure(*qubits, key=None, invert_mask=())
 measure_confusion_matrix: function measure_confusion_matrix(sampler, qubits, repetitions=1000, **kwargs)
 measure_density_matrix: function measure_density_matrix(density_matrix, indices, *, qid_shape=None, out=None, seed=None)
 measure_each: function measure_each(*qubits, key_func=None)
@@ -1088,7 +1096,7 @@ so4_to_magic_su2s: function so4_to_magic_su2s(mat, *, rtol=1e-05, atol=1e-08, ch
 state_vector: function state_vector(state, *, qid_shape=None)
 state_vector_kronecker_product: function state_vector_kronecker_product(t1, t2)
 state_vector_to_probabilities: function state_vector_to_probabilities(state_vector)
-stratified_circuit: function stratified_circuit(circuit, *categories)
+stratified_circuit: function stratified_circuit(circuit, *positional, categories=())
 study: module vqubit.study
 sub_state_vector: function sub_state_vector(state_vector, keep_indices, *, default=None, atol=1e-06)
 superoperator_to_choi: function superoperator_to_choi(superoperator)
@@ -1107,8 +1115,8 @@ to_resolvers: function to_resolvers(value)
 to_special: function to_special(u)
 to_sweep: function to_sweep(value)
 to_sweeps: function to_sweeps(value)
-to_valid_density_matrix: function to_valid_density_matrix(matrix, qid_shape, *, atol=1e-08)
-to_valid_state_vector: function to_valid_state_vector(state, qid_shape, *, atol=1e-08)
+to_valid_density_matrix: function to_valid_density_matrix(matrix, num_qubits=None, *, qid_shape=None, dtype=None, atol=1e-08)
+to_valid_state_vector: function to_valid_state_vector(state, num_qubits=None, *, qid_shape=None, dtype=None, atol=1e-08)
 toggle_tags: function toggle_tags(circuit, *tags)
 trace_distance_bound: function trace_distance_bound(value)
 trace_distance_from_angle_list: function trace_distance_from_angle_list(angle_list)

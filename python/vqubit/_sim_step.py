@@ -76,15 +76,15 @@ def measure_state_vector(
 	qid_shape: Sequence[int] | None = None,
 	out: Any = None,
 	seed: int | None = None,
-) -> tuple[list[complex], int]:
-	"""Measure ``indices`` of a state vector; return the collapsed state and outcome."""
+) -> tuple[list[int], list[complex]]:
+	"""Measure ``indices`` of a state vector; return the outcomes and the collapsed state."""
 	_checked_num_qubits(len(state), qid_shape, "state_vector")
 	probabilities = _probabilities_from_state(state, indices)
 	outcome = _draw(probabilities, random.Random(seed))
 	collapsed = _collapse_from_state(state, indices, outcome)
 	if out is not None:
 		out[:] = collapsed
-	return collapsed, outcome
+	return [outcome], collapsed
 
 
 def measure_density_matrix(
@@ -94,8 +94,8 @@ def measure_density_matrix(
 	qid_shape: Sequence[int] | None = None,
 	out: Any = None,
 	seed: int | None = None,
-) -> tuple[list[list[complex]], int]:
-	"""Measure ``indices`` of a density matrix; return the collapsed matrix and outcome."""
+) -> tuple[list[int], list[list[complex]]]:
+	"""Measure ``indices`` of a density matrix; return the outcomes and the collapsed matrix."""
 	_checked_num_qubits(len(density_matrix), qid_shape, "density_matrix")
 	dim = len(density_matrix)
 	num_qubits = dim.bit_length() - 1
@@ -111,7 +111,7 @@ def measure_density_matrix(
 	]
 	if out is not None:
 		out[:] = collapsed
-	return collapsed, outcome
+	return [outcome], collapsed
 
 
 def sample_state_vector(
@@ -147,14 +147,87 @@ def sample_density_matrix(
 	return [_draw(probabilities, rng) for _ in range(repetitions)]
 
 
-def final_state_vector(result: Any) -> list[complex]:
-	"""Return the final state vector of a simulation result."""
-	return list(result.state_vector())
+def final_state_vector(
+	program: Any,
+	*,
+	initial_state: Any = 0,
+	param_resolver: Any = None,
+	qubit_order: Any = None,
+	ignore_terminal_measurements: bool = False,
+	dtype: Any = None,
+	seed: int | None = None,
+) -> list[complex]:
+	"""Return the final state vector of a circuit, as Cirq's helper does.
+
+	A simulation *result* is accepted too, which is what this used to take: it
+	returns its state without simulating anything.
+	"""
+	del dtype
+	from ._circuits import Circuit
+
+	if hasattr(program, "state_vector") and not isinstance(program, Circuit):
+		return list(program.state_vector())
+	from ._sim import Simulator
+
+	circuit = program
+	if ignore_terminal_measurements:
+		circuit = _without_terminal_measurements(circuit)
+	return list(
+		Simulator(seed=seed)
+		.simulate(circuit, param_resolver=param_resolver, qubit_order=qubit_order, initial_state=initial_state)
+		.state_vector()
+	)
 
 
-def final_density_matrix(result: Any) -> list[list[complex]]:
-	"""Return the final density matrix of a simulation result."""
-	return [list(row) for row in result.density_matrix()]
+def final_density_matrix(
+	program: Any,
+	*,
+	noise: Any = None,
+	initial_state: Any = 0,
+	param_resolver: Any = None,
+	qubit_order: Any = None,
+	dtype: Any = None,
+	seed: int | None = None,
+	ignore_measurement_results: bool = True,
+) -> list[list[complex]]:
+	"""Return the final density matrix of a circuit, as Cirq's helper does.
+
+	A simulation *result* is accepted too, which is what this used to take: it
+	returns its matrix without simulating anything. ``noise`` is accepted and
+	ignored: add the channels to the circuit instead, which is what a noise model
+	expands to.
+	"""
+	del dtype, ignore_measurement_results
+	from ._circuits import Circuit
+
+	if hasattr(program, "density_matrix") and not isinstance(program, Circuit):
+		return [list(row) for row in program.density_matrix()]
+	circuit = program
+	if noise is not None:
+		# A noise model is exactly a map from moments to moments with channels.
+		circuit = Circuit(noise.noisy_moments(list(circuit.moments), sorted(circuit.all_qubits())))
+	from ._sim import DensityMatrixSimulator
+
+	return [
+		list(row)
+		for row in DensityMatrixSimulator(seed=seed)
+		.simulate(circuit, param_resolver=param_resolver, qubit_order=qubit_order, initial_state=initial_state)
+		.density_matrix()
+	]
+
+
+def _without_terminal_measurements(circuit: Any) -> Any:
+	"""Drop the measurements that nothing follows, which a state vector cannot carry."""
+	from ._circuits import Circuit
+	from ._sim import _measurements_are_terminal
+
+	if not _measurements_are_terminal(circuit):
+		raise ValueError(
+			"the circuit has measurements that are not at the end; a state vector cannot hold them "
+			"(pass ignore_terminal_measurements=True only for terminal ones, or simulate with run())"
+		)
+	operations = [operation for operation in circuit.all_operations() if not isinstance(operation.gate, MeasurementGate)]
+	return Circuit(operations)
 
 
 def sample_sweep(program: Any, params: Any, repetitions: int = 1, **kwargs: Any) -> Any:

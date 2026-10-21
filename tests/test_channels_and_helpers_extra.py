@@ -22,7 +22,7 @@ q0, q1, q2 = vqubit.LineQubit.range(3)
 def density_after(channel: vqubit.Gate, state: object) -> np.ndarray:
 	"""Apply a one-qubit channel to ``state`` and return the density matrix."""
 	result = vqubit.DensityMatrixSimulator().simulate(vqubit.Circuit(channel.on(q0)), initial_state=state)
-	return np.asarray(result.final_density_matrix.density_matrix())
+	return np.asarray(result.final_density_matrix)
 
 
 def kraus_sum(channel: vqubit.Gate) -> np.ndarray:
@@ -92,7 +92,7 @@ def test_mixed_unitary_channel() -> None:
 	result = vqubit.DensityMatrixSimulator().simulate(
 		vqubit.Circuit(prepared.on(q0), channel.on(q0)), initial_state=[1, 0]
 	)
-	assert_matrix_close(np.asarray(result.final_density_matrix.density_matrix()), [[0.5, 0], [0, 0.5]])
+	assert_matrix_close(np.asarray(result.final_density_matrix), [[0.5, 0], [0, 0.5]])
 	# |0> becomes an even mixture of |0> and |1>.
 	assert_matrix_close(density_after(channel, [1, 0]), [[0.5, 0], [0, 0.5]])
 	with pytest.raises(ValueError, match="sum to 1"):
@@ -120,7 +120,7 @@ def test_state_preparation_channel() -> None:
 	# A superposition target prepares that superposition.
 	plus = vqubit.StatePreparationChannel([1 / math.sqrt(2), 1 / math.sqrt(2)])
 	result = vqubit.DensityMatrixSimulator().simulate(vqubit.Circuit(plus.on(q0)), initial_state=[1, 0])
-	assert_matrix_close(np.asarray(result.final_density_matrix.density_matrix()), [[0.5, 0.5], [0.5, 0.5]])
+	assert_matrix_close(np.asarray(result.final_density_matrix), [[0.5, 0.5], [0.5, 0.5]])
 	with pytest.raises((ValueError, TypeError)):
 		vqubit.StatePreparationChannel(np.eye(3))
 

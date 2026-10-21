@@ -12,6 +12,7 @@ entirely on your machine.
 
 from __future__ import annotations
 
+import math
 import random
 from bisect import bisect_right
 from collections import Counter
@@ -574,6 +575,146 @@ def _measurements_are_terminal(program: Circuit) -> bool:
 	return True
 
 
+def _is_unitary_circuit(program: Circuit) -> bool:
+	"""Report whether every operation has a unitary.
+
+	A channel needs one trajectory per repetition, so the "simulate once and
+	sample the final distribution" shortcut only applies when this holds.
+	"""
+	return all(
+		isinstance(operation.gate, MeasurementGate) or operation.gate._cached_flat_unitary_() is not None
+		for operation in program.all_operations()
+	)
+
+
+def _kraus_matrices(gate: Any) -> list[list[list[complex]]] | None:
+	"""The Kraus operators of ``gate``, or ``None`` when it is not a channel."""
+	getter = getattr(gate, "_kraus_", None)
+	if getter is None:
+		return None
+	operators = getter()
+	if operators is None:
+		return None
+	return [[[complex(value) for value in row] for row in operator] for operator in operators]
+
+
+def _diagonal_effects(effects: Sequence[Sequence[Sequence[complex]]], tolerance: float = 1e-12) -> bool:
+	"""Whether every ``K†K`` is diagonal, so the probabilities need marginals only."""
+	for effect in effects:
+		size = len(effect)
+		for row in range(size):
+			for column in range(size):
+				if row != column and abs(effect[row][column]) > tolerance:
+					return False
+	return True
+
+
+def _scatter_bits(rest: int, target: int, targets: Sequence[int], num_qubits: int) -> int:
+	"""The full state index for a "rest" index and a target-subsystem index, MSB first."""
+	rest_qubits = [qubit for qubit in range(num_qubits) if qubit not in targets]
+	index = 0
+	for position, qubit in enumerate(rest_qubits):
+		bit = (rest >> (len(rest_qubits) - 1 - position)) & 1
+		index |= bit << (num_qubits - 1 - qubit)
+	for position, qubit in enumerate(targets):
+		bit = (target >> (len(targets) - 1 - position)) & 1
+		index |= bit << (num_qubits - 1 - qubit)
+	return index
+
+
+def _target_density_matrix(amplitudes: Sequence[float], num_qubits: int, targets: Sequence[int]) -> list[list[complex]]:
+	"""The reduced density matrix of ``targets``, from the interleaved amplitudes."""
+	size = 1 << len(targets)
+	rest_size = 1 << (num_qubits - len(targets))
+	reduced = [[0j] * size for _ in range(size)]
+	for rest in range(rest_size):
+		row = [complex(0, 0)] * size
+		indices = [_scatter_bits(rest, target, targets, num_qubits) for target in range(size)]
+		for target in range(size):
+			index = 2 * indices[target]
+			row[target] = complex(amplitudes[index], amplitudes[index + 1])
+		for first in range(size):
+			for second in range(size):
+				reduced[first][second] += row[first] * row[second].conjugate()
+	return reduced
+
+
+def _channel_probabilities(
+	state: Any, effects: Sequence[Sequence[Sequence[complex]]], targets: Sequence[int]
+) -> list[float]:
+	"""The probability of each Kraus branch, given the current state."""
+	size = len(effects[0])
+	if _diagonal_effects(effects):
+		# Every channel this library defines has diagonal effects, so the native
+		# marginals are enough: no pass over the whole state in Python.
+		marginal = list(state.probabilities(list(targets)))
+		probabilities = []
+		for effect in effects:
+			total = 0.0
+			for index in range(size):
+				total += float(effect[index][index].real) * marginal[index]
+			probabilities.append(max(total, 0.0))
+		return probabilities
+	# A general Kraus channel: its effects are not diagonal, so the coherences of
+	# the target subsystem matter. One pass builds its reduced density matrix.
+	amplitudes = list(state.amplitudes())
+	num_qubits = len(amplitudes).bit_length() - 2
+	reduced = _target_density_matrix(amplitudes, num_qubits, list(targets))
+	probabilities = []
+	for effect in effects:
+		total = 0.0
+		for row in range(size):
+			for column in range(size):
+				total += effect[row][column] * reduced[column][row]
+		probabilities.append(max(float(total.real), 0.0))
+	return probabilities
+
+
+def _apply_channel(state: Any, gate: Any, targets: Sequence[int], rng: random.Random) -> None:
+	"""Apply one trajectory of a channel to the state."""
+	from ._channels import ResetChannel
+
+	if isinstance(gate, ResetChannel):
+		for target in targets:
+			if state.measure([target], rng.random()):
+				state.apply_gate([0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0], [target])
+		return
+	operators = _kraus_matrices(gate)
+	if not operators:
+		raise TypeError(f"{gate!r} has neither a unitary nor Kraus operators and cannot be simulated")
+	effects = []
+	for operator in operators:
+		size = len(operator)
+		conjugate_transpose = [[operator[column][row].conjugate() for column in range(size)] for row in range(size)]
+		effects.append(
+			[
+				[sum(conjugate_transpose[row][k] * operator[k][column] for k in range(size)) for column in range(size)]
+				for row in range(size)
+			]
+		)
+	probabilities = _channel_probabilities(state, effects, targets)
+	total = sum(probabilities)
+	if total <= 0:
+		raise ValueError(f"{gate!r} has no Kraus branch with positive probability on this state")
+	threshold = rng.random() * total
+	accumulated = 0.0
+	chosen = len(probabilities) - 1
+	for index, probability in enumerate(probabilities):
+		accumulated += probability
+		if threshold < accumulated:
+			chosen = index
+			break
+	scale = 1.0 / math.sqrt(probabilities[chosen])
+	operator = operators[chosen]
+	size = len(operator)
+	flat: list[float] = []
+	for row in range(size):
+		for column in range(size):
+			value = operator[row][column] * scale
+			flat.extend((value.real, value.imag))
+	state.apply_gate(flat, list(targets))
+
+
 def _draw_outcome(probabilities: Sequence[float], rng: random.Random) -> int:
 	threshold = rng.random()
 	accumulated = 0.0
@@ -732,7 +873,7 @@ class Simulator(
 		amplitudes = vector_to_flat(_initial_state_vector(initial_state, dim))
 		rng = random.Random(self._seed if seed is None else seed)
 		records: dict[str, list[list[int]]] = {}
-		if _measurements_are_terminal(program):
+		if _measurements_are_terminal(program) and _is_unitary_circuit(program):
 			state = _native.NativeState(num_qubits)
 			if _is_basis_zero(initial_state):
 				state.set_zero_state()
@@ -815,7 +956,10 @@ class Simulator(
 				continue
 			flat = gate._cached_flat_unitary_()
 			if flat is None:
-				raise TypeError(f"{gate!r} has no unitary and cannot be simulated")
+				if rng is None:
+					raise ValueError(f"{gate!r} is a channel; simulate() needs a seed to pick a trajectory")
+				_apply_channel(state, gate, targets, rng)
+				continue
 			state.apply_gate(flat, targets)
 
 
@@ -887,13 +1031,21 @@ class DensityMatrixTrialResult(SimulationTrialResultBase):
 		return self._measurements
 
 	@property
-	def final_density_matrix(self) -> DensityMatrix:
-		"""The density matrix at the end of the simulation."""
-		return self._final_density_matrix
+	def final_density_matrix(self) -> Any:
+		"""The density matrix at the end of the simulation.
+
+		An array (a nested list without numpy), like Cirq's; the qubits it is
+		expressed in are :attr:`qubits` and :attr:`qubit_map`.
+		"""
+		return self._final_density_matrix.density_matrix()
 
 	def density_matrix(self) -> Any:
-		"""The final density matrix."""
+		"""The final density matrix (the same value as the property)."""
 		return self._final_density_matrix.density_matrix()
+
+	def dirac_notation(self, decimals: int = 3) -> str:
+		"""The diagonal of the density matrix written in Dirac notation."""
+		return self._final_density_matrix.dirac_notation(decimals)
 
 	def __repr__(self) -> str:
 		return f"vqubit.DensityMatrixTrialResult({self._final_density_matrix!r})"

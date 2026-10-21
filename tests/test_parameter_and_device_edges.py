@@ -114,7 +114,7 @@ def test_channel_edge_cases() -> None:
 	result = vqubit.DensityMatrixSimulator().simulate(
 		vqubit.Circuit(full.on(vqubit.LineQubit(0))), initial_state=[0, 1]
 	)
-	assert_matrix_close(np_asarray(result.final_density_matrix.density_matrix()), [[1, 0], [0, 0]])
+	assert_matrix_close(np_asarray(result.final_density_matrix), [[1, 0], [0, 0]])
 	with pytest.raises(ValueError):
 		vqubit.amplitude_damp(1.5)
 
@@ -128,7 +128,7 @@ def test_phase_and_bit_flip_channels() -> None:
 		result = vqubit.DensityMatrixSimulator().simulate(
 			vqubit.Circuit(channel.on(vqubit.LineQubit(0))), initial_state=[1, 0]
 		)
-		assert_matrix_close(np_asarray(result.final_density_matrix.density_matrix()), reference)
+		assert_matrix_close(np_asarray(result.final_density_matrix), reference)
 	with pytest.raises(ValueError):
 		vqubit.bit_flip(2.0)
 

@@ -1,0 +1,4 @@
+# file: /home/sheik/Documentos/vqubit/./python/vqubit/_transformers_more.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1e-08, 1e-05, 0.5, 1.0, 2.0, 'TRANSFORMER', 'TransformerContext', 'TransformerLogger', 'deep', 'defer_measurements', 'dephase_measurements', 'eject_phased_paulis', 'eject_z', 'index_tags', 'is_negligible_turn', 'merge_moments', 'merge_moments_batch', 'merge_operations', 'remove_tags', 'sym', 'tags', 'transformer', 'unroll_circuit_op']

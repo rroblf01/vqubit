@@ -103,7 +103,7 @@ def test_simulate_samples_and_reports_measurements() -> None:
 def test_trial_result_exposes_the_density_matrix() -> None:
 	q0 = vqubit.LineQubit(0)
 	result = vqubit.DensityMatrixSimulator().simulate(vqubit.Circuit(vqubit.H(q0)))
-	assert result.final_density_matrix.qubits == (q0,)
+	assert result.qubits == (q0,)
 	assert result.density_matrix()[0][0] == pytest.approx(0.5)
 
 

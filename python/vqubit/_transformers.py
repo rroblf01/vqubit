@@ -119,16 +119,19 @@ def _as_predicate(category: Any) -> Predicate:
 	raise TypeError(f"cannot use {category!r} as a category")
 
 
-def stratified_circuit(circuit: Circuit, *categories: Any) -> Circuit:
+def stratified_circuit(circuit: Circuit, *positional: Any, categories: Any = ()) -> Circuit:
 	"""Return ``circuit`` with its operations ordered by category.
 
 	The operations matching the first category come first, then those matching
 	the second, and so on; the original order is kept within each group, and
 	anything matching no category is placed last. Moments are not preserved.
+	The categories are taken positionally or by name, and a single iterable is
+	unpacked, so all of Cirq's calling forms work.
 	"""
-	if len(categories) == 1 and isinstance(categories[0], (list, tuple)):
-		categories = tuple(categories[0])
-	predicates = [_as_predicate(category) for category in categories]
+	category_list: tuple[Any, ...] = tuple(positional) + tuple(categories)
+	if len(category_list) == 1 and isinstance(category_list[0], (list, tuple)):
+		category_list = tuple(category_list[0])
+	predicates = [_as_predicate(category) for category in category_list]
 	operations = list(circuit.all_operations())
 	result = Circuit()
 	for predicate in predicates:

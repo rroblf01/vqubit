@@ -38,12 +38,31 @@ def _dim_of(qid_shape: Sequence[int] | None, length: int) -> int:
 
 def to_valid_state_vector(
 	state: Any,
-	qid_shape: Sequence[int],
+	num_qubits: Any = None,
 	*,
+	qid_shape: Sequence[int] | None = None,
+	dtype: Any = None,
 	atol: float = 1e-8,
 ) -> list[complex]:
-	"""Return ``state`` as a normalized state vector, or raise ``ValueError``."""
+	"""Return ``state`` as a normalized state vector, or raise ``ValueError``.
+
+	The second argument is the number of qubits, as in Cirq; a sequence is taken
+	as the shape of the qids instead, which is what this used to take, and
+	``qid_shape=`` says it by name. With neither, the shape is inferred from the
+	length of ``state``.
+	"""
+	del dtype
 	state = state.tolist() if is_numpy_array(state) else state
+	if qid_shape is None and num_qubits is not None and not isinstance(num_qubits, int):
+		qid_shape, num_qubits = tuple(num_qubits), None
+	if qid_shape is None:
+		if num_qubits is not None:
+			qid_shape = (2,) * int(num_qubits)
+		elif isinstance(state, int) and not isinstance(state, bool):
+			qid_shape = ()
+		else:
+			length = len(state)
+			qid_shape = (2,) * (length.bit_length() - 1) if length > 1 else ()
 	dim = 1
 	for size in qid_shape:
 		dim *= size
@@ -80,14 +99,25 @@ def state_vector(state: Any, *, qid_shape: Sequence[int] | None = None) -> list[
 
 def to_valid_density_matrix(
 	matrix: Any,
-	qid_shape: Sequence[int],
+	num_qubits: Any = None,
 	*,
+	qid_shape: Sequence[int] | None = None,
+	dtype: Any = None,
 	atol: float = 1e-8,
 ) -> Matrix:
-	"""Return ``matrix`` as a density matrix (a state vector becomes ``|psi><psi|``)."""
+	"""Return ``matrix`` as a density matrix (a state vector becomes ``|psi><psi|``).
+
+	The second argument is the number of qubits, as in Cirq; a sequence is taken
+	as the qid shape, which is what this used to take.
+	"""
+	del dtype
 	matrix = to_nested_list(matrix) if is_numpy_array(matrix) else matrix
+	if qid_shape is None and num_qubits is not None and not isinstance(num_qubits, int):
+		qid_shape, num_qubits = tuple(num_qubits), None
+	if qid_shape is None and num_qubits is not None:
+		qid_shape = (2,) * int(num_qubits)
 	if isinstance(matrix, int) and not isinstance(matrix, bool):
-		vector = to_valid_state_vector(matrix, qid_shape, atol=atol)
+		vector = to_valid_state_vector(matrix, qid_shape=qid_shape, atol=atol)
 		return asarray([[vector[i] * vector[j].conjugate() for j in range(len(vector))] for i in range(len(vector))])
 	if _is_density(matrix):
 		rows = [[complex(x) for x in row] for row in matrix]

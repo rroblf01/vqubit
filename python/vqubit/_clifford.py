@@ -932,7 +932,18 @@ class CliffordState:
 		return self._qubits
 
 	def state_vector(self) -> list[complex]:
-		"""The state as a flat vector of amplitudes."""
+		"""The state as a flat vector of amplitudes.
+
+		Materialising it costs ``2**n`` amplitudes, which is the whole point of
+		the tableau being small: above 26 qubits the request is refused instead of
+		trying to allocate gigabytes. For a bigger state, read
+		:meth:`stabilizers` or sample measurements with ``run``.
+		"""
+		if len(self._qubits) > 26:
+			raise ValueError(
+				f"a state vector of {len(self._qubits)} qubits has 2**{len(self._qubits)} amplitudes; "
+				"use the stabilizer tableau or run() with measurements instead"
+			)
 		return vector_from_flat(self._tableau.state_vector())
 
 	def stabilizers(self) -> list[Any]:

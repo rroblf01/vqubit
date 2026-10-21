@@ -7,16 +7,18 @@ adds the merge/unroll/tag/ejection family and the transformer decorator.
 from __future__ import annotations
 
 import functools
+import math
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 
 from ._channels import PhaseDampingChannel, ResetChannel
 from ._circuits import Circuit, CircuitOperation
-from ._gates import Gate, MeasurementGate, RzGate, WaitGate, ZPowGate, ZZPowGate
+from ._gates import FSimGate, Gate, ISwapPowGate, MeasurementGate, RzGate, SwapPowGate, WaitGate, ZPowGate, ZZPowGate
 from ._gates_more import CZPowGate
 from ._linalg import matmul
 from ._ops import Moment, Operation, TaggedOperation
 from ._optimizers import single_qubit_matrix_to_phased_x_z, single_qubit_matrix_to_phxz
+from ._protocols import is_parameterized
 from ._qubits import LineQubit, Qid
 
 TRANSFORMER = Callable[..., Circuit]
@@ -423,23 +425,66 @@ def _commutes_with_z(gate: Gate) -> bool:
 	return isinstance(gate, _Z_COMMUTING)
 
 
+def _is_swaplike(gate: Gate) -> bool:
+	"""Whether ``gate`` is a swap that moves a phase from one qubit to the other."""
+	if isinstance(gate, SwapPowGate):
+		return abs(float(gate.exponent) - 1.0) < 1e-8 if not is_parameterized(gate.exponent) else False
+	if isinstance(gate, ISwapPowGate):
+		return not is_parameterized(gate.exponent) and is_negligible_turn((float(gate.exponent) - 1) / 2)
+	if isinstance(gate, FSimGate):
+		return not is_parameterized(gate.theta) and is_negligible_turn(float(gate.theta) / math.pi - 0.5)
+	return False
+
+
 def eject_z(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:
-	"""Push ``Z`` rotations as late as possible through commuting gates."""
-	del atol
-	operations = list(circuit.all_operations())
-	changed = True
-	while changed:
-		changed = False
-		for index in range(len(operations) - 1):
-			first, second = operations[index], operations[index + 1]
-			if (
-				isinstance(first.gate, ZPowGate)
-				and set(first.qubits).intersection(second.qubits)
-				and _commutes_with_z(second.gate)
-			):
-				operations[index], operations[index + 1] = second, first
-				changed = True
-	return Circuit(operations)
+	"""Push ``Z`` rotations as late as possible through commuting gates.
+
+	The rotations are accumulated per qubit (so ``Z``, ``T`` and ``Z**-3`` on one
+	qubit become a single ``Z``), they cross whatever commutes with them, a swap
+	carries them to the other qubit, and a measurement in the computational basis
+	absorbs them, because it cannot tell them apart. A gate that does not commute
+	stops them: they are emitted just before it.
+
+	Cirq pushes one step further and *phases* a single-qubit gate (``Z`` across
+	``X`` becomes a ``PhasedXPowGate``, with the ``Z`` continuing to travel); the
+	two outputs are equivalent, and this one cannot loop.
+	"""
+	phases: dict[Qid, float] = {}
+	output: list[Operation] = []
+
+	def pending(qubit: Qid) -> float:
+		return phases.get(qubit, 0.0)
+
+	def dump(qubits: Sequence[Qid]) -> None:
+		for qubit in dict.fromkeys(qubits):
+			exponent = phases.pop(qubit, 0.0)
+			if not is_negligible_turn(exponent / 2.0, atol):
+				output.append(ZPowGate(exponent=exponent)(qubit))
+
+	for operation in circuit.all_operations():
+		gate = operation.gate
+		if isinstance(gate, ZPowGate) and not is_parameterized(gate.exponent):
+			qubit = operation.qubits[0]
+			phases[qubit] = pending(qubit) + float(gate.exponent)
+			continue
+		if isinstance(gate, MeasurementGate):
+			# ``Z`` before a measurement in the computational basis changes nothing.
+			for qubit in operation.qubits:
+				phases.pop(qubit, None)
+			output.append(operation)
+			continue
+		if _is_swaplike(gate):
+			first, second = operation.qubits
+			phases[first], phases[second] = pending(second), pending(first)
+			output.append(operation)
+			continue
+		if any(
+			not is_negligible_turn(pending(qubit) / 2.0, atol) for qubit in operation.qubits
+		) and not _commutes_with_z(gate):
+			dump(operation.qubits)
+		output.append(operation)
+	dump(list(phases))
+	return Circuit(output)
 
 
 def eject_phased_paulis(circuit: Circuit, *, atol: float = 1e-8) -> Circuit:

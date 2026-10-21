@@ -35,10 +35,21 @@ circuito = vq.Circuit(
     vq.bit_flip(0.02)(q1),
 )
 
-# Solo el simulador de matriz de densidad ejecuta canales
+# El simulador de matriz de densidad sigue la mezcla exacta
 resultado = vq.DensityMatrixSimulator().simulate(circuito)
 print(resultado.density_matrix()[0][0])   # población de |00>
+
+# El de vector de estado muestrea una *trayectoria* por disparo, como Cirq
+medidas = vq.Simulator(seed=0).run(
+    circuito + vq.measure(q0, key="m"), repetitions=1000
+)
+print(medidas.histogram(key="m"))
 ```
+
+Los dos son correctos y responden preguntas distintas: el de matriz de densidad
+da el estado mezclado exacto (y con él los valores esperados exactos), y el de
+vector de estado sortea un operador de Kraus por repetición, que es lo que hace
+`cirq.Simulator` y lo que cuesta memoria de un vector, no de una matriz.
 
 ## Inspeccionar los operadores
 

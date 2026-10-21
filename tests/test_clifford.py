@@ -103,3 +103,64 @@ def test_simulate_moment_steps_yields_the_state_after_each_moment() -> None:
 	]
 	with pytest.raises(ValueError, match="with measurements"):
 		list(vqubit.CliffordSimulator().simulate_moment_steps(vqubit.Circuit(vqubit.measure(q0, key="m"))))
+
+
+def test_the_state_vector_agrees_with_the_state_vector_simulator() -> None:
+	# The tableau's state used to be reconstructed with dense projectors, which
+	# was O(2**3n): correct for a handful of qubits and a minute of work (or a
+	# dead process) for twelve. A random circuit per size pins both the algebra
+	# (including the `i` of a Y row) and the speed.
+	import random
+
+	import vqubit as _vqubit
+
+	generator = random.Random(20261021)
+	for num_qubits in (2, 3, 4, 5, 6, 8, 10):
+		qubits = _vqubit.LineQubit.range(num_qubits)
+		for _ in range(6):
+			operations = []
+			for _ in range(8):
+				kind = generator.choice(["h", "s", "sdg", "x", "y", "z", "cnot", "cz", "swap"])
+				if kind in ("cnot", "cz", "swap"):
+					first, second = generator.sample(range(num_qubits), 2)
+					gate = {"cnot": _vqubit.CNOT, "cz": _vqubit.CZ, "swap": _vqubit.SWAP}[kind]
+					operations.append(gate(qubits[first], qubits[second]))
+				else:
+					gate = {
+						"h": _vqubit.H,
+						"s": _vqubit.S,
+						"sdg": _vqubit.S ** -1,
+						"x": _vqubit.X,
+						"y": _vqubit.Y,
+						"z": _vqubit.Z,
+					}[kind]
+					operations.append(gate(qubits[generator.randrange(num_qubits)]))
+			circuit = _vqubit.Circuit(operations)
+			exact = list(_vqubit.Simulator().simulate(circuit).state_vector())
+			tableau = list(_vqubit.CliffordSimulator().simulate(circuit).state_vector())
+			assert _aligned(tableau, exact)
+
+
+def test_the_state_vector_scales_to_twenty_qubits() -> None:
+	import time
+
+	qubits = vqubit.LineQubit.range(20)
+	circuit = vqubit.Circuit([vqubit.H(qubit) for qubit in qubits])
+	start = time.perf_counter()
+	vector = vqubit.CliffordSimulator().simulate(circuit).state_vector()
+	elapsed = time.perf_counter() - start
+	assert len(vector) == 1 << 20
+	assert abs(sum(abs(value) ** 2 for value in vector) - 1) < 1e-9
+	# The dense-projector version needed O(2**3n) operations here; anything
+	# under a couple of seconds can only be the linear algorithm.
+	assert elapsed < 5.0
+
+
+def test_a_huge_tableau_refuses_to_materialise_its_state_vector() -> None:
+	qubits = vqubit.LineQubit.range(30)
+	circuit = vqubit.Circuit([vqubit.H(qubit) for qubit in qubits])
+	state = vqubit.CliffordSimulator().simulate(circuit).final_state
+	with pytest.raises(ValueError, match="amplitudes"):
+		state.state_vector()
+	# The tableau itself is still available, which is the point of a stabilizer.
+	assert len(state.stabilizers()) == 30

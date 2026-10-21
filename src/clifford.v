@@ -292,52 +292,116 @@ fn complex_identity(dim int) []f64 {
 
 // clifford_state_vector reconstructs a state vector from a flattened tableau,
 // up to a global phase.
+//
+// It starts from `|0...0>` and projects onto each stabilizer generator in turn,
+// `|psi> <- (I + s P) |psi> / 2`, then normalises. A Pauli acts on a basis state
+// by flipping the bits its X part marks and adding a sign from its Z part, so
+// each projection is one pass over the `2**n` amplitudes: the whole thing is
+// O(n 2**n), where projecting with dense matrices would be O(2**3n) and made a
+// twelve-qubit state take a minute and die.
 @[vc_fn]
 pub fn clifford_state_vector(tableau []int, num_qubits int) []f64 {
 	n := num_qubits
+	if n > 26 {
+		panic('a state vector of 2**${n} amplitudes is too large to materialise; use the tableau or sample measurements')
+	}
 	side := 2*n + 1
 	dim := 1 << n
-	mut acc := complex_identity(dim)
+	// The projectors have rank one in total, so applying them to *any* vector
+	// with a non-zero overlap gives the state itself; a deterministic
+	// pseudo-random vector has one almost surely, where `|0...0>` is orthogonal
+	// to states such as `|1>` and would collapse to zero.
+	mut v := []f64{len: 2 * dim, init: 0.0}
+	mut seed := u64(0x9e3779b97f4a7c15)
+	for i in 0 .. 2 * dim {
+		seed = seed * u64(6364136223846793005) + u64(1442695040888963407)
+		v[i] = f64((seed >> 33) & u64(0xffffff)) / 16777216.0 - 0.5
+	}
 	for k in 0 .. n {
 		row := n + k
-		mut mat := []f64{len: 2, init: 0.0}
-		mat[0] = 1.0
-		mut mdim := 1
+		mut xmask := 0
+		mut zmask := 0
 		for j in 0 .. n {
-			xb := tableau[row*side + j]
-			zb := tableau[row*side + n + j]
-			mat = kron(mat, mdim, pauli_matrix(xb, zb), 2)
-			mdim *= 2
+			if tableau[row*side + j] == 1 {
+				xmask |= 1 << (n - 1 - j)
+			}
+			if tableau[row*side + n + j] == 1 {
+				zmask |= 1 << (n - 1 - j)
+			}
 		}
 		sign := if tableau[row*side + 2*n] == 1 { -1.0 } else { 1.0 }
-		mut proj := []f64{len: 2 * dim * dim, init: 0.0}
+		// The row's Pauli is `Y` on every qubit with both bits set, and
+		// `Y = i X Z`, so each of those contributes a factor of `i`.
+		mut overlap := 0
+		for j in 0 .. n {
+			if tableau[row*side + j] == 1 && tableau[row*side + n + j] == 1 {
+				overlap++
+			}
+		}
+		rotation := overlap % 4
+		mut next := []f64{len: 2 * dim, init: 0.0}
 		for i in 0 .. dim {
+			j := i ^ xmask
+			mut phase := sign
+			if parity(j & zmask) {
+				phase = -phase
+			}
+			// `phase * i**rotation` times the amplitude at `j`, in (re, im) pairs.
+			re := v[2*j]
+			im := v[2*j + 1]
+			mut pr := 0.0
+			mut pi := 0.0
+			match rotation {
+				0 { pr = phase * re; pi = phase * im }
+				1 { pr = -phase * im; pi = phase * re }
+				2 { pr = -phase * re; pi = -phase * im }
+				else { pr = phase * im; pi = -phase * re }
+			}
+			next[2*i] = 0.5 * (v[2*i] + pr)
+			next[2*i + 1] = 0.5 * (v[2*i + 1] + pi)
+		}
+		v = next.clone()
+	}
+	mut norm := 0.0
+	for i in 0 .. dim {
+		norm += v[2*i]*v[2*i] + v[2*i + 1]*v[2*i + 1]
+	}
+	if norm > 1e-18 {
+		scale := 1.0 / math.sqrt(norm)
+		for i in 0 .. 2 * dim {
+			v[i] *= scale
+		}
+	}
+	// Fix the global phase: the first amplitude that is not zero becomes real
+	// and positive, so the same tableau always gives the same vector.
+	for i in 0 .. dim {
+		re := v[2*i]
+		im := v[2*i + 1]
+		magnitude := math.sqrt(re*re + im*im)
+		if magnitude > 1e-12 {
+			phase_re := re / magnitude
+			phase_im := -im / magnitude
 			for j in 0 .. dim {
-				idx := 2 * (i * dim + j)
-				proj[idx] = sign * mat[idx] + if i == j { 1.0 } else { 0.0 }
-				proj[idx + 1] = sign * mat[idx + 1]
+				ar := v[2*j]
+				ai := v[2*j + 1]
+				v[2*j] = ar * phase_re - ai * phase_im
+				v[2*j + 1] = ar * phase_im + ai * phase_re
 			}
-		}
-		acc = matmul(acc, proj, dim)
-	}
-	for col in 0 .. dim {
-		mut norm := 0.0
-		for i in 0 .. dim {
-			re := acc[2*(i*dim + col)]
-			im := acc[2*(i*dim + col) + 1]
-			norm += re*re + im*im
-		}
-		if norm > 1e-18 {
-			scale := 1.0 / math.sqrt(norm)
-			mut out := []f64{len: 2 * dim, init: 0.0}
-			for i in 0 .. dim {
-				out[2*i] = acc[2*(i*dim + col)] * scale
-				out[2*i + 1] = acc[2*(i*dim + col) + 1] * scale
-			}
-			return out
+			break
 		}
 	}
-	return []f64{len: 2 * dim, init: 0.0}
+	return v
+}
+
+// parity reports whether the number of set bits in `mask` is odd.
+fn parity(mask int) bool {
+	mut bits := mask
+	mut odd := false
+	for bits != 0 {
+		odd = !odd
+		bits &= bits - 1
+	}
+	return odd
 }
 
 // NativeTableau is a stabilizer state whose tableau lives in `@[vc_buffer]`

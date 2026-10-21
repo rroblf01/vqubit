@@ -39,7 +39,7 @@ jobs:
             os: "windows-latest"
             args: "build --release --abi3 3.11"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: set up Python
         uses: actions/setup-python@v6
@@ -62,7 +62,7 @@ jobs:
     name: source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: set up Python
         uses: actions/setup-python@v6
@@ -90,7 +90,7 @@ jobs:
     needs: [build, sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: set up Python
         uses: actions/setup-python@v6

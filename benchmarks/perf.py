@@ -120,6 +120,10 @@ def main(argv: list[str]) -> int:
 		ok = ceiling and best <= ceiling
 		failures += 0 if ok else 1
 		print(f"{name:32s} {best:8.3f} {ceiling:8.3f}  {'ok' if ok else 'SLOW'}")
+		if not ok:
+			# A GitHub annotation, so the numbers show up in the checks summary
+			# even when the job log is not at hand.
+			print(f"::error title=Performance gate::{name} took {best:.3f}s, ceiling {ceiling:.3f}s")
 	return 1 if failures else 0
 
 

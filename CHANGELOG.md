@@ -260,6 +260,17 @@ tests with coverage at 95 %.
 
 ### Fixed (1.0: found by running Cirq's idioms and fuzzing)
 
+- **A `CircuitOperation` broke every simulation.** `is_parameterized` asked
+  `operation.gate`, which a `CircuitOperation` (or a `TaggedOperation`) does not
+  have, so `simulate`, `run` and `simulate_sweep` raised `NotImplementedError`
+  before touching the state; and the "simulate once, sample the distribution"
+  shortcut saw the measurement *inside* the sub-circuit and treated the whole
+  operation as a terminal measurement. The protocols now ask the operation
+  itself, and both simulators expand the sub-circuit in place (repetitions
+  included, measurement keys included). A parameterised sub-circuit also
+  resolves now, and a tagged operation no longer hides the parameter inside it.
+
+
 - **`CliffordSimulator(...).state_vector()` was O(2**3n) and crashed the
   process.** It rebuilt the state by multiplying dense projectors, so eleven
   qubits took seconds, twelve killed the interpreter, and the phase of a `Y`

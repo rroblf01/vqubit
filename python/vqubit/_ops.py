@@ -216,6 +216,16 @@ class TaggedOperation(Operation):
 		"""The wrapped operation without its tags, as a property like Cirq's."""
 		return self._sub_operation
 
+	def _is_parameterized_(self) -> bool:
+		from ._protocols import is_parameterized
+
+		return is_parameterized(self._sub_operation)
+
+	def _resolve_parameters_(self, resolver: Any) -> Operation:
+		from ._protocols import resolve_parameters
+
+		return resolve_parameters(self._sub_operation, resolver).with_tags(*self._tags)
+
 	def _circuit_diagram_info_(self) -> tuple[str, ...]:
 		symbols = list(self._sub_operation._circuit_diagram_info_())
 		if symbols:

@@ -566,13 +566,29 @@ def _measurements_are_terminal(program: Circuit) -> bool:
 	"""
 	operations = list(program.all_operations())
 	for index, operation in enumerate(operations):
-		if not isinstance(operation.gate, MeasurementGate):
+		# A *gate* measurement, not a sub-circuit that happens to contain one:
+		# that one is not terminal, it has to run.
+		if not isinstance(_operation_gate(operation), MeasurementGate):
 			continue
 		qubits = set(operation.qubits)
 		for later in operations[index + 1 :]:
-			if not isinstance(later.gate, MeasurementGate) and qubits.intersection(later.qubits):
+			later_gate = _operation_gate(later)
+			if not isinstance(later_gate, MeasurementGate) and qubits.intersection(later.qubits):
 				return False
 	return True
+
+
+def _operation_gate(operation: Any) -> Any | None:
+	"""The gate of ``operation``, or ``None`` when it does not wrap one.
+
+	A ``CircuitOperation`` or a ``TaggedOperation`` has no gate of its own (the
+	property raises), and the simulator has to take those apart instead of asking
+	them for a matrix.
+	"""
+	try:
+		return operation.gate
+	except NotImplementedError:
+		return None
 
 
 def _is_unitary_circuit(program: Circuit) -> bool:
@@ -581,10 +597,14 @@ def _is_unitary_circuit(program: Circuit) -> bool:
 	A channel needs one trajectory per repetition, so the "simulate once and
 	sample the final distribution" shortcut only applies when this holds.
 	"""
-	return all(
-		isinstance(operation.gate, MeasurementGate) or operation.gate._cached_flat_unitary_() is not None
-		for operation in program.all_operations()
-	)
+	for operation in program.all_operations():
+		gate = _operation_gate(operation)
+		if isinstance(gate, MeasurementGate):
+			continue
+		if gate is None or gate._cached_flat_unitary_() is None:
+			# A composite operation or a channel: its state depends on the shot.
+			return False
+	return True
 
 
 def _kraus_matrices(gate: Any) -> list[list[list[complex]]] | None:
@@ -882,13 +902,13 @@ class Simulator(
 			measurements: list[tuple[MeasurementGate, list[int]]] = []
 			for moment in program.moments:
 				for operation in moment.operations:
-					if isinstance(operation.gate, MeasurementGate):
-						measurements.append((operation.gate, [index[q] for q in operation.qubits]))
+					gate = _operation_gate(operation)
+					if isinstance(gate, MeasurementGate):
+						measurements.append((gate, [index[q] for q in operation.qubits]))
 						continue
-					flat = operation.gate._cached_flat_unitary_()
-					if flat is None:
-						raise TypeError(f"{operation.gate!r} has no unitary and cannot be simulated")
-					state.apply_gate(flat, [index[q] for q in operation.qubits])
+					if gate is None or gate._cached_flat_unitary_() is None:
+						raise TypeError(f"{operation!r} has no unitary and cannot be simulated")
+					state.apply_gate(gate._cached_flat_unitary_(), [index[q] for q in operation.qubits])
 			if not measurements:
 				return Result(records, param_resolver)
 			# Every measurement is terminal, so their joint distribution is the one
@@ -946,7 +966,14 @@ class Simulator(
 		measurements: dict[str, list[list[int]]] | None,
 	) -> None:
 		for operation in moment.operations:
-			gate = operation.gate
+			from ._circuits import CircuitOperation
+
+			if isinstance(operation, CircuitOperation):
+				for _ in range(operation.repetitions):
+					for inner in operation.circuit.moments:
+						self._apply_moment(state, inner, index, rng=rng, measurements=measurements)
+				continue
+			gate = _operation_gate(operation)
 			targets = [index[q] for q in operation.qubits]
 			if isinstance(gate, MeasurementGate):
 				if rng is None or measurements is None:
@@ -954,6 +981,8 @@ class Simulator(
 				outcome = state.measure(targets, rng.random())
 				_record_bits(gate, outcome, len(targets), measurements)
 				continue
+			if gate is None:
+				raise TypeError(f"{operation!r} has no unitary and cannot be simulated")
 			flat = gate._cached_flat_unitary_()
 			if flat is None:
 				if rng is None:
@@ -1171,7 +1200,14 @@ class DensityMatrixSimulator(
 		measurements: dict[str, list[list[int]]] | None,
 	) -> None:
 		for operation in moment.operations:
-			gate = operation.gate
+			from ._circuits import CircuitOperation
+
+			if isinstance(operation, CircuitOperation):
+				for _ in range(operation.repetitions):
+					for inner in operation.circuit.moments:
+						self._apply_moment(density, inner, index, rng=rng, measurements=measurements)
+				continue
+			gate = _operation_gate(operation)
 			targets = [index[q] for q in operation.qubits]
 			if isinstance(gate, MeasurementGate):
 				if rng is None or measurements is None:
@@ -1179,6 +1215,8 @@ class DensityMatrixSimulator(
 				outcome = density.measure(targets, rng.random())
 				_record_bits(gate, outcome, len(targets), measurements)
 				continue
+			if gate is None:
+				raise TypeError(f"{operation!r} has neither a unitary nor Kraus operators")
 			operators = gate._kraus_()
 			if operators is None:
 				matrix = gate._cached_unitary_()

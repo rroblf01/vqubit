@@ -414,6 +414,16 @@ def is_parameterized(value: Any) -> bool:
 		return any(is_parameterized(operation) for operation in value.all_operations())
 	if isinstance(value, Moment):
 		return any(is_parameterized(operation) for operation in value.operations)
+	if isinstance(value, Operation) and not isinstance(value, GateOperation):
+		# Not every operation wraps a gate (``CircuitOperation``, ``TaggedOperation``),
+		# so ask the operation itself first.
+		hook = getattr(value, "_is_parameterized_", None)
+		if hook is not None:
+			return bool(hook())
+		inner = getattr(value, "untagged", None)
+		if inner is not None:
+			return is_parameterized(inner)
+		return False
 	if isinstance(value, (GateOperation, Operation)):
 		return bool(value.gate._is_parameterized_())
 	if isinstance(value, Gate):
@@ -428,6 +438,14 @@ def resolve_parameters(value: Any, resolver: ParamResolver) -> Any:
 		return Circuit.from_moments(moments)
 	if isinstance(value, Moment):
 		return Moment([resolve_parameters(op, resolver) for op in value.operations])
+	if isinstance(value, Operation) and not isinstance(value, GateOperation):
+		hook = getattr(value, "_resolve_parameters_", None)
+		if hook is not None:
+			return hook(resolver)
+		inner = getattr(value, "untagged", None)
+		if inner is not None:
+			return resolve_parameters(inner, resolver)
+		return value
 	if isinstance(value, (GateOperation, Operation)):
 		return resolve_parameters(value.gate, resolver).on(*value.qubits)
 	if isinstance(value, Gate):

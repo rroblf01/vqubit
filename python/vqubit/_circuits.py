@@ -397,6 +397,16 @@ class CircuitOperation(Operation):
 	def _measurement_key_obj_(self) -> Any:
 		return None
 
+	def _is_parameterized_(self) -> bool:
+		from ._protocols import is_parameterized
+
+		return is_parameterized(self._circuit)
+
+	def _resolve_parameters_(self, resolver: Any) -> CircuitOperation:
+		from ._protocols import resolve_parameters
+
+		return CircuitOperation(resolve_parameters(self._circuit, resolver), repetitions=self._repetitions)
+
 	def _value_equality_values_(self) -> Any:
 		return (self._circuit, self._repetitions)
 

@@ -216,3 +216,41 @@ def test_a_two_qubit_channel_uses_the_coherences_of_both_qubits() -> None:
 	result = vqubit.Simulator(seed=5).run(circuit, repetitions=500)
 	# The Bell pair ends up perfectly correlated, whatever the branch.
 	assert all(row[0] == row[1] for row in result.measurements["m"])
+
+
+def test_a_circuit_operation_simulates_inside_a_circuit() -> None:
+	# It used to raise NotImplementedError: an operation without a gate reached
+	# `operation.gate` in the simulator, and the measurement inside it also made
+	# the "simulate once and sample" shortcut treat it as a terminal measurement.
+	q0 = vqubit.LineQubit(0)
+	inner = vqubit.FrozenCircuit(vqubit.H(q0), vqubit.measure(q0, key="m"))
+	circuit = vqubit.Circuit(vqubit.CircuitOperation(inner, repetitions=3))
+	result = vqubit.Simulator(seed=4).run(circuit, repetitions=5)
+	assert len(result.measurements["m"]) == 15  # three bits per shot
+	assert all(row[0] in (0, 1) for row in result.measurements["m"])
+	# The density-matrix simulator takes the same route.
+	exact = vqubit.DensityMatrixSimulator(seed=4).run(circuit, repetitions=5)
+	assert len(exact.measurements["m"]) == 15
+	# And without measurements it is just its unitary.
+	plain = vqubit.Circuit(vqubit.CircuitOperation(vqubit.FrozenCircuit(vqubit.H(q0)), repetitions=2))
+	assert [round(abs(z), 6) for z in vqubit.Simulator().simulate(plain).state_vector()] == [1.0, 0.0]
+	assert vqubit.DensityMatrixSimulator().simulate(plain).final_density_matrix[0][0] == pytest.approx(1)
+
+
+def test_a_parameterised_circuit_operation_is_resolved() -> None:
+	q0 = vqubit.LineQubit(0)
+	inner = vqubit.FrozenCircuit(vqubit.XPowGate(exponent=vqubit.Parameter("t"))(q0))
+	operation = vqubit.CircuitOperation(inner)
+	assert vqubit.is_parameterized(operation)
+	circuit = vqubit.Circuit(operation)
+	result = vqubit.Simulator().simulate_sweep(circuit, params=vqubit.Points("t", [0.0, 1.0]))
+	states = [list(item.state_vector()) for item in result]
+	assert [round(abs(z), 6) for z in states[0]] == [1.0, 0.0]
+	assert [round(abs(z), 6) for z in states[1]] == [0.0, 1.0]
+	# A tagged operation reports what it wraps, and resolving keeps the tag.
+	tagged = vqubit.XPowGate(exponent=vqubit.Parameter("t"))(q0).with_tags("a")
+	assert vqubit.is_parameterized(tagged)
+	resolved = vqubit.resolve_parameters(tagged, vqubit.ParamResolver({"t": 1.0}))
+	assert isinstance(resolved, vqubit.TaggedOperation)
+	assert resolved.tags == ("a",)
+	assert vqubit.is_parameterized(vqubit.H(q0).with_tags("a")) is False

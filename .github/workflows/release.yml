@@ -52,10 +52,6 @@ jobs:
           container: ${{ matrix.container }}
           args: ${{ matrix.args }}
 
-      - name: verify the RECORD
-        shell: bash
-        run: python tools/check_wheel.py dist/*.whl
-
       - name: upload the wheel
         uses: actions/upload-artifact@v6
         with:
@@ -79,14 +75,36 @@ jobs:
       - name: build the sdist
         run: vcraft sdist
 
-      - name: check the sdist
-        run: python tools/check_wheel.py dist/*.tar.gz
-
       - name: upload the sdist
         uses: actions/upload-artifact@v6
         with:
           name: sdist
           path: dist/*.tar.gz
+
+  # Every artifact is checked on a plain runner, after the upload/download
+  # round trip: the Linux wheels are built inside a manylinux container, where
+  # there is no `python` on PATH, and this also proves that what came back out
+  # of the artifacts is what was built. `publish` waits for this job.
+  verify:
+    name: verify the artifacts
+    needs: [build, sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: collect the distributions
+        uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: check every RECORD
+        run: python tools/check_wheel.py dist/*
 
   # Provenance in its own job, on a plain runner: it runs next to `publish`
   # rather than in front of it, so a change on GitHub's side cannot stop the
@@ -117,7 +135,7 @@ jobs:
 
   publish:
     name: publish to PyPI
-    needs: [build, sdist]
+    needs: [verify]
     runs-on: ubuntu-latest
     environment:
       name: pypi

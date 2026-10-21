@@ -339,8 +339,9 @@ Las divergencias `permanent` están explicadas en
       `installation` (ES/EN) y en la tabla de plataformas de `stability`; la
       matriz ya prueba el caso sin numpy/sympy/matplotlib y el job `interop`
       prueba el caso con ellos.
-- [ ] Endurecer los classifiers para la 1.0.0: `Development Status :: 3 - Alpha`
-      debe pasar a `5 - Production/Stable` cuando toque.
+- [x] **(1.0)** Classifiers endurecidos: `Development Status :: 5 -
+      Production/Stable` en `vcraft.toml`, con la versión 1.0.0 en `vcraft.toml`,
+      en `version()` nativa y en `CITATION.cff`.
 - [x] **(0.9)** Verificación por hash del `RECORD`:
       `tools/check_wheel.py` relee cada rueda y cada sdist construidos, compara
       cada `sha256` y cada tamaño con lo que dice `RECORD`, y falla si sobra un
@@ -493,7 +494,10 @@ parejas de rango deficiente (el SVD completaba mal la base) y la validación de
 forma/unitariedad de los helpers de descomposición (ya lanzan `ValueError` en vez
 de reventar en el núcleo V).
 
-#### 8. Rendimiento (apoyo)
+#### 8. Rendimiento (apoyo) — **metas de la 1.x, fuera de la 1.0.0**
+
+Las dos de abajo son metas de rendimiento que dependen de vcraft: no están en la
+definición de terminado de la 1.0.0 y la API no cambia cuando lleguen.
 
 - [ ] Cerrar la brecha de simulación a 20 qubits: es **DRAM/TLB-bound**, no
       aritmética (los kernels van a ~25 GB/s, el ancho de banda de la máquina), y
@@ -587,8 +591,11 @@ hecho:
       test; cualquier desvío nuevo falla el job.
 - [x] **Sin extras, a propósito** (como Cirq): lo opcional se documenta con su
       `pip install` y la matriz sin numpy/sympy/matplotlib lo prueba.
-- [x] Guía de migración desde Cirq; la documentación **versionada** queda
-      pendiente del ajuste de Pages (`mike` está preparado).
+- [x] Guía de migración desde Cirq (`guide/migrating-from-cirq`, ES y EN).
+- [ ] **Documentación versionada, después del tag**: `mike` está preparado y el
+      paso exacto está en `CONTRIBUTING.md`; necesita que GitHub Pages publique
+      desde la rama `gh-pages` (un ajuste del repositorio, un clic). No bloquea
+      la publicación: la web sigue publicando `main` hasta entonces.
 - [x] Política SemVer y de deprecación con mecanismo y test.
 - [x] `api-diff` en CI sobre la superficie pública (`tools/check_api_surface.py`).
 - [x] Gobernanza completa: COC, SECURITY, plantillas, CITATION, notas de release.
@@ -924,8 +931,9 @@ blanket. The `permanent` divergences are explained in
       is in `installation` (ES/EN) and in the `stability` platform table; the
       matrix already covers the no-numpy/sympy/matplotlib case and the `interop`
       job covers the case with them.
-- [ ] Harden the classifiers for 1.0.0: `Development Status :: 3 - Alpha` must
-      become `5 - Production/Stable` when the time comes.
+- [x] **(1.0)** Classifiers hardened: `Development Status :: 5 -
+      Production/Stable` in `vcraft.toml`, with 1.0.0 in `vcraft.toml`, in the
+      native `version()` and in `CITATION.cff`.
 - [x] **(0.9)** `RECORD` hash verification: `tools/check_wheel.py` reads every
       built wheel and sdist back, compares each `sha256` and size with what
       `RECORD` claims, and fails on an extra file, a missing one or mismatched
@@ -1051,7 +1059,10 @@ rank-deficient pairs (the SVD completed the basis wrongly) and the
 shape/unitarity validation of the decomposition helpers (they now raise
 `ValueError` instead of panicking in the V core).
 
-#### 8. Performance (supporting)
+#### 8. Performance (supporting) — **1.x goals, outside 1.0.0**
+
+The two below are performance goals that depend on vcraft: they are not part of
+the 1.0.0 definition of done and the API does not change when they land.
 
 - [ ] Close the 20-qubit simulation gap: it is **DRAM/TLB-bound**, not
       arithmetic (the kernels run at ~25 GB/s, the machine's bandwidth), and
@@ -1142,11 +1153,15 @@ A milestone is delivered when its gate passes, not when the work looks done:
 - [x] **No extras, on purpose** (like Cirq): the optional pieces are documented
       with their `pip install` and the matrix without numpy/sympy/matplotlib
       covers the bare case.
-- [ ] Documentation versioned per release, with the Cirq migration guide.
-- [ ] SemVer and deprecation policy with mechanism and test.
-- [ ] `api-diff` in CI over the public surface.
-- [ ] Complete governance: COC, SECURITY, templates, CITATION, release notes.
-- [ ] `benchmarks/verify.py` and `benchmarks/parity.py` green on all 3 OSes.
+- [x] The Cirq migration guide (`guide/migrating-from-cirq`, ES and EN).
+- [ ] **Versioned documentation, after the tag**: `mike` is ready and the exact
+      step is in `CONTRIBUTING.md`; it needs GitHub Pages to publish from the
+      `gh-pages` branch (a repository setting, one click). It does not block the
+      release: the site keeps publishing `main` until then.
+- [x] SemVer and deprecation policy with mechanism and test.
+- [x] `api-diff` in CI over the public surface.
+- [x] Complete governance: COC, SECURITY, templates, CITATION, release notes.
+- [x] `benchmarks/verify.py` and `benchmarks/parity.py` green on all 3 OSes.
 
 ### Out of scope for 1.0.0
 

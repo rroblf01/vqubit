@@ -114,6 +114,9 @@ release and one click on PyPI's side.
 6. **Verify what PyPI serves**: `python -m venv /tmp/check &&
    /tmp/check/bin/python -m pip install vqubit==X.Y.Z`, then import it and run
    `python tools/check_wheel.py dist/*.whl` on what `pip download` fetched.
+   The `attest` job signs every artifact, so
+   `gh attestation verify dist/vqubit-X.Y.Z-*.whl -R rroblf01/vqubit` answers
+   where it was built from.
 7. **Deploy the versioned docs** (below) and start the next `## [Unreleased]`
    section.
 

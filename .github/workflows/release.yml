@@ -12,10 +12,6 @@ jobs:
   build:
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -60,13 +56,6 @@ jobs:
         shell: bash
         run: python tools/check_wheel.py dist/*.whl
 
-      # GitHub's build provenance: `gh attestation verify <wheel> -R ...` proves
-      # the file was built by this workflow from this commit.
-      - name: attest the build provenance
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: dist/*.whl
-
       - name: upload the wheel
         uses: actions/upload-artifact@v6
         with:
@@ -76,10 +65,6 @@ jobs:
   sdist:
     name: source distribution
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@v5
 
@@ -97,16 +82,38 @@ jobs:
       - name: check the sdist
         run: python tools/check_wheel.py dist/*.tar.gz
 
-      - name: attest the build provenance
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: dist/*.tar.gz
-
       - name: upload the sdist
         uses: actions/upload-artifact@v6
         with:
           name: sdist
           path: dist/*.tar.gz
+
+  # Provenance in its own job, on a plain runner: it runs next to `publish`
+  # rather than in front of it, so a change on GitHub's side cannot stop the
+  # files from reaching PyPI, but a failure still marks the workflow red.
+  attest:
+    name: attest the build provenance
+    needs: [build, sdist]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: collect the distributions
+        uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+
+      # `gh attestation verify <file> -R rroblf01/vqubit` ties a downloaded file
+      # to this workflow and this commit.
+      - name: attest
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
 
   publish:
     name: publish to PyPI

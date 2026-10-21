@@ -348,10 +348,11 @@ Las divergencias `permanent` están explicadas en
       fichero, falta uno o los bytes no cuadran (nadie más lo comprueba: `pip`
       no lo mira). Corre en el job de build de los 3 SO y antes de publicar, y
       tiene sus propios tests con ruedas rotas a propósito.
-- [x] **(0.9)** Atestación de procedencia en la release:
-      `actions/attest-build-provenance@v4` firma cada rueda y el sdist desde el
-      workflow de release, así que `gh attestation verify` puede demostrar que
-      el fichero salió de ese commit y ese workflow. Se ejercita en la próxima
+- [x] **(1.0)** Atestación de procedencia en la release:
+      `actions/attest-build-provenance@v4` firma cada rueda y el sdist en un job
+      propio (`attest`), en paralelo con la publicación y en un runner limpio,
+      así que `gh attestation verify` demuestra de qué commit y workflow salió el
+      fichero sin poder bloquear la subida a PyPI. Se ejercita en la próxima
       release (no hay forma de probarlo sin publicar).
 - [x] **(1.0)** **Builds reproducibles:** mismo commit → mismos bytes.
       vcraft escribe las entradas del ZIP con fecha fija (1980-01-01, hora 0) y
@@ -939,11 +940,12 @@ blanket. The `permanent` divergences are explained in
       `RECORD` claims, and fails on an extra file, a missing one or mismatched
       bytes (`pip` does not check it). It runs in the build job of the three
       OSes and before publishing, with tests that feed it broken archives.
-- [x] **(0.9)** Release provenance attestation:
-      `actions/attest-build-provenance@v4` signs every wheel and the sdist from
-      the release workflow, so `gh attestation verify` can prove the file came
-      from that commit and that workflow. It is exercised by the next release
-      (there is no way to test it without publishing).
+- [x] **(1.0)** Release provenance attestation:
+      `actions/attest-build-provenance@v4` signs every wheel and the sdist in its
+      own `attest` job, beside publishing and on a clean runner, so
+      `gh attestation verify` proves which commit and workflow the file came from
+      without being able to block the upload to PyPI. It is exercised by the next
+      release (there is no way to test it without publishing).
 - [x] **(1.0)** **Reproducible builds:** same commit, same bytes. vcraft writes
       the ZIP entries with a fixed date (1980-01-01, time 0) in a deterministic
       order, and `METADATA`/`WHEEL` carry no date, so the wheel and the sdist

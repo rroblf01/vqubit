@@ -108,9 +108,11 @@ release and one click on PyPI's side.
    and update `CITATION.cff`.
 3. **Run the gate** from the checks above, then let CI finish green on `main`.
 4. **Tag and push**: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-5. **Publish the GitHub release** for that tag. `release.yml` builds the wheels
-   and the sdist, verifies each `RECORD`, attests the artifacts and uploads to
-   PyPI with Trusted Publishing.
+5. **Publish the GitHub release** for that tag, pasting the `CHANGELOG.md`
+   section for the version as the release notes. `release.yml` builds the wheels
+   and the sdist, verifies each `RECORD` in its `verify` job (publishing waits
+   for it), attests the artifacts in its `attest` job and uploads to PyPI with
+   Trusted Publishing.
 6. **Verify what PyPI serves**: `python -m venv /tmp/check &&
    /tmp/check/bin/python -m pip install vqubit==X.Y.Z`, then import it and run
    `python tools/check_wheel.py dist/*.whl` on what `pip download` fetched.

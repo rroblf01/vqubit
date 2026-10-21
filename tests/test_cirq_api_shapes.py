@@ -8,6 +8,7 @@ run with the wheel and pytest only.
 from __future__ import annotations
 
 import math
+from typing import Any, cast
 
 import pytest
 
@@ -197,10 +198,11 @@ def test_the_circuit_operators_refuse_what_they_cannot_do() -> None:
 	with pytest.raises(TypeError):
 		_ = circuit + 1
 	# `c * 1.5` and `c * True` are refused, which Python turns into a TypeError.
+	untyped = cast(Any, circuit)
 	with pytest.raises(TypeError):
-		_ = circuit * 1.5  # type: ignore[unsupported-operator]
+		_ = untyped * 1.5
 	with pytest.raises(TypeError):
-		_ = circuit * True  # type: ignore[unsupported-operator]
+		_ = untyped * True
 	# A QubitOrder object, not just a list, decides the diagram's order.
 	assert circuit.to_text_diagram(qubit_order=vqubit.QubitOrder.DEFAULT) == "0: ───H───"
 

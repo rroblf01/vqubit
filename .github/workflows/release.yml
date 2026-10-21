@@ -104,7 +104,7 @@ jobs:
           merge-multiple: true
 
       - name: check every RECORD
-        run: python tools/check_wheel.py dist/*
+        run: python tools/check_wheel.py dist/*.whl dist/*.tar.gz
 
   # Provenance in its own job, on a plain runner: it runs next to `publish`
   # rather than in front of it, so a change on GitHub's side cannot stop the

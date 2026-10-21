@@ -53,7 +53,7 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: upload the wheel
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: dist/*.whl
@@ -76,7 +76,7 @@ jobs:
         run: vcraft sdist
 
       - name: upload the sdist
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: dist/*.tar.gz

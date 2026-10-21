@@ -37,7 +37,7 @@ jobs:
         run: python tools/check_wheel.py dist/*.whl
 
       - name: upload the wheel
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheel-${{ matrix.os }}
           path: dist/*.whl

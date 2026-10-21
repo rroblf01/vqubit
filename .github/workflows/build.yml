@@ -77,7 +77,7 @@ jobs:
           ls dist/*.whl >/dev/null 2>&1 || { echo 'no wheel was written in dist/'; exit 1; }
 
       - name: upload
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: dist/*.whl

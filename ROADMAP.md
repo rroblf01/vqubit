@@ -316,6 +316,11 @@ Las divergencias `permanent` están explicadas en
 #### 3. Empaquetado y distribución
 
 - [x] Publicar **sdist** junto a los wheels (`vcraft sdist`) — 0.2.0.
+- [x] **(0.9)** La sdist se construye **e instala** en CI: un job la escribe,
+      comprueba su forma, la descomprime, construye una rueda con
+      `vcraft build --release`, la verifica contra su `RECORD` y la instala en un
+      entorno limpio para ejecutar un circuito. Antes se publicaba sin que nada
+      demostrara que compilaba.
 - [x] Wheels de **Windows** (`win_amd64`) — 0.2.0.
 - [x] Wheels *stripped* en release (`[build] strip`) — 0.2.0.
 - [ ] Extras publicados y documentados: `vqubit[vis]`, `vqubit[interop]`.
@@ -858,6 +863,11 @@ blanket. The `permanent` divergences are explained in
 #### 3. Packaging and distribution
 
 - [x] Publish an **sdist** alongside the wheels (`vcraft sdist`) — 0.2.0.
+- [x] **(0.9)** The sdist is **built and installed** in CI: a job writes it,
+      checks its shape, unpacks it, builds a wheel with `vcraft build
+      --release`, verifies it against its `RECORD` and installs it in a clean
+      environment to run a circuit. It used to be published with nothing proving
+      it compiled.
 - [x] **Windows** (`win_amd64`) wheels — 0.2.0.
 - [x] Stripped release wheels (`[build] strip`) — 0.2.0.
 - [ ] Publish and document extras: `vqubit[vis]`, `vqubit[interop]`.

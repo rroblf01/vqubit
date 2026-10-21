@@ -240,6 +240,10 @@ tests with coverage at 95 %.
   16 qubits went from 2.3 s to 0.02 s without `numpy` (the seeded outcomes are
   bit-for-bit the same as the linear scan, which `tests/test_sim_extra.py`
   pins).
+- **The sdist is built and used in CI**: a job writes it, checks its shape,
+  unpacks it, builds a wheel with `vcraft build --release`, verifies that wheel
+  against its `RECORD` and installs it in a clean environment to simulate a
+  circuit. The sdist was published without any proof that it compiles.
 - **`tools/check_wheel.py`**: reads a built wheel or sdist back and verifies
   every `RECORD` hash and size (and that the archive has no unrecorded files and
   no missing ones). It runs on the three build jobs and before publishing.

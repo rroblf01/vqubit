@@ -30,6 +30,12 @@ jobs:
         with:
           args: build --release --abi3 3.11
 
+      # pip does not check RECORD, so nothing else proves that the archive
+      # contains exactly the files it lists.
+      - name: verify the RECORD
+        shell: bash
+        run: python tools/check_wheel.py dist/*.whl
+
       - name: upload the wheel
         uses: actions/upload-artifact@v6
         with:

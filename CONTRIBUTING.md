@@ -81,10 +81,15 @@ $ ruff check .
 $ ruff format --check .
 $ ty check
 $ python benchmarks/verify.py   # 619 numerical checks
-$ python benchmarks/parity.py   # 1867 API checks against cirq-core 1.7.0
+$ python benchmarks/parity.py   # 1873 API checks against cirq-core 1.7.0
+$ python benchmarks/perf.py     # four workloads against the ceilings
 $ python tools/check_api_docs.py # new public API must be documented
 $ mkdocs build --strict         # both languages
 ```
+
+The build jobs also run `python tools/check_wheel.py dist/*.whl`, which reads
+the freshly built wheel back and verifies every `RECORD` hash and size; run it
+after a local build if you touched packaging (`pip` does not check `RECORD`).
 
 The test suite must also pass **without** numpy, sympy or matplotlib: the
 matrix installs only the wheel and pytest, so import those lazily or guard

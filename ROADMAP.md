@@ -323,8 +323,22 @@ Las divergencias `permanent` están explicadas en
       ver `UPSTREAM.md` §3): hoy el `METADATA` no lleva ningún `Provides-Extra`.
 - [ ] Endurecer los classifiers para la 1.0.0: `Development Status :: 3 - Alpha`
       debe pasar a `5 - Production/Stable` cuando toque.
-- [ ] Builds reproducibles, verificación por hash del `RECORD` y atestación de
-      procedencia (SLSA) en PyPI.
+- [x] **(0.9)** Verificación por hash del `RECORD`:
+      `tools/check_wheel.py` relee cada rueda y cada sdist construidos, compara
+      cada `sha256` y cada tamaño con lo que dice `RECORD`, y falla si sobra un
+      fichero, falta uno o los bytes no cuadran (nadie más lo comprueba: `pip`
+      no lo mira). Corre en el job de build de los 3 SO y antes de publicar, y
+      tiene sus propios tests con ruedas rotas a propósito.
+- [x] **(0.9)** Atestación de procedencia en la release:
+      `actions/attest-build-provenance@v4` firma cada rueda y el sdist desde el
+      workflow de release, así que `gh attestation verify` puede demostrar que
+      el fichero salió de ese commit y ese workflow. Se ejercita en la próxima
+      release (no hay forma de probarlo sin publicar).
+- [ ] **Builds reproducibles** (mismo commit → mismos bytes). **Bloqueado por
+      vcraft** (`UPSTREAM.md` §5: el empaquetado no respeta `SOURCE_DATE_EPOCH`
+      ni la fecha de los ficheros). Criterio: dos builds del mismo commit en
+      máquinas distintas dan el mismo `sha256`, comprobado con
+      `tools/check_wheel.py`.
 - [x] **(0.9)** Política de plataformas y ciclos de soporte en
       `docs/{es,en}/guide/stability.md`: CPython 3.11–3.15, Linux/macOS/Windows
       x86_64 y arm64, sin dependencias en tiempo de ejecución.
@@ -851,8 +865,20 @@ blanket. The `permanent` divergences are explained in
       `UPSTREAM.md` §3): the `METADATA` carries no `Provides-Extra` today.
 - [ ] Harden the classifiers for 1.0.0: `Development Status :: 3 - Alpha` must
       become `5 - Production/Stable` when the time comes.
-- [ ] Reproducible builds, `RECORD` hash verification and provenance
-      attestation (SLSA) on PyPI.
+- [x] **(0.9)** `RECORD` hash verification: `tools/check_wheel.py` reads every
+      built wheel and sdist back, compares each `sha256` and size with what
+      `RECORD` claims, and fails on an extra file, a missing one or mismatched
+      bytes (`pip` does not check it). It runs in the build job of the three
+      OSes and before publishing, with tests that feed it broken archives.
+- [x] **(0.9)** Release provenance attestation:
+      `actions/attest-build-provenance@v4` signs every wheel and the sdist from
+      the release workflow, so `gh attestation verify` can prove the file came
+      from that commit and that workflow. It is exercised by the next release
+      (there is no way to test it without publishing).
+- [ ] **Reproducible builds** (same commit, same bytes). **Blocked by vcraft**
+      (`UPSTREAM.md` §5: packaging does not honour `SOURCE_DATE_EPOCH` or file
+      timestamps). Criterion: two builds of the same commit on different
+      machines give the same `sha256`, checked with `tools/check_wheel.py`.
 - [ ] Document the supported-platform policy and Python support windows.
 
 #### 4. Interoperability

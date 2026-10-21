@@ -240,6 +240,12 @@ tests with coverage at 95 %.
   16 qubits went from 2.3 s to 0.02 s without `numpy` (the seeded outcomes are
   bit-for-bit the same as the linear scan, which `tests/test_sim_extra.py`
   pins).
+- **`tools/check_wheel.py`**: reads a built wheel or sdist back and verifies
+  every `RECORD` hash and size (and that the archive has no unrecorded files and
+  no missing ones). It runs on the three build jobs and before publishing.
+- **Build provenance**: the release workflow attests every wheel and the sdist
+  with `actions/attest-build-provenance`, so `gh attestation verify` links the
+  published file to the commit and workflow that produced it.
 - **A performance gate**: `benchmarks/perf.py` times four workloads (16-qubit
   state vector, 8-qubit density matrix, 100-qubit stabilizer, 16-qubit sampling)
   against the ceilings in `benchmarks/perf_budget.json` (about twenty times a

@@ -170,7 +170,13 @@ jobs:
           mkdir -p /tmp/sdist
           tar -xzf dist/*.tar.gz -C /tmp/sdist
           cd /tmp/sdist/vqubit-*
-          vcraft build --release --abi3 3.11
+          if ! vcraft build --release --abi3 3.11 2>&1 | tee /tmp/vcraft.log; then
+            # The job log is not always at hand; surface the tail as annotations.
+            tail -n 40 /tmp/vcraft.log | while IFS= read -r line; do
+              echo "::error title=vcraft build::$line"
+            done
+            exit 1
+          fi
           python "$GITHUB_WORKSPACE/tools/check_wheel.py" dist/*.whl
 
       - name: install it in a clean environment and use it

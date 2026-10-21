@@ -258,6 +258,51 @@ tests with coverage at 95 %.
   `numpy` installed so the sampling case takes the same vectorised fast path the
   budget was taken in.
 
+### Fixed (1.0: found by running Cirq's idioms and fuzzing)
+
+- **`CliffordSimulator(...).state_vector()` was O(2**3n) and crashed the
+  process.** It rebuilt the state by multiplying dense projectors, so eleven
+  qubits took seconds, twelve killed the interpreter, and the phase of a `Y`
+  generator was only ever +/-1, which made several states plain wrong. The kernel
+  now starts from a deterministic pseudo-random vector and applies each
+  stabilizer projector with a bit flip and a sign, one pass over the 2**n
+  amplitudes: **twenty qubits in 0.31 s**, verified against the state-vector
+  simulator for random Clifford circuits up to ten qubits. Above 26 qubits
+  `state_vector()` raises instead of trying to allocate gigabytes, and the
+  stabilizer list stays available.
+- **The state-vector simulator runs channels and resets.** `Simulator().run` and
+  `simulate` refused every non-unitary gate ("has no unitary"), so a noisy
+  circuit needed the density-matrix simulator. They now sample one Kraus
+  trajectory per repetition, exactly as `cirq.Simulator` does, with the built-in
+  channels taking a native fast path (their effects are diagonal in the
+  computational basis) and a general `KrausChannel` falling back to the reduced
+  density matrix of its qubits. The distribution matches the density-matrix
+  simulator and Cirq.
+- **`eject_z` looped forever** on a `Z` followed by a `T`: every pass swapped the
+  two Z-type gates, each making the other look ejectable. It now accumulates the
+  rotations per qubit (so `Z`, `T` becomes `Z**1.25`), crosses what commutes,
+  follows a swap, drops them before a computational-basis measurement and stops
+  before a gate that does not commute — O(operations) instead of a bubble loop
+  that could not terminate.
+- **`stratified_circuit` reordered across dependencies**, silently changing the
+  unitary: grouping by category moved a gate before the one it depended on. It is
+  now a dependency graph (the ready operations are ordered by category, ties by
+  position), so the unitary and the order on every qubit are preserved.
+- **`measure` takes `invert_mask`**, as Cirq's does.
+- **The JSON carries channels, waits, matrix gates, `FSimGate` and tagged
+  operations.** `to_json` refused them and `read_json` could not read what Cirq
+  writes; both directions work now, tested against `cirq-core`.
+- **Cirq idioms that used to fail:** `final_state_vector(circuit)` and
+  `final_density_matrix(circuit)` (they only accepted a simulation result) with
+  their keyword arguments, `DensityMatrixTrialResult.final_density_matrix` is the
+  array rather than a wrapper, `measure_state_vector`/`measure_density_matrix`
+  return `(outcomes, state)`, `to_valid_state_vector`/`to_valid_density_matrix`
+  take `num_qubits`, `Operation.with_tags`/`.tags`/`.untagged` and `Circuit.tags`,
+  `Circuit + Circuit`/`Circuit + op`/`Circuit * n`, `CircuitOperation.repeat`
+  and `param_resolver=`, `Circuit.to_text_diagram(qubit_order=,
+  precision=, ...)`, `stratified_circuit(categories=...)`,
+  `CZTargetGateset(allow_partial_czs=...)`.
+
 ### Added (1.0: type checking the native module)
 
 - **`stubtest` in CI over the stub the wheel ships**, with `mypy==1.19.1`: the

@@ -765,12 +765,12 @@ TParamVal: class Any(*args, **kwargs)
 TParamValComplex: class Any(*args, **kwargs)
 TRANSFORMER: value Callable
 TaggedOperation: class TaggedOperation(sub_operation, *tags)
-    method untagged(self)
     method with_tags(self, *tags)
     property gate
     property qubits
     property sub_operation
     property tags
+    property untagged
 TargetGateset: class TargetGateset(*, atol=1e-08)
     method compile_operation(self, operation)
     method convert_two_qubit(self, operation)

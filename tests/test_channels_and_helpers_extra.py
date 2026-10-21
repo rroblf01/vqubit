@@ -149,7 +149,7 @@ def test_tags_have_string_forms() -> None:
 	# A tagged operation carries its tags and still does the same thing.
 	operation = vqubit.TaggedOperation(vqubit.X(q0), virtual)
 	assert operation.tags == (virtual,)
-	assert operation.untagged() == vqubit.X(q0)
+	assert operation.untagged == vqubit.X(q0)
 	assert_matrix_close(vqubit.unitary(operation), vqubit.unitary(vqubit.X))
 	with pytest.raises(ValueError, match="at least one tag"):
 		vqubit.TaggedOperation(vqubit.X(q0))

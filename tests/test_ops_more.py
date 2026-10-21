@@ -18,7 +18,7 @@ def test_tagged_operation() -> None:
 	assert tagged.tags == ("hardware",)
 	assert tagged.qubits == (q0,)
 	assert tagged.sub_operation == vqubit.H(q0)
-	assert tagged.untagged() == vqubit.H(q0)
+	assert tagged.untagged == vqubit.H(q0)
 	assert "hardware" in str(vqubit.Circuit(tagged))
 
 

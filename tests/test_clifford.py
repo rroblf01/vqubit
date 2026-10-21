@@ -129,7 +129,7 @@ def test_the_state_vector_agrees_with_the_state_vector_simulator() -> None:
 					gate = {
 						"h": _vqubit.H,
 						"s": _vqubit.S,
-						"sdg": _vqubit.S ** -1,
+						"sdg": _vqubit.S**-1,
 						"x": _vqubit.X,
 						"y": _vqubit.Y,
 						"z": _vqubit.Z,

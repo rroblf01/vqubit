@@ -80,3 +80,49 @@ def test_the_cirq_bridge_keeps_the_unitary() -> None:
 	circuit = vqubit.Circuit(vqubit.H(q0), vqubit.CZ(q0, q1), vqubit.rz(0.3)(q1))
 	converted = vqubit.to_cirq(circuit)
 	assert numpy.allclose(numpy.asarray(cirq.unitary(converted)), numpy.asarray(vqubit.unitary(circuit)), atol=1e-9)
+
+
+def test_channels_and_the_other_gate_types_travel_between_the_two_libraries() -> None:
+	"""The JSON of a channel, a wait, a matrix gate or a tagged op, both ways."""
+	numpy = pytest.importorskip("numpy", exc_type=ImportError)
+	cirq = pytest.importorskip("cirq", exc_type=ImportError)
+	import vqubit as _vqubit
+
+	q = _vqubit.LineQubit(0)
+	cq = cirq.LineQubit(0)
+	mine = [
+		_vqubit.bit_flip(0.1),
+		_vqubit.phase_flip(0.1),
+		_vqubit.depolarize(0.1, 2),
+		_vqubit.amplitude_damp(0.2),
+		_vqubit.phase_damp(0.2),
+		_vqubit.generalized_amplitude_damp(0.2, 0.3),
+		_vqubit.ResetChannel(),
+		_vqubit.KrausChannel([numpy.eye(2)]),
+		_vqubit.WaitGate(0.3),
+		_vqubit.MatrixGate(_vqubit.unitary(_vqubit.H)),
+		_vqubit.FSimGate(theta=0.3, phi=0.6),
+		_vqubit.H(q).with_tags("a"),
+	]
+	for gate in mine:
+		text = _vqubit.to_json(gate)
+		# vqubit reads its own JSON back...
+		assert _vqubit.read_json(text) is not None
+		# ...and Cirq reads it too, which is what the `cirq_type` format is for.
+		assert cirq.read_json(json_text=text) is not None
+	# And the other direction, from what Cirq writes.
+	theirs = [
+		cirq.bit_flip(0.1),
+		cirq.depolarize(0.1, 2),
+		cirq.amplitude_damp(0.2),
+		cirq.generalized_amplitude_damp(0.2, 0.3),
+		cirq.ResetChannel(),
+		cirq.WaitGate(cirq.Duration(nanos=300)),
+		cirq.MatrixGate(cirq.unitary(cirq.H)),
+		cirq.KrausChannel([numpy.array([[1, 0], [0, 0.9]]), numpy.array([[0, 0.1], [0, 0]])]),
+		cirq.FSimGate(theta=0.3, phi=0.6),
+		cirq.H(cq).with_tags("a"),
+	]
+	for gate in theirs:
+		restored = _vqubit.read_json(cirq.to_json(gate))
+		assert restored is not None

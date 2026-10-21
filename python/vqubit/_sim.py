@@ -662,11 +662,11 @@ def _channel_probabilities(
 	reduced = _target_density_matrix(amplitudes, num_qubits, list(targets))
 	probabilities = []
 	for effect in effects:
-		total = 0.0
+		accumulated = 0j
 		for row in range(size):
 			for column in range(size):
-				total += effect[row][column] * reduced[column][row]
-		probabilities.append(max(float(total.real), 0.0))
+				accumulated += effect[row][column] * reduced[column][row]
+		probabilities.append(max(accumulated.real, 0.0))
 	return probabilities
 
 

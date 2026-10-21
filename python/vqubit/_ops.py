@@ -35,7 +35,7 @@ class Operation:
 		if not tags:
 			return self
 		existing = getattr(self, "tags", ())
-		return TaggedOperation(self, (*existing, *tags))
+		return TaggedOperation(self, *existing, *tags)
 
 	def without_tags(self) -> Operation:
 		"""Return the operation with no tags at all."""
@@ -199,7 +199,7 @@ class TaggedOperation(Operation):
 		"""Return a copy carrying these tags as well."""
 		if not tags:
 			return self
-		return TaggedOperation(self._sub_operation, (*self._tags, *tags))
+		return TaggedOperation(self._sub_operation, *self._tags, *tags)
 
 	@property
 	def qubits(self) -> tuple[Qid, ...]:
@@ -211,8 +211,9 @@ class TaggedOperation(Operation):
 		"""The gate of the wrapped operation."""
 		return self._sub_operation.gate
 
+	@property
 	def untagged(self) -> Operation:
-		"""Return the wrapped operation without its tags."""
+		"""The wrapped operation without its tags, as a property like Cirq's."""
 		return self._sub_operation
 
 	def _circuit_diagram_info_(self) -> tuple[str, ...]:

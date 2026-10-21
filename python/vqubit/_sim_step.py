@@ -226,7 +226,9 @@ def _without_terminal_measurements(circuit: Any) -> Any:
 			"the circuit has measurements that are not at the end; a state vector cannot hold them "
 			"(pass ignore_terminal_measurements=True only for terminal ones, or simulate with run())"
 		)
-	operations = [operation for operation in circuit.all_operations() if not isinstance(operation.gate, MeasurementGate)]
+	operations = [
+		operation for operation in circuit.all_operations() if not isinstance(operation.gate, MeasurementGate)
+	]
 	return Circuit(operations)
 
 

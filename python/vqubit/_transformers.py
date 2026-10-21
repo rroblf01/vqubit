@@ -8,7 +8,7 @@ work sits together.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 import vqubit_native as _native
@@ -119,6 +119,14 @@ def _as_predicate(category: Any) -> Predicate:
 	raise TypeError(f"cannot use {category!r} as a category")
 
 
+def _category_rank(operation: Operation, predicates: Sequence[Any]) -> int:
+	"""The index of the first category ``operation`` belongs to, or one past the end."""
+	for index, predicate in enumerate(predicates):
+		if predicate(operation):
+			return index
+	return len(predicates)
+
+
 def stratified_circuit(circuit: Circuit, *positional: Any, categories: Any = ()) -> Circuit:
 	"""Return ``circuit`` with its operations ordered by category.
 
@@ -133,14 +141,39 @@ def stratified_circuit(circuit: Circuit, *positional: Any, categories: Any = ())
 		category_list = tuple(category_list[0])
 	predicates = [_as_predicate(category) for category in category_list]
 	operations = list(circuit.all_operations())
+	ranks = [_category_rank(operation, predicates) for operation in operations]
+
+	# Grouping must not reorder an operation before one it depends on: the
+	# circuit is a dependency graph, and only the *ready* operations (those whose
+	# predecessors on their qubits have been emitted) can be placed. Among the
+	# ready ones, the lowest category goes first and ties keep the original
+	# order, which is what Cirq's `stratified_circuit` does.
+	predecessors: list[set[int]] = [set() for _ in operations]
+	last_on_qubit: dict[Any, int] = {}
+	for index, operation in enumerate(operations):
+		for qubit in operation.qubits:
+			if qubit in last_on_qubit:
+				predecessors[index].add(last_on_qubit[qubit])
+			last_on_qubit[qubit] = index
+	successors: list[list[int]] = [[] for _ in operations]
+	ready: list[int] = []
+	for index, blocking in enumerate(predecessors):
+		for blocker in blocking:
+			successors[blocker].append(index)
+		if not blocking:
+			ready.append(index)
+
 	result = Circuit()
-	for predicate in predicates:
-		for operation in operations:
-			if predicate(operation):
-				result.append(operation)
-	for operation in operations:
-		if not any(predicate(operation) for predicate in predicates):
-			result.append(operation)
+	emitted = [False] * len(operations)
+	while ready:
+		ready.sort(key=lambda index: (ranks[index], index))
+		index = ready.pop(0)
+		emitted[index] = True
+		result.append(operations[index])
+		for follower in successors[index]:
+			predecessors[follower].discard(index)
+			if not predecessors[follower] and not emitted[follower]:
+				ready.append(follower)
 	return result
 
 

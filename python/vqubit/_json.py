@@ -12,6 +12,20 @@ import gzip
 import json
 from typing import Any
 
+from ._channels import (
+	AmplitudeDampingChannel,
+	BitFlipChannel,
+	BitPhaseFlipChannel,
+	DepolarizingChannel,
+	PhaseDampingChannel,
+	PhaseFlipChannel,
+	ResetChannel,
+)
+from ._channels_extra import (
+	GeneralizedAmplitudeDampingChannel,
+	KrausChannel,
+	MixedUnitaryChannel,
+)
 from ._circuits import Circuit, FrozenCircuit
 from ._control_values import ProductOfSums, SumOfProducts
 from ._gates import (
@@ -26,10 +40,12 @@ from ._gates import (
 	CYPowGate,
 	CZGate,
 	CZPowGate,
+	FSimGate,
 	HPowGate,
 	IdentityGate,
 	ISWAPGate,
 	ISwapPowGate,
+	MatrixGate,
 	MeasurementGate,
 	PhasedXPowGate,
 	PhasedXZGate,
@@ -39,6 +55,7 @@ from ._gates import (
 	SqrtISwapGate,
 	SWAPGate,
 	SwapPowGate,
+	WaitGate,
 	XPowGate,
 	XXPowGate,
 	YPowGate,
@@ -46,10 +63,11 @@ from ._gates import (
 	ZPowGate,
 	ZZPowGate,
 )
-from ._ops import GateOperation, Moment
+from ._ops import GateOperation, Moment, TaggedOperation
 from ._parameter import Parameter, _BinaryOp, _UnaryOp
 from ._pauli import Pauli, PauliString
 from ._qubits import GridQubit, LineQubit, NamedQubit
+from ._value_extra import Duration
 
 _PAULI_BY_VALUE = {p.value: p for p in Pauli}
 
@@ -168,6 +186,58 @@ def _encode(value: Any) -> Any:
 		# ``CSWAP`` is the one plain multi-qubit gate that is *not* a power gate,
 		# so it keeps a type name of its own (as in Cirq).
 		return {"cirq_type": type(value).__name__}
+	if isinstance(value, (BitFlipChannel, PhaseFlipChannel, BitPhaseFlipChannel)):
+		# Cirq names the parameter ``p``; vqubit calls it ``probability``.
+		return {"cirq_type": type(value).__name__, "p": _encode(value.probability)}
+	if isinstance(value, DepolarizingChannel):
+		payload: dict[str, Any] = {"cirq_type": "DepolarizingChannel", "p": _encode(value.probability)}
+		if value.num_qubits != 1:
+			payload["n_qubits"] = value.num_qubits
+		return payload
+	if isinstance(value, (AmplitudeDampingChannel, PhaseDampingChannel)):
+		return {"cirq_type": type(value).__name__, "gamma": _encode(value.gamma)}
+	if isinstance(value, GeneralizedAmplitudeDampingChannel):
+		return {
+			"cirq_type": "GeneralizedAmplitudeDampingChannel",
+			"p": _encode(value.p),
+			"gamma": _encode(value.gamma),
+		}
+	if isinstance(value, ResetChannel):
+		return {"cirq_type": "ResetChannel", "dimension": value._qid_shape_()[0]}
+	if isinstance(value, KrausChannel):
+		return {
+			"cirq_type": "KrausChannel",
+			"_kraus_ops": _encode(value._kraus_()),
+			"_key": _encode(getattr(value, "key", None)),
+		}
+	if isinstance(value, MixedUnitaryChannel):
+		return {
+			"cirq_type": "MixedUnitaryChannel",
+			"_mixture": _encode([[probability, matrix] for probability, matrix in value._mixture]),
+			"_key": _encode(getattr(value, "key", None)),
+		}
+	if isinstance(value, WaitGate):
+		return {
+			"cirq_type": "WaitGate",
+			"duration": {"cirq_type": "Duration", "picos": round(value.duration_nanos * 1000)},
+			"num_qubits": value.num_qubits,
+		}
+	if isinstance(value, MatrixGate):
+		matrix = value._unitary_()
+		rows = [list(row) for row in matrix] if matrix is not None else []
+		return {
+			"cirq_type": "MatrixGate",
+			"matrix": _encode(rows),
+			"qid_shape": [2] * value.num_qubits,
+		}
+	if isinstance(value, FSimGate):
+		return {"cirq_type": "FSimGate", "theta": _encode(value.theta), "phi": _encode(value.phi)}
+	if isinstance(value, TaggedOperation):
+		return {
+			"cirq_type": "TaggedOperation",
+			"sub_operation": _encode(value.untagged),
+			"tags": _encode(list(value.tags)),
+		}
 	if isinstance(value, GateOperation):
 		return {"cirq_type": "GateOperation", "gate": _encode(value.gate), "qubits": _encode(list(value.qubits))}
 	if isinstance(value, Moment):
@@ -386,6 +456,26 @@ def _register_all() -> None:
 	_DECODERS["CCXGate"] = lambda d: CCXGate()
 	_DECODERS["CSWAPGate"] = lambda d: CSWAPGate()
 	_DECODERS["ISWAPGate"] = lambda d: ISWAPGate()
+	_DECODERS["BitFlipChannel"] = lambda d: BitFlipChannel(_decode(d["p"]))
+	_DECODERS["PhaseFlipChannel"] = lambda d: PhaseFlipChannel(_decode(d["p"]))
+	_DECODERS["BitPhaseFlipChannel"] = lambda d: BitPhaseFlipChannel(_decode(d["p"]))
+	_DECODERS["DepolarizingChannel"] = lambda d: DepolarizingChannel(_decode(d["p"]), num_qubits=d.get("n_qubits", 1))
+	_DECODERS["AmplitudeDampingChannel"] = lambda d: AmplitudeDampingChannel(_decode(d["gamma"]))
+	_DECODERS["PhaseDampingChannel"] = lambda d: PhaseDampingChannel(_decode(d["gamma"]))
+	_DECODERS["GeneralizedAmplitudeDampingChannel"] = lambda d: GeneralizedAmplitudeDampingChannel(
+		_decode(d["p"]), _decode(d["gamma"])
+	)
+	_DECODERS["ResetChannel"] = lambda d: ResetChannel(d.get("dimension", 2))
+	_DECODERS["KrausChannel"] = lambda d: KrausChannel(_decode(d["_kraus_ops"]), key=_decode(d.get("_key")))
+	_DECODERS["MixedUnitaryChannel"] = lambda d: MixedUnitaryChannel(
+		[(probability, matrix) for probability, matrix in _decode(d["_mixture"])],
+		key=_decode(d.get("_key")),
+	)
+	_DECODERS["Duration"] = lambda d: Duration(picos=d["picos"])
+	_DECODERS["WaitGate"] = lambda d: WaitGate(_decode(d["duration"]).total_nanos(), num_qubits=d.get("num_qubits", 1))
+	_DECODERS["MatrixGate"] = lambda d: MatrixGate(_decode(d["matrix"]))
+	_DECODERS["FSimGate"] = lambda d: FSimGate(theta=_decode(d["theta"]), phi=_decode(d["phi"]))
+	_DECODERS["TaggedOperation"] = lambda d: TaggedOperation(_decode(d["sub_operation"]), tuple(_decode(d["tags"])))
 	_DECODERS["GateOperation"] = lambda d: GateOperation(_decode(d["gate"]), [_decode(q) for q in d["qubits"]])
 	_DECODERS["Moment"] = lambda d: Moment([_decode(op) for op in d["operations"]])
 	_DECODERS["Circuit"] = lambda d: Circuit.from_moments([_decode(m) for m in d["moments"]])

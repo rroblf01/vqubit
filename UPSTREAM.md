@@ -9,13 +9,13 @@ project `vqubit` (zero runtime dependencies, single `abi3` wheel per platform).
 
 | # | Title | Blocks |
 | - | ----- | ------ |
-| 1 | `.pyi` emits enum members as annotations, so the stub is unusable | `ty`, `mypy`, `stubtest` (roadmap 1.4, 7.3) |
-| 2 | `.pyi` writes `__init__` for classes built in `tp_new` | `stubtest` (roadmap 7.3) |
-| 3 | No way to declare optional dependencies / extras | `vqubit[vis]`, `vqubit[interop]` (roadmap 3.5) |
+| 1 | `.pyi` emits enum members as annotations, so the stub is unusable | `mypy` without an override (worked around: one module override) |
+| 2 | `.pyi` writes `__init__` for classes built in `tp_new` | nothing (six allowlisted `stubtest` entries) |
+| 3 | No way to declare optional dependencies / extras | nothing in 1.0 (no extras by design, like Cirq) |
 | 4 | Huge pages for the buffers (`buffer_new_*`) | 20-qubit simulation (roadmap 8) |
-| 5 | `WHEEL: Generator:` carries the project version; `audit` rejects `.pyd` | packaging hygiene |
+| 5 | `WHEEL: Generator:` carries the project version; `audit` rejects `.pyd`; fixed timestamps undocumented | packaging hygiene |
 | 6 | Runtime dispatch (function multiversioning) for the hot kernels | SIMD from a portable wheel (roadmap 8) |
-| 7 | `NativeTableau` has no `copy()`; `CliffordOp` is missing gates; `NativeDensity` has no `set_density_matrix` | per-step Clifford snapshots, stim's gate set, density-matrix trial states (roadmap 0.3) |
+| 7 | `NativeTableau` has no `copy()`; `CliffordOp` is missing gates; `NativeDensity` has no `set_density_matrix`; no way to apply an arbitrary Clifford | per-step Clifford snapshots, stim's gate set, density-matrix trial states (roadmap 0.3) |
 
 ---
 
@@ -27,6 +27,10 @@ project `vqubit` (zero runtime dependencies, single `abi3` wheel per platform).
 > checkout) does not mask the rest of the check; `ty` reads the same stub and
 > passes. The fix still belongs upstream (`member = value`), because the stub is
 > also what users see when they inspect the extension.
+>
+> **Update (1.0):** unchanged upstream, and no longer blocking: `stubtest` runs
+> over the stub the wheel ships (job `stubtest`) and the only entries it needs
+> from this section are the two explained in the update to §2.
 
 **What happens.** For a V enum returned across the FFI boundary, the generated
 stub writes one annotated attribute per member:
@@ -90,6 +94,15 @@ reported as an error by strict checkers even though it is the documented use.
 **Expected.** `def __new__(cls, num_qubits: int) -> NativeState: ...`, and, if the
 runtime truly is a disjoint base, the corresponding marker (or a targeted
 `# type: ignore`), so `stubtest` passes cleanly.
+
+> **Update (1.0):** these are the six entries of
+> `tools/stubtest_allowlist.txt`, and the only ones: with them,
+> `mypy.stubtest` over the stub the wheel ships says `Success: no issues found in
+> 1 module`. The marker cannot be written in a stub that has to work on Python
+> 3.11 either (`typing.disjoint_base` is a 3.15 name), so this needs the codegen:
+> either `__new__` plus the PEP 800 marker, or `Py_TPFLAGS_BASETYPE` on the
+> types. Anything else `stubtest` finds now fails CI, so the list cannot grow
+> quietly.
 
 ---
 

@@ -1,0 +1,22 @@
+# Known gaps of the stub vcraft generates, all tracked in UPSTREAM.md.
+#
+# `mypy.stubtest` compares the `.pyi` that ships in the wheel with the extension
+# itself. Everything it can see is fixed in the stub; what is listed here cannot
+# be, because it comes from the code generator or from the C API:
+#
+# * `__init__` vs `__new__` (UPSTREAM.md §2): vcraft writes the constructor as
+#   `__init__(self, num_qubits)`, but the extension implements it in `tp_new`,
+#   which is what the C API calls for. Correcting the stub is not possible while
+#   the stub is generated on every build.
+# * `@disjoint_base` (UPSTREAM.md §2): the extension types are not subclassable,
+#   so mypy 1.19 wants the PEP 800 marker. The stub ships to Python 3.11, where
+#   `typing.disjoint_base` does not exist, so it cannot carry it.
+#
+# Anything new that shows up here is a real regression: the list is pinned by
+# `tests/test_stubtest_allowlist.py`.
+vqubit_native.NativeState.__init__
+vqubit_native.NativeDensity.__init__
+vqubit_native.NativeTableau.__init__
+vqubit_native.NativeState
+vqubit_native.NativeDensity
+vqubit_native.NativeTableau

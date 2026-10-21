@@ -258,6 +258,15 @@ tests with coverage at 95 %.
   `numpy` installed so the sampling case takes the same vectorised fast path the
   budget was taken in.
 
+### Added (1.0: type checking the native module)
+
+- **`stubtest` in CI over the stub the wheel ships**, with `mypy==1.19.1`: the
+  job installs the wheel, takes the `vqubit_native.pyi` it carries and compares
+  it with the extension. Six exceptions remain, all vcraft's (the constructor is
+  in `tp_new` and the types cannot carry the PEP 800 marker on Python 3.11);
+  they live in `tools/stubtest_allowlist.txt`, `stubtest` fails when an entry
+  silences nothing, and `tests/test_stubtest_allowlist.py` pins the exact six.
+
 ### Added (1.0: distribution)
 
 - **Reproducible builds, checked on every push.** Two builds of the same commit

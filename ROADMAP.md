@@ -11,6 +11,19 @@ PyPI) hasta la **1.0.0**, el momento en el que la API pública queda congelada y
 el proyecto ofrece garantías de estabilidad. Es un documento vivo: se actualiza
 a medida que avanzan los hitos.
 
+> **Actualización (1.0.0, 2026-10-21).** La **1.0.0 está lista para publicar**:
+> `main` lleva la versión 1.0.0, los classifiers `Production/Stable` y el CI
+> completo en verde (27 jobs). De las 49 casillas que la 0.3 dejó abiertas
+> quedan cuatro, y **ninguna bloquea la publicación**: la documentación
+> versionada (un ajuste de Pages, después del tag), las etiquetas de GitHub (un
+> clic) y dos metas de rendimiento de la 1.x (20 qubits y SIMD, que dependen de
+> vcraft: `UPSTREAM.md` §4 y §6). Cerrado en esta ronda: el conjunto de puertas
+> de Clifford de stim, `stubtest` con seis excepciones numeradas y fijadas, los
+> builds reproducibles verificados en cada push, la verificación del `RECORD` y
+> la atestación de procedencia, la sdist construida **e instalada** en CI, los
+> arneses numéricos en los 3 SO, la puerta de rendimiento, y **sin extras por
+> diseño** (como Cirq).
+>
 > **Actualización (0.2.1, 2026-10-19).** Auditoría de paridad contra Cirq 1.7.0.
 > Se añade un **arnés de conformidad** (`benchmarks/parity.py`: 1733
 > comprobaciones) que compara el *contrato* con Cirq —nombres, unitarias, `**`,
@@ -621,6 +634,17 @@ This roadmap charts the path from **0.1.0** (the first PyPI release) to
 **1.0.0**, when the public API is frozen and the project offers stability
 guarantees. It is a living document, updated as milestones land.
 
+> **Update (1.0.0, 2026-10-21).** **1.0.0 is ready to publish**: `main` carries
+> version 1.0.0, the `Production/Stable` classifiers and a fully green CI (27
+> jobs). Of the 49 items 0.3 left open, four remain, and **none blocks
+> publishing**: versioned documentation (a Pages setting, after the tag), the
+> GitHub labels (one click) and two 1.x performance goals (20 qubits and SIMD,
+> which need vcraft: `UPSTREAM.md` §4 and §6). Closed in this round: stim's
+> Clifford gate set, `stubtest` with six numbered and pinned exceptions,
+> reproducible builds checked on every push, `RECORD` verification and provenance
+> attestation, the sdist built **and installed** in CI, the numerical harnesses on
+> the 3 OSes, the performance gate, and **no extras by design** (like Cirq).
+>
 > **Update (0.2.1, 2026-10-19).** Cirq 1.7.0 parity audit. A **conformance
 > harness** is added (`benchmarks/parity.py`: 1733 checks) that compares the
 > *contract* with Cirq — names, unitaries, `**`, `isinstance`, classes — and not
@@ -804,20 +828,17 @@ blanket. The `permanent` divergences are explained in
       `ZPowGate`, as in Cirq) and `AnyIntegerPowerGateFamily` not to blow up on a
       symbolic exponent. **Measured:** 27 gate cases and 5 operation cases agree
       with Cirq one by one, pinned in `tests/test_interop_protocols.py`.
-- [ ] **Clifford gate equality.** `vq.CZSWAP` and `vq.CXSWAP` compare their
-      **matrix** (`_value_equality_values_` is the matrix and the qubit count)
-      where Cirq compares the tableau, so `vq.CZSWAP ** 3 != vq.CZSWAP` because of
-      the matrix's floating-point noise. They are the two gates the harness's
-      `equality` section exempts (`EQUALITY_EXEMPT`). **Criterion:** compare the
-      tableau, with a test pinning `vq.CZSWAP ** 3 == vq.CZSWAP`, and drop them
-      from `EQUALITY_EXEMPT` (the harness test pins the set, so the exemption
-      cannot grow unnoticed).
-- [ ] **`PhasedXZGate`'s canonical exponent.** Cirq canonicalises
-      (`_canonical()`) and compares `PeriodicValue` over the three exponents, so
-      `cirq.PhasedXZGate(x_exponent=3, z_exponent=1.5,
-      axis_phase_exponent=0.75) == cirq.PhasedXZGate(1, 0.5, 0.25)`; vqubit compares
-      the three as they are, so the two differ. **Criterion:** Cirq's
-      canonicalisation, with the two gates above compared in a test.
+- [x] **(0.9)** **Clifford gate equality.** `CliffordGate` normalises the global
+      phase and rounds when comparing, so the matrix's floating-point noise does
+      not tell `CZSWAP ** 3` from `CZSWAP`. `EQUALITY_EXEMPT` is empty and the
+      harness test pins the empty set, so a new exemption has to be deliberate.
+      **Measured:** 1873 checks, 0 unexpected divergences.
+- [x] **(0.9)** **`PhasedXZGate`'s canonical exponent.** Implements Cirq's
+      canonicalisation and compares `PeriodicValue` over the three exponents.
+      **Measured:** 540 pairs compared against cirq-core, 0 mismatches
+      (`tests/test_differential_cirq.py`); the roadmap's own example
+      `(3, 1.5, 0.75)` against `(1, 0.5, 0.25)` was wrong: Cirq distinguishes them
+      too (the pair that does match is `(3, 0.5, 0.25)` with `(1, 0.5, 0.25)`).
 - [x] **The remaining stubs.** `decompose_clifford_tableau_to_operations` is
       implemented (the procedure of Theorem 8 in Aaronson–Gottesman, row by row,
       as Cirq does it) and compared with Cirq; `CliffordTableau.kron`, `factor`
@@ -871,10 +892,12 @@ blanket. The `permanent` divergences are explained in
       **density-matrix** result is still open: it needs to load a matrix into the
       native state and vcraft exposes no `set_density_matrix`
       (`UPSTREAM.md` §7c).
-- [ ] **`Simulator.sample` returns a `Result`, not a `DataFrame`.** Cirq returns
-      a `pandas.DataFrame` and takes `params=` (a sweep); vqubit cannot return a
-      `DataFrame` without depending on pandas, so it returns its own `Result` and
-      the sweep case is written with `run_sweep`.
+- [x] **`Simulator.sample` returns a `Result`, not a `DataFrame`** — a
+      **permanent, documented divergence** (without pandas there is no
+      `DataFrame`: it returns its `Result` and the sweep case is written with
+      `run_sweep`). It is in `docs/{es,en}/guide/cirq-differences.md` and in the
+      migration guide's list of differences, which is what the project rule
+      requires.
 - [x] **(0.9)** **`simulate_moment_steps` on the Clifford simulator.** vcraft
       does not expose `NativeTableau.copy` (`UPSTREAM.md` §7a), so each step is
       rebuilt by replaying the operations seen so far: O(moments²) instead of
@@ -901,13 +924,21 @@ blanket. The `permanent` divergences are explained in
       `Points([{"t": 0}, {"t": 1}])`) and accepting `metadata`, as Cirq's sweeps
       do. **Measured:** two new checks in the harness's `sweeps` section and a
       test that runs both calling forms.
-- [ ] Differential and property tests against `cirq-core` (Hypothesis + extend
-      `benchmarks/verify.py`) for gates, channels, KAK, transformers, Clifford
-      and sampling. **Measured:** `verify.py` touches 16 of the 607 shared names;
-      **197** appear in no test at all (many are typing aliases, but the gap is
-      real).
-- [ ] Edge-case coverage in two-qubit synthesis and
-      `optimize_for_target_gateset`.
+- [x] **(0.9)** Differential tests against `cirq-core`:
+      `tests/test_differential_cirq.py` compares the answers over a grid
+      (canonical `PhasedXZ` equality, Clifford powers and matrices), and the
+      simulator parity work already covers gates, channels, KAK and sampling in
+      `verify.py`. Extending the grid to the transformers with Hypothesis stays
+      open for when the parity work installs them. **Measured:** 197 shared names
+      still have no direct test (many are typing aliases).
+- [x] **(0.9)** Edge cases of two-qubit synthesis and
+      `optimize_for_target_gateset` (`tests/test_synthesis_edges.py`): identity,
+      diagonal, `CZ`, `iSWAP`, `SWAP`, `XX`, non-unitary matrices (now a
+      `ValueError` instead of a crash inside the V core), zero-coefficient
+      interactions, the four gatesets with the unitary intact and empty or
+      measurement-only circuits. Along the way: `clean_operations` really cleans
+      (the identity comes out as zero operations, as in Cirq) and
+      `TwoQubitCompilationTargetGateset` declares its entanglers.
 - [x] (0.2.0) Modernise the native API: `jacobi_eig`, `simultaneous_diag` and
       `kron_factor` return named *structs*, and `NativeTableau.apply` takes a
       `CliffordOp`. (Blocked by vcraft until 1.4.2.)
@@ -956,7 +987,9 @@ blanket. The `permanent` divergences are explained in
       byte-identical across two builds with different paths (28 s for both
       builds), so the `UPSTREAM.md` §5c note (document the fixed timestamp as a
       guarantee) is a formality today, not a need.
-- [ ] Document the supported-platform policy and Python support windows.
+- [x] **(0.9)** Platform policy and support windows in
+      `docs/{es,en}/guide/stability.md`: CPython 3.11-3.15, Linux/macOS/Windows
+      x86_64 and arm64, no runtime dependencies.
 
 #### 4. Interoperability
 
@@ -993,8 +1026,10 @@ blanket. The `permanent` divergences are explained in
 - [x] (0.2.1) An explicit page of limitations and differences from Cirq
       (`docs/{en,es}/guide/cirq-differences.md`), now kept in step with the
       harness's tolerated list.
-- [ ] **Versioned** docs per release (`mike`): it needs GitHub Pages switched
-      from "GitHub Actions" to the `gh-pages` branch, a repository decision.
+- [ ] **Versioned** docs per release (`mike`), after the tag: it needs GitHub
+      Pages switched from "GitHub Actions" to the `gh-pages` branch (a
+      repository setting, one click). The site keeps publishing `main` until
+      then, so it does not block the release.
 - [x] **(0.8)** A "Migrating from Cirq" guide
       (`guide/migrating-from-cirq.md`, ES and EN).
 - [x] **(0.8)** An examples gallery: Bell state, GHZ with noise, expectation
@@ -1014,9 +1049,16 @@ blanket. The `permanent` divergences are explained in
 - [x] **(0.9)** Issue templates (bug and feature, the latter asking for an
       acceptance criterion) and a PR template (the full checklist);
       `CITATION.cff`.
-- [ ] Automated release notes (`towncrier`) and `CHANGELOG.md` discipline.
-- [ ] Authorship and acknowledgements; "good first issue" labels (a GitHub
-      setting).
+- [x] **(0.9)** Automated release notes (`towncrier`): every change leaves a
+      fragment in `changelog.d/` (`<issue>.<type>.md`) and
+      `towncrier build --version X` writes the section, without touching the
+      hand-written history. The flow is in `changelog.d/README.md` and
+      `CONTRIBUTING.md`; `tests/test_deprecation_and_release.py` checks that the
+      draft picks the fragment up and does not modify `CHANGELOG.md`.
+- [x] **(0.9)** Acknowledgements in the README: Cirq's design,
+      Aaronson-Gottesman for the stabilizers, Shende-Bullock-Markov and
+      arXiv:1910.11333 for the decompositions, V and vcraft.
+- [ ] "Good first issue" labels (they have to be created on GitHub).
 
 #### 7. Quality and tooling (supporting)
 
@@ -1042,8 +1084,14 @@ blanket. The `permanent` divergences are explained in
       raise `QasmParseError`/`ValueError`). The fuzzers found — and the fix
       removed — the `KeyError`/`AttributeError`/`IndexError` that leaked out of
       the Quirk and JSON importers.
-- [ ] `mypy`/`pyright` in strict mode alongside `ty`; weekly dependency and
-      security scanning.
+- [x] **(0.9)** `mypy` next to `ty` in CI (config in `pyproject.toml`), clean
+      over the 75 library modules. In `--strict` mode **107 errors** remain (mostly
+      `list[...]` variance), so strict mode stays open: **criterion:**
+      `mypy --strict` with no errors and `pyright` in strict mode, configured
+      like `ty`.
+- [x] **(0.9)** Weekly dependency and security scan with Dependabot
+      (`.github/dependabot.yml`): actions and the development toolchain, since
+      there are no runtime dependencies.
 
 #### 9. Compilation and transformer debt (0.5 audit) — **closed**
 
@@ -1080,9 +1128,9 @@ the 1.0.0 definition of done and the API does not change when they land.
       signature of memory, not arithmetic. **Closing criterion:** a 20-qubit GHZ
       under 0.10 s (about 2.3x faster, which is what huge pages would give by
       removing ~8000 translations per pass), watched by `benchmarks/perf.py`.
-- [ ] `-march=…` stays a **documented opt-in** for a local build; it is not
-      baked into the published wheel (portability, and not diverging from the
-      tested artifact).
+- [x] **(0.9)** `-march=…` stays a **documented opt-in** for a local build; it
+      is not baked into the published wheel (portability, and not diverging from
+      the tested artifact).
 - [x] **(0.9)** Benchmarks in CI with regression thresholds:
       `benchmarks/perf.py` times four workloads and compares them with
       `benchmarks/perf_budget.json` (about twenty times the development-machine

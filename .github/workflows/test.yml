@@ -158,8 +158,10 @@ jobs:
           name: wheel-ubuntu-latest
           path: dist
 
-      - name: install the wheel
-        run: python -m pip install dist/*.whl
+      # numpy is not a dependency, but the sampling case takes its vectorised
+      # fast path, so the job must match the environment the budget was taken in.
+      - name: install the wheel and numpy
+        run: python -m pip install dist/*.whl numpy
 
       - name: run the benchmark gate
         run: python benchmarks/perf.py

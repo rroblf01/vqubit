@@ -29,6 +29,13 @@ print(resultado.histogram(key="m"))  # Counter({0: ..., 3: ...})
 `simulate` devuelve un `SimulationResult` con `final_state` y `state_vector()`;
 `run` devuelve un `Result` con `measurements` y `histogram`.
 
+!!! note "Si tienes `numpy` instalado"
+    `run` lo usa para sortear las `repetitions` de una vez; sin él, cada
+    disparo repite la simulación en Python puro y puede ser dos órdenes de
+    magnitud más lento (2000 disparos de 16 qubits: 0,02 s con `numpy`, 2,3 s
+    sin él). Es la única parte del camino caliente que se acelera con `numpy`;
+    `numpy` sigue siendo opcional.
+
 ## Matriz de densidad
 
 El `DensityMatrixSimulator` evoluciona una matriz de densidad, así que puede

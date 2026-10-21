@@ -29,6 +29,12 @@ print(result.histogram(key="m"))  # Counter({0: ..., 3: ...})
 `simulate` returns a `SimulationResult` with `final_state` and `state_vector()`;
 `run` returns a `Result` with `measurements` and `histogram`.
 
+!!! note "If you have `numpy` installed"
+    `run` uses it to draw all the `repetitions` at once; without it every shot
+    re-runs the simulation in pure Python and can be two orders of magnitude
+    slower (2000 shots of 16 qubits: 0.02 s with `numpy`, 2.3 s without). It is
+    the only part of the hot path that `numpy` speeds up, and it stays optional.
+
 ## Density matrix
 
 `DensityMatrixSimulator` evolves a density matrix, so it can simulate **noisy**

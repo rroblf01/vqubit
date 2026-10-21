@@ -239,7 +239,9 @@ tests with coverage at 95 %.
   state vector, 8-qubit density matrix, 100-qubit stabilizer, 16-qubit sampling)
   against the ceilings in `benchmarks/perf_budget.json` (about twenty times a
   development machine: a shared runner is several times slower and noisy, and
-  five times was not enough). A `performance` job runs it on every push.
+  five times was not enough). A `performance` job runs it on every push, with
+  `numpy` installed so the sampling case takes the same vectorised fast path the
+  budget was taken in.
 
 ### Added (0.9: governance)
 

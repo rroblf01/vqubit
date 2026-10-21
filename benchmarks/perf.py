@@ -13,6 +13,11 @@ magnitude slower, not a few percent. Re-baseline with
 
 Run it with ``python benchmarks/perf.py``; it exits non-zero when a case exceeds
 its ceiling.
+
+The baseline is measured with ``numpy`` installed, because ``run`` draws all the
+repetitions in one go when it is available and falls back to a per-shot Python
+loop otherwise (two orders of magnitude slower on the sampling case). Install
+``numpy`` in the job that runs this gate so it measures the same code path.
 """
 
 from __future__ import annotations

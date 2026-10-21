@@ -471,7 +471,10 @@ de reventar en el núcleo V).
       en una máquina de desarrollo. El factor es ancho a propósito: un runner
       compartido es varias veces más lento y ruidoso (el primer intento con 5×
       falló en CI), así que la puerta caza un kernel roto o diez veces más lento,
-      no un 5 %. Re-basar con `--write` y un build `--release`. **Medido:** los
+      no un 5 %. El job instala `numpy` porque el caso de muestreo toma su ruta
+      rápida vectorizada; sin él cada disparo repite la simulación en Python y
+      tarda ~150× más (2,3 s frente a 0,02 s), que no es una regresión del
+      kernel. Re-basar con `--write` y un build `--release`. **Medido:** los
       cuatro casos pasan con 20× de margen.
 - [ ] Evaluar más SIMD/OpenMP en los kernels V; densidad a mayor anchura.
 
@@ -971,7 +974,9 @@ shape/unitarity validation of the decomposition helpers (they now raise
       `benchmarks/perf_budget.json` (about twenty times the development-machine
       time per case: a shared runner is several times slower and noisy — five
       times was not enough in CI — so it catches a broken kernel or an
-      order-of-magnitude regression). Re-baseline with `--write` and a `--release` build.
+      order-of-magnitude regression). The job installs `numpy` because the
+      sampling case takes its vectorised fast path (about 150 times faster than
+      the per-shot Python loop, which is not a kernel regression). Re-baseline with `--write` and a `--release` build.
 - [ ] Evaluate more SIMD/OpenMP in the V kernels; density matrices at larger
       widths.
 

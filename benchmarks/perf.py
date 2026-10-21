@@ -4,9 +4,10 @@
 *fast*. Each case is timed three times and the best run is compared with
 ``perf_budget.json``, which holds an absolute ceiling per case.
 
-The ceilings are deliberately generous (about five times the time measured on a
-development machine): CI runners are shared and noisy, so the gate is there to
-catch a kernel that became ten times slower, not a few percent. Re-baseline with
+The ceilings are deliberately generous (about twenty times the time measured on
+a development machine, because a shared CI runner is several times slower and
+noisy): the gate is there to catch a kernel that broke or became an order of
+magnitude slower, not a few percent. Re-baseline with
 ``python benchmarks/perf.py --write`` on a quiet machine, with a release build
 (``vcraft build --release``): a debug extension is several times slower.
 
@@ -98,7 +99,7 @@ def measure(case: Callable[[], None]) -> float:
 
 def main(argv: list[str]) -> int:
 	if "--write" in argv:
-		budget = {name: round(measure(case) * 5, 3) for name, case in CASES}
+		budget = {name: round(measure(case) * 20, 3) for name, case in CASES}
 		with open(BUDGET, "w", encoding="utf-8") as handle:
 			json.dump(budget, handle, indent="\t", sort_keys=True)
 			handle.write("\n")

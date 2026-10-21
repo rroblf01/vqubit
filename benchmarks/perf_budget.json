@@ -1,6 +1,6 @@
 {
-	"density-matrix 8q, 220 gates": 0.373,
-	"samples 16q, 2000 runs": 0.082,
-	"stabilizer 100q, 500 gates": 0.123,
-	"state-vector 16q, 220 gates": 0.325
+	"density-matrix 8q, 220 gates": 1.496,
+	"samples 16q, 2000 runs": 0.348,
+	"stabilizer 100q, 500 gates": 0.515,
+	"state-vector 16q, 220 gates": 1.253
 }

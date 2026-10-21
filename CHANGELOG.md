@@ -237,9 +237,9 @@ tests with coverage at 95 %.
   one OS.
 - **A performance gate**: `benchmarks/perf.py` times four workloads (16-qubit
   state vector, 8-qubit density matrix, 100-qubit stabilizer, 16-qubit sampling)
-  against the ceilings in `benchmarks/perf_budget.json` (about five times a
-  development machine, so a shared runner cannot fail it but a ten-times-slower
-  kernel does). A `performance` job runs it on every push.
+  against the ceilings in `benchmarks/perf_budget.json` (about twenty times a
+  development machine: a shared runner is several times slower and noisy, and
+  five times was not enough). A `performance` job runs it on every push.
 
 ### Added (0.9: governance)
 

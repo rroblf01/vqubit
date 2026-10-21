@@ -13,6 +13,7 @@ entirely on your machine.
 from __future__ import annotations
 
 import random
+from bisect import bisect_right
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
 from typing import Any
@@ -583,6 +584,26 @@ def _draw_outcome(probabilities: Sequence[float], rng: random.Random) -> int:
 	return len(probabilities) - 1
 
 
+def _cumulative_probabilities(probabilities: Sequence[float]) -> list[float]:
+	"""The running totals of ``probabilities``, in the same summation order."""
+	cumulative: list[float] = []
+	accumulated = 0.0
+	for probability in probabilities:
+		accumulated += probability
+		cumulative.append(accumulated)
+	return cumulative
+
+
+def _draw_cumulative(cumulative: Sequence[float], rng: random.Random) -> int:
+	"""Draw an outcome from precomputed running totals.
+
+	The same draw as :func:`_draw_outcome` —first total strictly above the
+	threshold, or the last outcome— without walking the distribution on every
+	shot: ``bisect_right`` skips the totals that are not above the threshold.
+	"""
+	return min(bisect_right(cumulative, rng.random()), len(cumulative) - 1)
+
+
 def _outcome_of(targets: Sequence[int], positions: dict[int, int], union_outcome: int) -> int:
 	"""Read one measurement's outcome out of a joint outcome over the union.
 
@@ -750,8 +771,11 @@ class Simulator(
 						bits = _outcome_of(targets, positions, int(outcome))
 						_record_bits(gate, bits, len(targets), records)
 				return Result(records, param_resolver)
+			# The numpy branch above keeps an ``ndarray`` in ``cumulative``; the
+			# pure-Python one uses the running totals, built once, not per shot.
+			running = _cumulative_probabilities(probabilities)
 			for _ in range(repetitions):
-				outcome = _draw_outcome(probabilities, rng)
+				outcome = _draw_cumulative(running, rng)
 				for gate, targets in measurements:
 					bits = _outcome_of(targets, positions, outcome)
 					_record_bits(gate, bits, len(targets), records)

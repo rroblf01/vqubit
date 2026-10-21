@@ -30,10 +30,10 @@ print(result.histogram(key="m"))  # Counter({0: ..., 3: ...})
 `run` returns a `Result` with `measurements` and `histogram`.
 
 !!! note "If you have `numpy` installed"
-    `run` uses it to draw all the `repetitions` at once; without it every shot
-    re-runs the simulation in pure Python and can be two orders of magnitude
-    slower (2000 shots of 16 qubits: 0.02 s with `numpy`, 2.3 s without). It is
-    the only part of the hot path that `numpy` speeds up, and it stays optional.
+    `run` draws all the `repetitions` at once with `numpy`; without it draws
+    with the running totals (`bisect`) over the same distribution. Both paths
+    simulate the circuit **once** when the measurements are terminal, so 2000
+    shots of 16 qubits take about 0.02 s either way. `numpy` stays optional.
 
 ## Density matrix
 

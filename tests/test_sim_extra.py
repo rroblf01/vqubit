@@ -36,6 +36,17 @@ class _AlwaysOne(random.Random):
 		return 1.0
 
 
+class _Exactly(random.Random):
+	"""A PRNG whose draw is exactly the given value."""
+
+	def __init__(self, value: float) -> None:
+		super().__init__()
+		self._value = value
+
+	def random(self) -> float:
+		return self._value
+
+
 def _bell_circuit() -> Any:
 	q0, q1 = vqubit.LineQubit.range(2)
 	return vqubit.Circuit(vqubit.H(q0), vqubit.CNOT(q0, q1))
@@ -216,6 +227,27 @@ def test_sampling_helpers_fall_back_to_the_last_outcome() -> None:
 	rng = _AlwaysOne()
 	assert step._draw([0.5, 0.5], rng) == 1
 	assert sim._draw_outcome([0.5, 0.5], rng) == 1
+	assert sim._draw_cumulative(sim._cumulative_probabilities([0.5, 0.5]), rng) == 1
+
+
+def test_the_cumulative_draw_is_the_linear_draw() -> None:
+	# The linear scan is the reference; the bisect on the running totals exists
+	# only so a shot does not walk a 2**16-long distribution. Same threshold,
+	# same outcome, including the exact-total edge case.
+	import random
+
+	import vqubit._sim as sim
+
+	probabilities = [0.0, 0.25, 0.0, 0.5, 0.125, 0.125, 0.0]
+	cumulative = sim._cumulative_probabilities(probabilities)
+	assert cumulative[-1] == 1.0
+	first = random.Random(0)
+	second = random.Random(0)
+	for _ in range(200):
+		assert sim._draw_cumulative(cumulative, first) == sim._draw_outcome(probabilities, second)
+	# A threshold exactly on a total skips the zero-width outcome that follows it.
+	assert sim._draw_cumulative([0.5, 0.5], _Exactly(0.5)) == 1
+	assert sim._draw_outcome([0.5, 0.5], _Exactly(0.5)) == 1
 
 
 def test_step_result_reports_its_qubit_map_and_repr() -> None:

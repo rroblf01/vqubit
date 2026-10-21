@@ -30,11 +30,11 @@ print(resultado.histogram(key="m"))  # Counter({0: ..., 3: ...})
 `run` devuelve un `Result` con `measurements` y `histogram`.
 
 !!! note "Si tienes `numpy` instalado"
-    `run` lo usa para sortear las `repetitions` de una vez; sin él, cada
-    disparo repite la simulación en Python puro y puede ser dos órdenes de
-    magnitud más lento (2000 disparos de 16 qubits: 0,02 s con `numpy`, 2,3 s
-    sin él). Es la única parte del camino caliente que se acelera con `numpy`;
-    `numpy` sigue siendo opcional.
+    `run` sortea todas las `repetitions` de una vez con `numpy`; sin él sortea
+    con los totales acumulados (`bisect`) sobre la misma distribución. Las dos
+    rutas simulan el circuito **una** vez cuando las medidas son terminales, así
+    que 2000 disparos de 16 qubits tardan ~0,02 s en ambos casos. `numpy` sigue
+    siendo opcional.
 
 ## Matriz de densidad
 

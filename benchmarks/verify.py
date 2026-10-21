@@ -254,6 +254,52 @@ def check_stabilizer(report: Report) -> None:
 		"operation kinds",
 	)
 
+	# The stabilizer simulator has to accept every gate Cirq calls a stabilizer
+	# operation, not only the nine the native tableau has an opcode for: the
+	# rest are rewritten as short words over those, and the state both
+	# simulators produce has to agree.
+	cirq_qubits = cirq.LineQubit.range(2)
+	vqubit_qubits = vq.LineQubit.range(2)
+	pairs = [
+		(cirq.X**0.5, vq.X**0.5),
+		(cirq.X**1.5, vq.X**1.5),
+		(cirq.Y**0.5, vq.Y**0.5),
+		(cirq.Y**1.5, vq.Y**1.5),
+		(cirq.XX**0.5, vq.XX**0.5),
+		(cirq.XX, vq.XX),
+		(cirq.XX**1.5, vq.XX**1.5),
+		(cirq.YY**0.5, vq.YY**0.5),
+		(cirq.YY, vq.YY),
+		(cirq.ZZ**0.5, vq.ZZ**0.5),
+		(cirq.ZZ, vq.ZZ),
+		(cirq.ISWAP, vq.ISWAP),
+		(cirq.ISWAP**-1, vq.ISWAP**-1),
+		(cirq.ISWAP**2, vq.ISWAP**2),
+	]
+	for cirq_gate, vqubit_gate in pairs:
+		name = str(cirq_gate)
+		report.check(
+			"stabilizer",
+			f"has_stabilizer_effect {name}",
+			vq.has_stabilizer_effect(vqubit_gate) == cirq.has_stabilizer_effect(cirq_gate),
+			f"cirq {cirq.has_stabilizer_effect(cirq_gate)} vs vqubit {vq.has_stabilizer_effect(vqubit_gate)}",
+		)
+		count = cirq_gate.num_qubits()
+		cirq_circuit = cirq.Circuit([cirq.H(cirq_qubits[0]), cirq_gate.on(*cirq_qubits[:count])])
+		vqubit_circuit = vq.Circuit([vq.H(vqubit_qubits[0]), vqubit_gate(*vqubit_qubits[:count])])
+		want = np.asarray(cirq.CliffordSimulator().simulate(cirq_circuit).final_state.state_vector())
+		got = np.asarray(vq.CliffordSimulator().simulate(vqubit_circuit).state_vector())
+		report.check("stabilizer", f"state after {name}", up_to_phase(got, want), "the stabilizer state")
+
+	# And the gates that are not stabilizer operations stay refused on both sides.
+	for cirq_gate, vqubit_gate in [(cirq.X**0.25, vq.X**0.25), (cirq.ISWAP**0.5, vq.ISWAP**0.5), (cirq.T, vq.T)]:
+		report.check(
+			"stabilizer",
+			f"has_stabilizer_effect {cirq_gate}",
+			vq.has_stabilizer_effect(vqubit_gate) == cirq.has_stabilizer_effect(cirq_gate),
+			f"cirq {cirq.has_stabilizer_effect(cirq_gate)} vs vqubit {vq.has_stabilizer_effect(vqubit_gate)}",
+		)
+
 
 # --- expectation values -------------------------------------------------------
 

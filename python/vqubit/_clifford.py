@@ -25,11 +25,15 @@ from ._gates import (
 	CZGate,
 	HPowGate,
 	IdentityGate,
+	ISwapPowGate,
 	MeasurementGate,
 	SWAPGate,
 	XPowGate,
+	XXPowGate,
 	YPowGate,
+	YYPowGate,
 	ZPowGate,
+	ZZPowGate,
 )
 from ._linalg import vector_from_flat
 from ._ops import Operation
@@ -111,6 +115,124 @@ def _instruction_code(gate: Any) -> _native.CliffordOp | None:
 	raise TypeError(f"{gate!r} is not a Clifford gate")
 
 
+#: A list of ``(instruction, target positions)`` applied in order. The positions
+#: index the operation's own targets, so a word works on any qubits the gate is
+#: applied to.
+Word = list[tuple[Any, tuple[int, ...]]]
+
+#: Words for the Cliffords the native tableau has no instruction for. Cirq
+#: treats ``X ** 0.5``, ``Y ** 0.5``, ``iSWAP``, ``XX``, ``YY`` and ``ZZ`` as
+#: Clifford gates, so the stabilizer simulator has to as well: the tableau only
+#: knows nine elementary instructions, and these are written as short words over
+#: them. Every word equals its gate up to a global phase, which is all a tableau
+#: can tell apart; ``tests/test_clifford_cliffords.py`` compares the unitaries
+#: and ``benchmarks/verify.py`` compares the states with Cirq's simulator.
+_X_HALF: Word = [(_INSTR_H, (0,)), (_INSTR_S, (0,)), (_INSTR_H, (0,))]
+_X_THREE_HALVES: Word = [(_INSTR_H, (0,)), (_INSTR_SDG, (0,)), (_INSTR_H, (0,))]
+_Y_HALF: Word = [(_INSTR_H, (0,)), (_INSTR_X, (0,))]
+_Y_THREE_HALVES: Word = [(_INSTR_H, (0,)), (_INSTR_Z, (0,))]
+
+#: ``CNOT . X . CNOT`` is ``X (x) X``; the phase gate and the extra ``CNOT`` in
+#: ``_XX_HALF`` give its square root.
+_XX_ONE: Word = [(_INSTR_CNOT, (0, 1)), (_INSTR_X, (0,)), (_INSTR_CNOT, (0, 1))]
+_XX_HALF: Word = [
+	(_INSTR_SDG, (0,)),
+	(_INSTR_CNOT, (0, 1)),
+	(_INSTR_H, (0,)),
+	(_INSTR_SDG, (0,)),
+	(_INSTR_CNOT, (0, 1)),
+]
+_ZZ_HALF: Word = [(_INSTR_S, (0,)), (_INSTR_S, (1,)), (_INSTR_CZ, (0, 1))]
+_ZZ_THREE_HALVES: Word = [(_INSTR_SDG, (0,)), (_INSTR_SDG, (1,)), (_INSTR_CZ, (0, 1))]
+_ISWAP: Word = [(_INSTR_S, (0,)), (_INSTR_S, (1,)), (_INSTR_CZ, (0, 1)), (_INSTR_SWAP, (0, 1))]
+_ISWAP_THREE: Word = [
+	(_INSTR_SDG, (0,)),
+	(_INSTR_SDG, (1,)),
+	(_INSTR_CZ, (0, 1)),
+	(_INSTR_SWAP, (0, 1)),
+]
+#: ``Y (x) Y`` is ``X (x) X`` conjugated by a phase gate on each qubit, and
+#: conjugating a power conjugates the power, so the ``XX`` words carry over.
+_CONJUGATE: Word = [(_INSTR_SDG, (0,)), (_INSTR_SDG, (1,))]
+_UNCONJUGATE: Word = [(_INSTR_S, (0,)), (_INSTR_S, (1,))]
+
+
+def _reduced(exponent: Any, period: float) -> float | None:
+	"""``exponent`` modulo ``period``, or ``None`` when it is not a number."""
+	if isinstance(exponent, bool) or not isinstance(exponent, (int, float)):
+		return None
+	return float(exponent) % period
+
+
+def _pick(exponent: Any, period: float, table: Sequence[tuple[float, Word]]) -> Word | None:
+	"""The word registered for ``exponent`` modulo ``period``, if there is one."""
+	reduced = _reduced(exponent, period)
+	if reduced is None:
+		return None
+	for value, word in table:
+		if abs(reduced - value) < _EPS:
+			return list(word)
+	return None
+
+
+def _decomposed_word(gate: Any) -> Word | None:
+	"""Native instructions for a Clifford the tableau has no opcode for."""
+	if isinstance(gate, XPowGate):
+		return _pick(gate.exponent, 2, [(0.5, _X_HALF), (1.5, _X_THREE_HALVES)])
+	if isinstance(gate, YPowGate):
+		return _pick(gate.exponent, 2, [(0.5, _Y_HALF), (1.5, _Y_THREE_HALVES)])
+	if isinstance(gate, XXPowGate):
+		return _pick(gate.exponent, 2, [(0.0, []), (0.5, _XX_HALF), (1.0, _XX_ONE), (1.5, [*_XX_HALF, *_XX_ONE])])
+	if isinstance(gate, YYPowGate):
+		return _pick(
+			gate.exponent,
+			2,
+			[
+				(0.0, []),
+				(0.5, [*_CONJUGATE, *_XX_HALF, *_UNCONJUGATE]),
+				(1.0, [(_INSTR_Y, (0,)), (_INSTR_Y, (1,))]),
+				(1.5, [*_CONJUGATE, *_XX_HALF, *_XX_ONE, *_UNCONJUGATE]),
+			],
+		)
+	if isinstance(gate, ZZPowGate):
+		return _pick(
+			gate.exponent,
+			2,
+			[
+				(0.0, []),
+				(0.5, _ZZ_HALF),
+				(1.0, [(_INSTR_Z, (0,)), (_INSTR_Z, (1,))]),
+				(1.5, _ZZ_THREE_HALVES),
+			],
+		)
+	if isinstance(gate, ISwapPowGate):
+		# ``iSWAP`` has period four: the identity, the gate, ``Z (x) Z`` and the
+		# inverse.
+		return _pick(
+			gate.exponent,
+			4,
+			[(0.0, []), (1.0, _ISWAP), (2.0, [(_INSTR_Z, (0,)), (_INSTR_Z, (1,))]), (3.0, _ISWAP_THREE)],
+		)
+	return None
+
+
+def _instruction_word(gate: Any) -> Word | None:
+	"""The native instructions for ``gate``, in order, or ``None`` if it is not a Clifford.
+
+	An empty word means there is nothing to apply: the identity (``I``, ``X **
+	2``) or a power that lands on it. This is also what
+	:func:`vqubit.has_stabilizer_effect` and the simulator's
+	``is_supported_operation`` ask.
+	"""
+	try:
+		code = _instruction_code(gate)
+	except TypeError:
+		return _decomposed_word(gate)
+	if code is None:
+		return []
+	return [(code, (0,)) if gate._num_qubits_() == 1 else (code, (0, 1))]
+
+
 def _build_instructions(
 	program: Circuit,
 	index: dict[Qid, int],
@@ -131,12 +253,14 @@ def _build_instructions(
 				measure_meta.append((gate.key, position, int(invert_mask[position])))
 				key_sizes[gate.key] = max(key_sizes.get(gate.key, 0), position + 1)
 			continue
-		code = _instruction_code(gate)
-		if code is None:
-			continue
+		word = _instruction_word(gate)
+		if word is None:
+			raise TypeError(f"{gate!r} is not a Clifford gate")
 		targets = [index[q] for q in operation.qubits]
-		second = targets[1] if len(targets) > 1 else 0
-		instructions.extend((int(code), targets[0], second))
+		for code, positions in word:
+			first = targets[positions[0]]
+			second = targets[positions[1]] if len(positions) > 1 else 0
+			instructions.extend((int(code), first, second))
 	return instructions, measure_meta, key_sizes
 
 
@@ -862,13 +986,7 @@ def _is_clifford_gate(gate: Any) -> bool:
 	:func:`vqubit.has_stabilizer_effect` and the simulator's
 	``is_supported_operation`` need.
 	"""
-	if isinstance(gate, IdentityGate):
-		return True
-	try:
-		_instruction_code(gate)
-	except TypeError:
-		return False
-	return True
+	return _instruction_word(gate) is not None
 
 
 class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
@@ -904,11 +1022,11 @@ class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 			if isinstance(gate, MeasurementGate):
 				raise ValueError("simulate() cannot run a circuit with measurements; use run()")
 			self._refuse_unsupported(operation)
-			code = _instruction_code(gate)
-			if code is None:
-				continue
 			targets = [index[q] for q in operation.qubits]
-			tableau.apply(code, targets[0], targets[1] if len(targets) > 1 else 0)
+			for code, positions in _instruction_word(gate) or []:
+				first = targets[positions[0]]
+				second = targets[positions[1]] if len(positions) > 1 else 0
+				tableau.apply(code, first, second)
 		return CliffordSimulationResult(CliffordState(tableau, qubits), param_resolver)
 
 	def simulate_moment_steps(
@@ -937,11 +1055,11 @@ class CliffordSimulator(_SweepsAndBatches, _SampledExpectationValues):
 				if isinstance(gate, MeasurementGate):
 					raise ValueError("simulate_moment_steps() cannot run a circuit with measurements; use run()")
 				self._refuse_unsupported(operation)
-				code = _instruction_code(gate)
-				if code is None:
-					continue
 				targets = [index[q] for q in operation.qubits]
-				applied.append((code, targets[0], targets[1] if len(targets) > 1 else 0))
+				for code, positions in _instruction_word(gate) or []:
+					first = targets[positions[0]]
+					second = targets[positions[1]] if len(positions) > 1 else 0
+					applied.append((code, first, second))
 			tableau = _native.NativeTableau(len(qubits))
 			for code, first, second in applied:
 				tableau.apply(code, first, second)

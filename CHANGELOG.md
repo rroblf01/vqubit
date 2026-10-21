@@ -258,6 +258,21 @@ tests with coverage at 95 %.
   `numpy` installed so the sampling case takes the same vectorised fast path the
   budget was taken in.
 
+### Added (1.0: the Clifford gate set)
+
+- **The stabilizer simulator takes the whole stim gate set.** `X ** 0.5`,
+  `Y ** 0.5`, `XX`, `YY`, `ZZ` (integer or half-integer exponent) and `iSWAP`
+  (integer exponent) are accepted by `CliffordSimulator`, `has_stabilizer_effect`
+  and `is_supported_operation`, exactly as Cirq accepts them. The native tableau
+  only has nine instruction codes, so each of these is rewritten as a short word
+  over them, equal to the gate up to a global phase (which a tableau cannot see).
+  The words are verified against the state-vector simulator and against Cirq's
+  stabilizer simulator in `tests/test_clifford_cliffords.py`, and 31 new checks
+  in `benchmarks/verify.py` compare the two libraries gate by gate.
+- **Documented limit:** a bare `CliffordGate` (say `CXSWAP`) still has to be
+  simulated with `Simulator`, because the native tableau cannot take an arbitrary
+  Clifford; `guide/cirq-differences` says so and `UPSTREAM.md` §7d tracks it.
+
 ### Added (0.9: governance)
 
 - **`CODE_OF_CONDUCT.md`** (Contributor Covenant 2.1) and **`SECURITY.md`**,

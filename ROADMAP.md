@@ -278,14 +278,20 @@ Las divergencias `permanent` están explicadas en
       O(momentos²) en vez de O(momentos), aceptable para inspección paso a paso y
       documentado. **Medido:** una foto por momento, igual a simular el prefijo
       (`tests/test_clifford.py`). La copia nativa solo lo haría lineal.
-- [ ] **El conjunto de puertas de Clifford es más pequeño que el de stim.** Cirq
-      acepta `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` y `ZZ`
-      (`has_stabilizer_effect` es `True`) y el *tableau* nativo de vqubit no tiene
-      esas instrucciones, así que vqubit dice `False`; las que sí puede expresar
-      ya se aceptan con exponente entero (`X ** 3`, `CNOT ** -1`), como Cirq.
-      **Criterio:** ampliar vcraft con esas instrucciones (`UPSTREAM.md` §7) y una
-      sección `stabilizer` en `benchmarks/verify.py` que compare
-      `has_stabilizer_effect` y las unitarias simuladas con Cirq.
+- [x] **(1.0)** **El conjunto de puertas de Clifford iguala al de stim.**
+      `X ** 0.5`, `Y ** 0.5`, `XX`, `YY`, `ZZ` (exponente entero o medio) e
+      `iSWAP` (entero) se reescriben como palabras cortas de las nueve
+      instrucciones nativas, así que `has_stabilizer_effect` y
+      `CliffordSimulator` responden como Cirq (`python/vqubit/_clifford.py`,
+      `_decomposed_word`). Las palabras son iguales a su puerta salvo fase
+      global, que es lo único que un *tableau* distingue. **Medido:** 44 tests
+      en `tests/test_clifford_cliffords.py` (unitarias, estados contra el
+      `Simulator` y contra el simulador de Cirq, circuitos aleatorios, medidas
+      correlacionadas) y 31 comprobaciones nuevas en la sección `stabilizer` de
+      `benchmarks/verify.py` (650/650). Las instrucciones nativas seguirían
+      siendo más rápidas: es un item de rendimiento en `UPSTREAM.md` §7b, ya no
+      de corrección. Una `CliffordGate` suelta sigue necesitando `Simulator`
+      (`UPSTREAM.md` §7d, documentado en `guide/cirq-differences`).
 - [x] **Las clases de barrido tienen ya la firma de Cirq.**
       `vqubit.Linspace("t", 0, 1, 4)` y `vqubit.Points("t", [0.5, 2.0])` funcionan
       con la convención de Cirq de que el `Linspace` **incluye** los dos
@@ -834,14 +840,19 @@ blanket. The `permanent` divergences are explained in
       O(moments), fine for step-by-step inspection and documented. **Measured:**
       one snapshot per moment, equal to simulating the prefix
       (`tests/test_clifford.py`). A native copy would only make it linear.
-- [ ] **The Clifford gate set is smaller than stim's.** Cirq accepts
-      `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` and `ZZ`
-      (`has_stabilizer_effect` is `True`) and vqubit's native tableau has no such
-      instructions, so it says `False`; the ones it can express are taken with an
-      integer exponent (`X ** 3`, `CNOT ** -1`), as in Cirq. **Criterion:**
-      extend vcraft with those instructions (`UPSTREAM.md` §7) and a `stabilizer`
-      section in `benchmarks/verify.py` comparing `has_stabilizer_effect` and the
-      simulated unitaries with Cirq.
+- [x] **(1.0)** **The Clifford gate set matches stim's.** `X ** 0.5`,
+      `Y ** 0.5`, `XX`, `YY`, `ZZ` (integer or half-integer exponent) and
+      `iSWAP` (integer) are rewritten as short words over the nine native
+      instructions, so `has_stabilizer_effect` and `CliffordSimulator` answer
+      like Cirq (`python/vqubit/_clifford.py`, `_decomposed_word`). The words
+      equal their gate up to a global phase, which is all a tableau can tell
+      apart. **Measured:** 44 tests in `tests/test_clifford_cliffords.py`
+      (unitaries, states against `Simulator` and against Cirq's simulator,
+      random circuits, correlated measurements) and 31 new checks in the
+      `stabilizer` section of `benchmarks/verify.py` (650/650). Native
+      instructions would still be faster: that is now a performance item in
+      `UPSTREAM.md` §7b, not a correctness one. A bare `CliffordGate` still needs
+      `Simulator` (`UPSTREAM.md` §7d, documented in `guide/cirq-differences`).
 - [x] **The sweep classes have Cirq's signature now.** `vqubit.Linspace("t", 0, 1, 4)`
       and `vqubit.Points("t", [0.5, 2.0])` work with Cirq's convention that a
       `Linspace` **includes** both ends (`0, 1/3, 2/3, 1`), without losing

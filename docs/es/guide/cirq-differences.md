@@ -223,6 +223,25 @@ assert abs(abs(estado[0]) - 2**-0.5) < 1e-9
 assert abs(abs(estado[3]) - 2**-0.5) < 1e-9
 ```
 
+## El simulador de Clifford y las puertas que acepta
+
+`vq.CliffordSimulator` acepta las mismas puertas que Cirq considera de
+estabilizadores: las elementales (`H`, `S`, `X`, `Y`, `Z`, `CNOT`, `CZ`, `SWAP`)
+con exponente entero y, desde la 1.0, también `X ** 0.5`, `Y ** 0.5`, `XX`,
+`YY`, `ZZ` (con exponente entero o medio) e `iSWAP` (con exponente entero). Las
+que el *tableau* nativo no sabe expresar se reescriben como palabras cortas de
+las nueve instrucciones que sí tiene; el estado coincide con el del simulador de
+Cirq y con el del `Simulator` de vqubit. `vq.has_stabilizer_effect` responde lo
+mismo que `cirq.has_stabilizer_effect` en todas ellas.
+
+Queda una puerta fuera: una **`CliffordGate` suelta** (por ejemplo `vq.CXSWAP`,
+o cualquiera construida a mano con `CliffordGate.from_unitary`). `has_stabilizer_effect`
+dice `True` —lo es—, pero el simulador de estabilizadores la rechaza, porque el
+*tableau* nativo solo acepta instrucciones y una `CliffordGate` es una matriz
+arbitraria; simúlala con `vq.Simulator`. El *tableau* sigue siendo suyo:
+`vq.CliffordTableau` y `vq.CliffordGate` funcionan con ella. Está anotado como
+mejora de vcraft en `UPSTREAM.md` §7d.
+
 ## El diagrama de texto
 
 `vq.Circuit` dibuja un diagrama de una línea por qubit y una columna por momento

@@ -436,21 +436,17 @@ class CliffordTableauSimulationState(SimulationState):
 
 	def apply_operation(self, operation: Any) -> None:
 		"""Apply one Clifford operation to the tablea."""
-		from ._clifford import _instruction_code, _is_clifford_gate
+		from ._clifford import _instruction_word
 
 		gate = operation.gate
-		code = _instruction_code(gate)
-		if code is None:
-			# ``None`` is both "the identity" (``I``, ``X ** 2``) and "the
-			# kernels cannot express it"; only the second is an error.
-			if _is_clifford_gate(gate):
-				return
+		word = _instruction_word(gate)
+		if word is None:
 			raise TypeError(f"{gate!r} is not a Clifford gate")
 		targets = [self._index[q] for q in operation.qubits]
-		if len(targets) == 1:
-			self._tableau.apply(code, targets[0], targets[0])
-		else:
-			self._tableau.apply(code, targets[0], targets[1])
+		for code, positions in word:
+			first = targets[positions[0]]
+			second = targets[positions[1]] if len(positions) > 1 else first
+			self._tableau.apply(code, first, second)
 
 
 class StabilizerSimulationState(CliffordTableauSimulationState):

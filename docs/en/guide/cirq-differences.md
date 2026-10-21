@@ -221,6 +221,25 @@ assert abs(abs(state[0]) - 2**-0.5) < 1e-9
 assert abs(abs(state[3]) - 2**-0.5) < 1e-9
 ```
 
+## The Clifford simulator and the gates it accepts
+
+`vq.CliffordSimulator` accepts the same gates Cirq treats as stabilizer
+operations: the elementary ones (`H`, `S`, `X`, `Y`, `Z`, `CNOT`, `CZ`, `SWAP`)
+with an integer exponent and, since 1.0, also `X ** 0.5`, `Y ** 0.5`, `XX`,
+`YY`, `ZZ` (integer or half-integer exponent) and `iSWAP` (integer exponent).
+The ones the native tableau cannot spell are rewritten as short words over the
+nine instructions it does have; the state matches both Cirq's stabilizer
+simulator and vqubit's own `Simulator`. `vq.has_stabilizer_effect` answers the
+same as `cirq.has_stabilizer_effect` for all of them.
+
+One gate stays out: a **bare `CliffordGate`** (say `vq.CXSWAP`, or one built by
+hand with `CliffordGate.from_unitary`). `has_stabilizer_effect` says `True` — it
+is one — but the stabilizer simulator refuses it, because the native tableau
+only takes instructions and a `CliffordGate` is an arbitrary matrix; simulate it
+with `vq.Simulator`. The tableau is still yours: `vq.CliffordTableau` and
+`vq.CliffordGate` work with it. It is recorded as a vcraft improvement in
+`UPSTREAM.md` §7d.
+
 ## The text diagram
 
 `vq.Circuit` draws one line per qubit and one column per moment, and it matches

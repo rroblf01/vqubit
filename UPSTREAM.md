@@ -219,7 +219,19 @@ type only accepts amplitudes (`set_from_amplitudes`) or ``|0...0>``
 `NativeDensity.set_density_matrix(flat)` (the interleaved form
 `buffer.density_matrix()` already returns) so states round-trip in and out.
 
-**7b. `CliffordOp` is missing instructions that stim has.** vqubit's Clifford gate
+**7b. `CliffordOp` is missing instructions that stim has.**
+
+> **Update (1.0):** closed on vqubit's side without new instructions. The six
+> gates are now rewritten as short words over the nine native ones
+> (`python/vqubit/_clifford.py`, `_decomposed_word`), so
+> `has_stabilizer_effect` and `CliffordSimulator` answer like Cirq's,
+> `benchmarks/verify.py` compares them gate by gate (31 checks in the
+> `stabilizer` section) and `tests/test_clifford_cliffords.py` compares the
+> states with both simulators. Native opcodes would still be faster — a word is
+> up to nine instructions where stim applies one — so the request below stands
+> as a performance item, not a correctness one.
+
+vqubit's Clifford gate
 set is `h, s, sdg, x, y, z, cnot, cz, swap, measure`. `cirq` (through stim) also
 treats `X ** 0.5`, `Y ** 0.5`, `iSWAP`, `XX`, `YY` and `ZZ` as stabilizer gates,
 and vqubit reports `has_stabilizer_effect(...) is False` for them because the
@@ -239,3 +251,25 @@ Expected: `sx`, `sy`, `iswap`, `xx`, `yy`, `zz` (and their inverses, where stim
 has them) in `CliffordOp`, applied by `NativeTableau.apply`. With those, vqubit's
 `has_stabilizer_effect` and `CliffordSimulator` would answer like Cirq's for the
 whole stim gate set, and `benchmarks/verify.py` could compare them gate by gate.
+
+**7d. `NativeTableau` cannot apply an arbitrary Clifford.** It applies one of the
+ten instruction codes, so a `vqubit.CliffordGate` — a gate kept as a unitary,
+the way `cirq.CliffordGate` is — cannot be run on the stabilizer simulator, even
+though `has_stabilizer_effect` reports `True` for it. Cirq's simulator accepts it
+because its tableau is updated from the gate's own tableau. Workaround in place:
+those gates are simulated with `vqubit.Simulator`, and the limitation is
+documented in `guide/cirq-differences` (it is a divergence, not silence).
+
+```python
+import vqubit as vq
+q0, q1 = vq.LineQubit.range(2)
+print(vq.has_stabilizer_effect(vq.CXSWAP))  # True
+vq.CliffordSimulator().simulate(vq.Circuit(vq.CXSWAP(q0, q1)))
+# TypeError: CliffordSimulator doesn't support ...
+```
+
+Expected: a way to apply a Clifford given its tableau or its action on the Pauli
+generators, e.g. `NativeTableau.apply_tableau(xs, zs, rs)` for the gate's
+`2n`-by-`2n` symplectic block, or `CliffordOp.from_unitary`. That would let the
+stabilizer simulator take any `CliffordGate` (and let `CXSWAP`/`CZSWAP` — vqubit's
+own extras — run there).

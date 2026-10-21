@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 import vqubit
 from tests.helpers import assert_matrix_close
 
@@ -71,7 +69,7 @@ def test_stratified_circuit_never_reorders_a_dependency() -> None:
 	stratified = vqubit.stratified_circuit(
 		circuit, categories=[vqubit.HPowGate, vqubit.XPowGate, vqubit.YPowGate, vqubit.ZPowGate, vqubit.CXPowGate]
 	)
-	assert vqubit.unitary(stratified) == pytest.approx(vqubit.unitary(circuit), abs=1e-12)
+	assert_matrix_close(vqubit.unitary(stratified), vqubit.unitary(circuit))
 	# The order of the operations on each qubit is untouched.
 	for qubit in (q0, q1):
 		before = [op for op in circuit.all_operations() if qubit in op.qubits]

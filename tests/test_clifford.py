@@ -164,3 +164,16 @@ def test_a_huge_tableau_refuses_to_materialise_its_state_vector() -> None:
 		state.state_vector()
 	# The tableau itself is still available, which is the point of a stabilizer.
 	assert len(state.stabilizers()) == 30
+
+
+def test_the_tableau_takes_y_powers_by_hand() -> None:
+	# ``apply_y`` has a branch per half-integer exponent; the simulator only ever
+	# reaches the integer one, so the others are exercised here.
+	for exponent in (0.5, 1.0, 1.5, 2.0):
+		tableau = vqubit.CliffordTableau(1)
+		tableau.apply_y(0, exponent)
+		# A Y power is a Clifford, so the stabilisers it produces are well formed.
+		stabilizers = tableau.stabilizer_pauli_strings()
+		assert len(stabilizers) == 1
+	with pytest.raises(ValueError, match="half integer"):
+		vqubit.CliffordTableau(1).apply_y(0, 0.25)

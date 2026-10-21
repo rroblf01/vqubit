@@ -475,7 +475,7 @@ def _register_all() -> None:
 	_DECODERS["WaitGate"] = lambda d: WaitGate(_decode(d["duration"]).total_nanos(), num_qubits=d.get("num_qubits", 1))
 	_DECODERS["MatrixGate"] = lambda d: MatrixGate(_decode(d["matrix"]))
 	_DECODERS["FSimGate"] = lambda d: FSimGate(theta=_decode(d["theta"]), phi=_decode(d["phi"]))
-	_DECODERS["TaggedOperation"] = lambda d: TaggedOperation(_decode(d["sub_operation"]), tuple(_decode(d["tags"])))
+	_DECODERS["TaggedOperation"] = lambda d: TaggedOperation(_decode(d["sub_operation"]), *_decode(d["tags"]))
 	_DECODERS["GateOperation"] = lambda d: GateOperation(_decode(d["gate"]), [_decode(q) for q in d["qubits"]])
 	_DECODERS["Moment"] = lambda d: Moment([_decode(op) for op in d["operations"]])
 	_DECODERS["Circuit"] = lambda d: Circuit.from_moments([_decode(m) for m in d["moments"]])

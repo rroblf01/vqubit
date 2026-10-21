@@ -172,6 +172,13 @@ def final_state_vector(
 	circuit = program
 	if ignore_terminal_measurements:
 		circuit = _without_terminal_measurements(circuit)
+	elif any(isinstance(operation.gate, MeasurementGate) for operation in circuit.all_operations()):
+		# Cirq refuses here too: a measurement leaves a mixed state behind, so
+		# there is no single state vector to return unless they are ignored.
+		raise ValueError(
+			"the circuit has measurements, and a state vector cannot hold them; "
+			"pass ignore_terminal_measurements=True for measurements at the end, or simulate with run()"
+		)
 	return list(
 		Simulator(seed=seed)
 		.simulate(circuit, param_resolver=param_resolver, qubit_order=qubit_order, initial_state=initial_state)
